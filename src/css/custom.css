@@ -1,0 +1,39 @@
+/* Charte Fonrex : orange #F97316 + gris anthracite #1A1A2E */
+
+:root {
+  --ifm-color-primary: #F97316;
+  --ifm-color-primary-dark: #e06010;
+  --ifm-color-primary-darker: #c95408;
+  --ifm-color-primary-darkest: #a84200;
+  --ifm-color-primary-light: #fb8c3a;
+  --ifm-color-primary-lighter: #fca05a;
+  --ifm-color-primary-lightest: #fdb87a;
+  --ifm-code-font-size: 95%;
+  --docusaurus-highlighted-code-line-bg: rgba(249, 115, 22, 0.1);
+}
+
+[data-theme='dark'] {
+  --ifm-color-primary: #F97316;
+  --ifm-background-color: #0d1117;
+  --ifm-navbar-background-color: #161b22;
+  --ifm-footer-background-color: #0d1117;
+}
+
+/* Logo dans la navbar */
+.navbar__logo img {
+  height: 32px;
+}
+
+/* Badges dans les titres d'API */
+.api-method {
+  font-family: monospace;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.85em;
+  font-weight: bold;
+  margin-right: 8px;
+}
+.api-method.get    { background: #1d9e75; color: white; }
+.api-method.post   { background: #378add; color: white; }
+.api-method.delete { background: #e05a5a; color: white; }
+.api-method.ws     { background: #8b5cf6; color: white; }

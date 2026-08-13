@@ -1,0 +1,38 @@
+{
+  "version.label": {
+    "message": "Actuelle",
+    "description": "The label for version current"
+  },
+  "sidebar.docs.category.Getting Started": {
+    "message": "Premiers Pas",
+    "description": "The label for category 'Getting Started' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.API Reference": {
+    "message": "Référence API",
+    "description": "The label for category 'API Reference' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Guides": {
+    "message": "Guides d'utilisation",
+    "description": "The label for category 'Guides' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Architecture": {
+    "message": "Architecture & Modèle",
+    "description": "The label for category 'Architecture' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Providers": {
+    "message": "Providers de données",
+    "description": "The label for category 'Providers' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Monitoring": {
+    "message": "Supervision & Santé",
+    "description": "The label for category 'Monitoring' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Deployment": {
+    "message": "Déploiement Production",
+    "description": "The label for category 'Deployment' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Contributing": {
+    "message": "Contribution & Tests",
+    "description": "The label for category 'Contributing' in sidebar 'docs'"
+  }
+}

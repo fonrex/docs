@@ -1,0 +1,38 @@
+{
+  "version.label": {
+    "message": "当前版本",
+    "description": "The label for version current"
+  },
+  "sidebar.docs.category.Getting Started": {
+    "message": "快速入门",
+    "description": "The label for category 'Getting Started' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.API Reference": {
+    "message": "API 参考",
+    "description": "The label for category 'API Reference' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Guides": {
+    "message": "使用指南",
+    "description": "The label for category 'Guides' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Architecture": {
+    "message": "架构与数据模型",
+    "description": "The label for category 'Architecture' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Providers": {
+    "message": "数据提供商",
+    "description": "The label for category 'Providers' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Monitoring": {
+    "message": "监控与健康检查",
+    "description": "The label for category 'Monitoring' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Deployment": {
+    "message": "生产部署",
+    "description": "The label for category 'Deployment' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Contributing": {
+    "message": "贡献与测试",
+    "description": "The label for category 'Contributing' in sidebar 'docs'"
+  }
+}
