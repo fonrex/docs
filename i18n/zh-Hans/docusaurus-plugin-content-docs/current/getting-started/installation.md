@@ -74,7 +74,7 @@ Expected JSON response:
 使用 CSV 数据向本地数据库填充金融工具和上市信息：
 
 ```bash
-docker compose exec fonrex-api python import_assets.py --file etf.csv
+docker compose exec fonrex-api python import_assets.py --file data/etf.csv
 ```
 
 您的 API 现在已准备好提供金融数据服务！

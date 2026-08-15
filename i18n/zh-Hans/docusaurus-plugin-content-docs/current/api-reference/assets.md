@@ -94,6 +94,7 @@ print(f"Asset Name: {data['name']}, Listings Count: {len(data['listings'])}")
 | 参数名 | 类型 | 是否必需 | 默认值 | 说明描述 |
 |---|---|---|---|---|
 | `ticker` | `string` | ✅ | — | 股票代码（例如 `AIR.PA`、`AAPL`） |
+| `period` | `string` | ✅ | — | 历史时间周期（例如 `1d`、`5d`、`1mo`、`1y`、`max`） |
 | `resolution` | `string` | ❌ | `d` | K 线周期 (`d`, `w`, `m`) |
 | `format` | `string` | ❌ | `json` | 输出格式 (`json`, `csv`) |
 | `limit` | `integer` | ❌ | `100` | 要返回的历史 K 线数量 |

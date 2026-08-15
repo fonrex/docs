@@ -16,7 +16,7 @@ description: "学习如何使用 cURL、Python 和 WebSocket 客户端获取金�
 
 ### cURL
 ```bash
-curl -s "http://localhost:5000/eod/AIR.PA?resolution=d&limit=5"
+curl -s "http://localhost:5000/eod/AIR.PA?period=1mo"
 ```
 
 ### Python
@@ -24,7 +24,7 @@ curl -s "http://localhost:5000/eod/AIR.PA?resolution=d&limit=5"
 import requests
 
 url = "http://localhost:5000/eod/AIR.PA"
-params = {"resolution": "d", "limit": 5}
+params = {"period": "1mo"}
 response = requests.get(url, params=params)
 
 data = response.json()
@@ -58,6 +58,10 @@ for bar in data['data']:
 ---
 
 ## 2. 计算技术指标
+
+:::note 前置说明
+在计算指定代码（例如 `AAPL`）的技术指标之前，必须先通过 `POST /historical/ingest?ticker=AAPL` 摄取历史数据（例如 `curl -X POST "http://localhost:5000/historical/ingest?ticker=AAPL"`）。若未提前摄取历史数据，Endpoint 将返回 `{"detail":"No historical data found for AAPL"}`。
+:::
 
 计算 **Apple Inc. (`AAPL`)** 的 14 周期 **RSI（相对强弱指数）**。
 

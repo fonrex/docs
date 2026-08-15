@@ -93,6 +93,7 @@ Retrieve End-of-Day (EOD) historical prices in JSON or CSV format. Auto-triggers
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `ticker` | `string` | ✅ | — | Ticker symbol (e.g. `AIR.PA`, `AAPL`) |
+| `period` | `string` | ✅ | — | Historical period window (e.g. `1d`, `5d`, `1mo`, `1y`, `max`) |
 | `resolution` | `string` | ❌ | `d` | Candle resolution (`d`, `w`, `m`) |
 | `format` | `string` | ❌ | `json` | Output format (`json`, `csv`) |
 | `limit` | `integer` | ❌ | `100` | Number of historical bars to return |

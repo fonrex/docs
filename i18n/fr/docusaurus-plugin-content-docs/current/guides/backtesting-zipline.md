@@ -20,7 +20,7 @@ import requests
 
 def fetch_fonrex_ohlcv(ticker: str, limit: int = 1000) -> pd.DataFrame:
     url = f"http://localhost:5000/eod/{ticker}"
-    params = {"resolution": "d", "limit": limit, "format": "json"}
+    params = {"period": "1y", "resolution": "d", "limit": limit, "format": "json"}
     response = requests.get(url, params=params)
     data = response.json()["data"]
     

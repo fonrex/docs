@@ -74,7 +74,7 @@ Expected JSON response:
 Alimentez votre base de données locale avec des instruments financiers et des cotations depuis des données CSV :
 
 ```bash
-docker compose exec fonrex-api python import_assets.py --file etf.csv
+docker compose exec fonrex-api python import_assets.py --file data/etf.csv
 ```
 
 Votre API est maintenant prête à servir des données financières !

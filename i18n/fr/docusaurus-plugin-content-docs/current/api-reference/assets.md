@@ -94,9 +94,10 @@ Récupérer les prix historiques de fin de journée (EOD) au format JSON ou CSV.
 | Paramètre | Type | Requis | Défaut | Description |
 |---|---|---|---|---|
 | `ticker` | `string` | ✅ | — | Symbole ticker (ex. `AIR.PA`, `AAPL`) |
+| `period` | `string` | ✅ | — | Période temporelle (ex. `1d`, `5d`, `1mo`, `1y`, `max`) |
 | `resolution` | `string` | ❌ | `d` | Résolution des bougies (`d`, `w`, `m`) |
 | `format` | `string` | ❌ | `json` | Format de sortie (`json`, `csv`) |
-| `limit` | `integer` | ❌ | `100` | Nombre de bougies historiques to return |
+| `limit` | `integer` | ❌ | `100` | Nombre de bougies historiques à retourner |
 | `order` | `string` | ❌ | `asc` | Ordre de tri par date (`asc`, `desc`) |
 
 ### Codes de Retour

@@ -15,7 +15,7 @@ Retrieve End-of-Day (EOD) OHLCV historical prices for **Airbus SE (`AIR.PA`)**.
 
 ### cURL
 ```bash
-curl -s "http://localhost:5000/eod/AIR.PA?resolution=d&limit=5"
+curl -s "http://localhost:5000/eod/AIR.PA?period=1mo"
 ```
 
 ### Python
@@ -23,7 +23,7 @@ curl -s "http://localhost:5000/eod/AIR.PA?resolution=d&limit=5"
 import requests
 
 url = "http://localhost:5000/eod/AIR.PA"
-params = {"resolution": "d", "limit": 5}
+params = {"period": "1mo"}
 response = requests.get(url, params=params)
 
 data = response.json()
@@ -57,6 +57,10 @@ for bar in data['data']:
 ---
 
 ## 2. Compute Technical Indicators
+
+:::note Prerequisite
+Before computing technical indicators for a ticker (e.g., `AAPL`), historical data must be ingested first via `POST /historical/ingest?ticker=AAPL` (e.g., `curl -X POST "http://localhost:5000/historical/ingest?ticker=AAPL"`). If data has not been ingested beforehand, the endpoint will return `{"detail":"No historical data found for AAPL"}`.
+:::
 
 Calculate a 14-period **RSI (Relative Strength Index)** for **Apple Inc. (`AAPL`)**.
 

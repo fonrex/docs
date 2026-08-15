@@ -15,6 +15,10 @@ The Technical Indicators API leverages the `pandas-ta` calculation engine to com
 
 Calculate a single technical indicator for a ticker.
 
+:::note Prerequisite
+Requires prior historical data ingestion via `POST /historical/ingest?ticker={ticker}`. Returns `404` (`{"detail": "No historical data found for {ticker}"}`) if no historical data exists for the given ticker.
+:::
+
 ### Parameters
 
 | Parameter | Type | Required | Default | Description |

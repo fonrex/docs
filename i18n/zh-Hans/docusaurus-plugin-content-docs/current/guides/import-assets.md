@@ -33,13 +33,13 @@ Execute the pipeline inside the `fonrex-api` container:
 ### 1. Standard Asset Import
 
 ```bash
-docker compose exec fonrex-api python import_assets.py --file etf.csv
+docker compose exec fonrex-api python import_assets.py --file data/etf.csv
 ```
 
 ### 2. Dry Run Simulation (No Database Writing)
 
 ```bash
-docker compose exec fonrex-api python import_assets.py --file etf.csv --dry-run
+docker compose exec fonrex-api python import_assets.py --file data/etf.csv --dry-run
 ```
 
 ### 3. Yahoo Profile & Logo Enrichment Only

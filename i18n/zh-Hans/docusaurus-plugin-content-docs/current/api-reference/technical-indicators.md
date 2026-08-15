@@ -16,6 +16,10 @@ description: "计算趋势、动量、波动性和成交量技术指标、批量
 
 针对股票代码计算单个技术指标。
 
+:::note 前置说明
+需要提前通过 `POST /historical/ingest?ticker={ticker}` 摄取历史数据。若数据库中不存在指定代码的历史数据，将返回 `404` 错误 (`{"detail": "No historical data found for {ticker}"}`)。
+:::
+
 ### 请求参数
 
 | 参数名 | 类型 | 是否必需 | 默认值 | 说明描述 |

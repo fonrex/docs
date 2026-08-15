@@ -16,6 +16,10 @@ L'API des indicateurs techniques exploite le moteur de calcul `pandas-ta` pour c
 
 Calculer un indicateur technique unique pour un ticker.
 
+:::note Prérequis
+Nécessite au préalable l'ingestion des données historiques via `POST /historical/ingest?ticker={ticker}`. Retourne une erreur `404` (`{"detail": "No historical data found for {ticker}"}`) si aucune donnée historique n'est présente en base pour le ticker spécifié.
+:::
+
 ### Paramètres
 
 | Paramètre | Type | Requis | Défaut | Description |

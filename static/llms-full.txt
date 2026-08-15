@@ -103,6 +103,7 @@ Retrieve End-of-Day (EOD) historical prices in JSON or CSV format. Auto-triggers
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `ticker` | `string` | ✅ | — | Ticker symbol (e.g. `AIR.PA`, `AAPL`) |
+| `period` | `string` | ✅ | — | Historical period window (e.g. `1d`, `5d`, `1mo`, `1y`, `max`) |
 | `resolution` | `string` | ❌ | `d` | Candle resolution (`d`, `w`, `m`) |
 | `format` | `string` | ❌ | `json` | Output format (`json`, `csv`) |
 | `limit` | `integer` | ❌ | `100` | Number of historical bars to return |
@@ -775,6 +776,10 @@ The Technical Indicators API leverages the `pandas-ta` calculation engine to com
 ## <span className="api-method get">GET</span> `/technical/{ticker}`
 
 Calculate a single technical indicator for a ticker.
+
+:::note Prerequisite
+Requires prior historical data ingestion via `POST /historical/ingest?ticker={ticker}`. Returns `404` (`{"detail": "No historical data found for {ticker}"}`) if no historical data exists for the given ticker.
+:::
 
 ### Parameters
 
@@ -1883,7 +1888,7 @@ Retrieve End-of-Day (EOD) OHLCV historical prices for **Airbus SE (`AIR.PA`)**.
 
 ### cURL
 ```bash
-curl -s "http://localhost:5000/eod/AIR.PA?resolution=d&limit=5"
+curl -s "http://localhost:5000/eod/AIR.PA?period=1mo"
 ```
 
 ### Python
@@ -1891,7 +1896,7 @@ curl -s "http://localhost:5000/eod/AIR.PA?resolution=d&limit=5"
 import requests
 
 url = "http://localhost:5000/eod/AIR.PA"
-params = {"resolution": "d", "limit": 5}
+params = {"period": "1mo"}
 response = requests.get(url, params=params)
 
 data = response.json()
@@ -1925,6 +1930,10 @@ for bar in data['data']:
 ---
 
 ## 2. Compute Technical Indicators
+
+:::note Prerequisite
+Before computing technical indicators for a ticker (e.g., `AAPL`), historical data must be ingested first via `POST /historical/ingest?ticker=AAPL` (e.g., `curl -X POST "http://localhost:5000/historical/ingest?ticker=AAPL"`). If data has not been ingested beforehand, the endpoint will return `{"detail":"No historical data found for AAPL"}`.
+:::
 
 Calculate a 14-period **RSI (Relative Strength Index)** for **Apple Inc. (`AAPL`)**.
 
@@ -2058,7 +2067,7 @@ Expected JSON response:
 Seed your local database with financial instruments and listings from CSV data:
 
 ```bash
-docker compose exec fonrex-api python import_assets.py --file etf.csv
+docker compose exec fonrex-api python import_assets.py --file data/etf.csv
 ```
 
 Your API is now ready to serve financial data!
@@ -2176,7 +2185,7 @@ import requests
 
 def fetch_fonrex_ohlcv(ticker: str, limit: int = 1000) -> pd.DataFrame:
     url = f"http://localhost:5000/eod/{ticker}"
-    params = {"resolution": "d", "limit": limit, "format": "json"}
+    params = {"period": "1y", "resolution": "d", "limit": limit, "format": "json"}
     response = requests.get(url, params=params)
     data = response.json()["data"]
     
@@ -2317,13 +2326,13 @@ Execute the pipeline inside the `fonrex-api` container:
 ### 1. Standard Asset Import
 
 ```bash
-docker compose exec fonrex-api python import_assets.py --file etf.csv
+docker compose exec fonrex-api python import_assets.py --file data/etf.csv
 ```
 
 ### 2. Dry Run Simulation (No Database Writing)
 
 ```bash
-docker compose exec fonrex-api python import_assets.py --file etf.csv --dry-run
+docker compose exec fonrex-api python import_assets.py --file data/etf.csv --dry-run
 ```
 
 ### 3. Yahoo Profile & Logo Enrichment Only
