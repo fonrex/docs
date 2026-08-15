@@ -74,7 +74,7 @@ npm run serve
 ├── src/                   # Custom pages, components, and styles
 │   ├── css/               # Global & custom CSS styles
 │   └── pages/             # Non-doc React pages (e.g., Landing page)
-├── static/                # Static assets (images, logos, favicons)
+├── static/                # Static assets (images, logos, llms.txt, llms-full.txt)
 ├── docusaurus.config.ts   # Main Docusaurus configuration
 ├── sidebars.ts            # Sidebar navigation tree configuration
 ├── tsconfig.json          # TypeScript configuration

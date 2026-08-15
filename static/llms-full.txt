@@ -1,0 +1,2732 @@
+# Fonrex Documentation - Full Content Dump
+
+> Complete concatenated documentation for LLMs
+
+---
+
+
+
+<!-- FILE: /docs/api-reference/assets.md -->
+
+---
+id: "assets"
+title: "Asset & Listing API Reference"
+sidebar_label: "Assets & Listings"
+description: "Documentation for asset identity resolution, listings, and EOD history endpoints"
+---
+
+# Asset & Listing API Reference
+
+The Asset API manages financial instrument identities, exchange listings, and multi-format EOD history retrieval.
+
+---
+
+## <span className="api-method get">GET</span> `/assets/by-isin/{isin}`
+
+Retrieve a canonical asset instrument and all its active exchange listings by ISIN code.
+
+### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `isin` | `string` | ✅ | — | 12-character ISIN code (e.g. `NL0000235190`) |
+
+### Response Example
+
+```json
+{
+  "id": 42,
+  "isin": "NL0000235190",
+  "name": "Airbus SE",
+  "sector": "Industrials",
+  "industry": "Aerospace & Defense",
+  "quote_type": "EQUITY",
+  "listings": [
+    {
+      "id": 101,
+      "ticker": "AIR.PA",
+      "exchange": "XPAR",
+      "currency": "EUR",
+      "is_primary": true
+    },
+    {
+      "id": 102,
+      "ticker": "AIR.DE",
+      "exchange": "XETR",
+      "currency": "EUR",
+      "is_primary": false
+    }
+  ]
+}
+```
+
+### Examples
+
+#### cURL
+```bash
+curl -s "http://localhost:5000/assets/by-isin/NL0000235190"
+```
+
+#### Python
+```python
+import requests
+
+resp = requests.get("http://localhost:5000/assets/by-isin/NL0000235190")
+data = resp.json()
+print(f"Asset Name: {data['name']}, Listings Count: {len(data['listings'])}")
+```
+
+---
+
+## <span className="api-method get">GET</span> `/listings`
+
+Search exchange listings by ticker, ISIN, exchange, or currency.
+
+### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `ticker` | `string` | ❌ | — | Ticker symbol (e.g. `AAPL`) |
+| `isin` | `string` | ❌ | — | ISIN code |
+| `exchange` | `string` | ❌ | — | Exchange code (e.g. `XPAR`, `NASDAQ`) |
+| `currency` | `string` | ❌ | — | 3-letter currency code (e.g. `EUR`, `USD`) |
+| `limit` | `integer` | ❌ | `50` | Maximum results to return |
+
+---
+
+## <span className="api-method get">GET</span> `/eod/{ticker}`
+
+Retrieve End-of-Day (EOD) historical prices in JSON or CSV format. Auto-triggers historical ingestion if local data is missing.
+
+### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `ticker` | `string` | ✅ | — | Ticker symbol (e.g. `AIR.PA`, `AAPL`) |
+| `resolution` | `string` | ❌ | `d` | Candle resolution (`d`, `w`, `m`) |
+| `format` | `string` | ❌ | `json` | Output format (`json`, `csv`) |
+| `limit` | `integer` | ❌ | `100` | Number of historical bars to return |
+| `order` | `string` | ❌ | `asc` | Sort order by date (`asc`, `desc`) |
+
+### Status Codes
+
+| Code | Description |
+|---|---|
+| 200 | Success |
+| 404 | Asset/Listing not found |
+| 422 | Invalid parameter input |
+
+
+
+<!-- FILE: /docs/api-reference/fundamentals.md -->
+
+---
+id: "fundamentals"
+title: "Fundamental Financials API Reference"
+sidebar_label: "Fundamentals"
+description: "Endpoints for multi-provider fundamental metrics, financial statements, and valuation ratios"
+---
+
+# Fundamental Financials API Reference
+
+The Fundamentals API aggregates financial metrics, key statistics, balance sheets, income statements, cash flows, and analyst consensus across 14+ fundamental providers.
+
+---
+
+## <span className="api-method get">GET</span> `/fundamental`
+
+Aggregate key financial statistics (P/E ratio, Dividend Yield, Market Cap, Enterprise Value, Beta, ESG scores) across providers.
+
+### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `ticker` | `string` | ❌ | — | Ticker symbol (e.g. `TSLA`) |
+| `isin` | `string` | ❌ | — | ISIN code (e.g. `US88160R1014`) |
+| `exchange` | `string` | ❌ | — | Financial exchange code |
+| `currency` | `string` | ❌ | — | Currency filter |
+| `provider` | `string` | ❌ | — | Specific provider override (e.g. `ZoneBourse`, `Gurufocus`, `YahooFinance`) |
+
+### Response Example
+
+```json
+{
+  "asset_profile": {
+    "isin": "US88160R1014",
+    "name": "Tesla, Inc.",
+    "ticker": "TSLA",
+    "sector": "Consumer Cyclical"
+  },
+  "metrics": {
+    "market_cap": 750230000000,
+    "pe_ratio": 62.4,
+    "forward_pe": 48.1,
+    "dividend_yield": 0.0,
+    "beta": 2.34,
+    "price_to_sales": 7.82,
+    "roe": 0.194
+  },
+  "providers_used": ["ZoneBourse", "Gurufocus", "YahooFinance"]
+}
+```
+
+### Examples
+
+#### cURL
+```bash
+curl -s "http://localhost:5000/fundamental?ticker=TSLA"
+```
+
+#### Python
+```python
+import requests
+
+resp = requests.get("http://localhost:5000/fundamental", params={"ticker": "TSLA"})
+data = resp.json()
+print("Market Cap:", data["metrics"]["market_cap"])
+```
+
+---
+
+## <span className="api-method get">GET</span> `/fundamental/deep`
+
+Retrieve deep structured financial data including daily snapshots, financial statements, EPS earnings history, and analyst consensus ratings.
+
+### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `ticker` | `string` | ✅ | — | Ticker symbol (e.g. `AIR.PA`) |
+
+### Response Example
+
+```json
+{
+  "highlights": {
+    "pe_ratio": 28.5,
+    "enterprise_value": 110500000000,
+    "roe": 0.162,
+    "roa": 0.054
+  },
+  "financial_statements": [
+    {
+      "statement_type": "income",
+      "period_type": "annual",
+      "period_end": "2025-12-31",
+      "revenue": 65400000000,
+      "net_income": 4200000000
+    }
+  ],
+  "analyst_ratings": {
+    "consensus": "Buy",
+    "target_mean": 165.0,
+    "strong_buy": 12,
+    "buy": 8,
+    "hold": 4,
+    "sell": 1
+  }
+}
+```
+
+
+
+<!-- FILE: /docs/api-reference/historical.md -->
+
+---
+id: "historical"
+title: "Historical Ingestion API Reference"
+sidebar_label: "Historical Ingestion"
+description: "Endpoints for backfilling historical OHLCV data, bulk ingestion, and historical query routes"
+---
+
+# Historical Ingestion API Reference
+
+The Historical API provides methods to ingest, backfill, and query historical daily OHLCV bar data into TimescaleDB storage.
+
+---
+
+## <span className="api-method post">POST</span> `/historical/ingest`
+
+Trigger a single-asset historical ingestion or backfill.
+
+### Request Body
+
+```json
+{
+  "ticker": "BNP.PA",
+  "resolution": "d",
+  "from_date": "2020-01-01",
+  "to_date": "2026-08-01",
+  "force": false
+}
+```
+
+### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `ticker` | `string` | ✅ | — | Ticker symbol to ingest |
+| `resolution` | `string` | ❌ | `d` | Candle resolution (`d`, `w`, `m`) |
+| `from_date` | `string` | ❌ | — | Start date (`YYYY-MM-DD`) |
+| `to_date` | `string` | ❌ | — | End date (`YYYY-MM-DD`) |
+| `force` | `boolean` | ❌ | `false` | Re-download and overwrite existing database records |
+
+### Response Example
+
+```json
+{
+  "status": "success",
+  "ticker": "BNP.PA",
+  "records_added": 1650,
+  "source": "YahooFinance",
+  "duration_ms": 1240
+}
+```
+
+---
+
+## <span className="api-method post">POST</span> `/historical/ingest/bulk`
+
+Trigger bulk ingestion across multiple tickers with concurrency controls.
+
+### Request Body
+
+```json
+{
+  "tickers": ["AIR.PA", "BNP.PA", "TTE.PA", "MC.PA"],
+  "resolution": "d",
+  "concurrency": 4
+}
+```
+
+### Response Example
+
+```json
+{
+  "total": 4,
+  "successful": 4,
+  "failed": 0,
+  "details": [
+    { "ticker": "AIR.PA", "status": "success", "records_added": 250 },
+    { "ticker": "BNP.PA", "status": "success", "records_added": 250 }
+  ]
+}
+```
+
+---
+
+## <span className="api-method get">GET</span> `/ticker/{symbol}/history`
+
+Query historical OHLCV candles from the `prices_eod` table. Automatically ingests missing data if `auto_ingest=true`.
+
+### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `symbol` | `string` | ✅ | — | Instrument symbol |
+| `resolution` | `string` | ❌ | `d` | Resolution (`d`, `w`, `m`) |
+| `limit` | `integer` | ❌ | `500` | Number of historical bars |
+| `auto_ingest` | `boolean` | ❌ | `true` | Automatically backfill missing bars from yfinance |
+
+### Examples
+
+#### cURL
+```bash
+curl -s "http://localhost:5000/ticker/AAPL/history?limit=10"
+```
+
+#### Python
+```python
+import requests
+
+resp = requests.get("http://localhost:5000/ticker/AAPL/history", params={"limit": 10})
+bars = resp.json()["data"]
+print("Fetched bars:", len(bars))
+```
+
+
+
+<!-- FILE: /docs/api-reference/monitoring.md -->
+
+---
+id: "monitoring"
+title: "Provider Monitoring API Reference"
+sidebar_label: "Provider Monitoring"
+description: "Endpoints for provider health check statuses, canary inspection logs, and automated alerts"
+---
+
+# Provider Monitoring API Reference
+
+The Provider Monitoring API exposes endpoints to query provider health, inspect daily synthetic canary check executions, view outlier alerts, and resolve system incidents.
+
+---
+
+## <span className="api-method get">GET</span> `/health/providers`
+
+Retrieve current health and availability summary across all financial data providers.
+
+### Response Example
+
+```json
+{
+  "total_providers": 14,
+  "healthy_count": 13,
+  "degraded_count": 1,
+  "providers": [
+    {
+      "name": "ZoneBourse",
+      "is_healthy": true,
+      "success_rate": 0.98,
+      "avg_latency_ms": 320,
+      "last_check_at": "2026-08-11T06:00:00Z"
+    },
+    {
+      "name": "Investing",
+      "is_healthy": false,
+      "success_rate": 0.65,
+      "avg_latency_ms": 1450,
+      "last_check_at": "2026-08-11T06:00:00Z"
+    }
+  ]
+}
+```
+
+---
+
+## <span className="api-method get">GET</span> `/health/providers/{name}`
+
+Detailed health statistics, historical latency metrics, and recent outlier events for a single provider.
+
+---
+
+## <span className="api-method get">GET</span> `/health/alerts`
+
+Retrieve active or resolved provider quality alerts.
+
+### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `severity` | `string` | ❌ | — | Filter by severity (`critical`, `warning`, `info`) |
+| `provider` | `string` | ❌ | — | Provider name |
+| `include_resolved` | `boolean` | ❌ | `false` | Include historical resolved alerts |
+
+---
+
+## <span className="api-method post">POST</span> `/health/alerts/{id}/resolve`
+
+Manually mark an alert as resolved with an optional resolution note.
+
+### Request Body
+
+```json
+{
+  "resolution_note": "Upstream rate limit cleared by provider support."
+}
+```
+
+---
+
+## <span className="api-method post">POST</span> `/health/canary/run`
+
+Trigger an immediate background Canary health check across all registered providers or a single target provider.
+
+---
+
+## <span className="api-method get">GET</span> `/health/canary/history`
+
+Historical execution log of daily synthetic canary checks.
+
+---
+
+## <span className="api-method get">GET</span> `/health/stats`
+
+Global data quality statistics over a 7-day rolling window.
+
+
+
+<!-- FILE: /docs/api-reference/news.md -->
+
+---
+id: "news"
+title: "News Aggregator API Reference"
+sidebar_label: "News Aggregator"
+description: "Endpoints for multi-source financial news feeds, ticker-specific articles, and background ingestion"
+---
+
+# News Aggregator API Reference
+
+The News Aggregator API collects, deduplicates, and classifies financial news articles across 7 scrapers: Yahoo Finance, Google Finance, ZoneBourse, Boursorama, Investing.com, MarketWatch, and MSN Finance.
+
+---
+
+## <span className="api-method get">GET</span> `/news/{ticker}`
+
+Retrieve financial news articles mentioning a specific ticker. Results are cached in Redis for 30 minutes.
+
+### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `ticker` | `string` | ✅ | — | Financial ticker (e.g. `AIR.PA`, `AAPL`) |
+| `limit` | `integer` | ❌ | `20` | Number of articles |
+| `lang` | `string` | ❌ | — | Language filter (`en`, `fr`) |
+
+### Response Example
+
+```json
+{
+  "ticker": "AIR.PA",
+  "count": 2,
+  "articles": [
+    {
+      "id": 842,
+      "title": "Airbus Delivers 65 Aircraft in July, Reaffirms Full-Year Target",
+      "summary": "Airbus reported strong commercial airplane deliveries for July...",
+      "url": "https://www.marketwatch.com/story/airbus-delivers-65-aircraft-2026",
+      "source": "MarketWatch",
+      "provider": "marketwatch_news",
+      "author": "Financial Desk",
+      "published_at": "2026-08-10T14:30:00Z",
+      "sentiment": "POSITIVE",
+      "sentiment_score": 0.78,
+      "language": "en"
+    }
+  ]
+}
+```
+
+---
+
+## <span className="api-method get">GET</span> `/news/feed`
+
+Retrieve global financial news feed across all assets.
+
+### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `limit` | `integer` | ❌ | `20` | Maximum items to return |
+| `lang` | `string` | ❌ | — | Filter by language (`en`, `fr`) |
+| `provider` | `string` | ❌ | — | Filter by provider (e.g. `zonebourse_news`) |
+
+---
+
+## <span className="api-method post">POST</span> `/news/{ticker}/refresh`
+
+Trigger an asynchronous background refresh of news scrapers for a ticker without blocking the request.
+
+---
+
+## <span className="api-method get">GET</span> `/news/stats`
+
+Retrieve global news aggregator statistics (total articles indexed, provider breakdown, language counts).
+
+
+
+<!-- FILE: /docs/api-reference/realtime.md -->
+
+---
+id: "realtime"
+title: "Realtime & WebSocket API Reference"
+sidebar_label: "Realtime & WebSockets"
+description: "WebSocket live price streaming, REST quote snapshots, and subscription management endpoints"
+---
+
+# Realtime & WebSocket API Reference
+
+The Realtime API streams live 1-minute market ticks over WebSockets via TradingView bridge connections and Redis Pub/Sub, and exposes high-speed quote REST snapshots.
+
+---
+
+## <span className="api-method ws">WS</span> `/ws/realtime/{ticker}`
+
+Open a persistent WebSocket streaming channel for real-time tick updates on a given ticker.
+
+### Connection Protocol
+
+```javascript
+const ws = new WebSocket("ws://localhost:5000/ws/realtime/AIR.PA");
+```
+
+### Event Messages
+
+Upon connection, the server sends a initial `snapshot` message followed by real-time `tick` events:
+
+#### Initial Snapshot Event
+```json
+{
+  "type": "snapshot",
+  "ticker": "AIR.PA",
+  "data": {
+    "close": 135.90,
+    "open": 134.20,
+    "high": 136.50,
+    "low": 133.80,
+    "volume": 1245000,
+    "timestamp": "2026-08-11T10:15:00Z"
+  }
+}
+```
+
+#### Live Tick Event
+```json
+{
+  "type": "tick",
+  "ticker": "AIR.PA",
+  "data": {
+    "close": 136.10,
+    "change": 0.20,
+    "change_pct": 0.147,
+    "volume": 1246500,
+    "timestamp": "2026-08-11T10:16:00Z"
+  }
+}
+```
+
+---
+
+## <span className="api-method get">GET</span> `/quote/{ticker}`
+
+Retrieve the latest price quote snapshot from the Redis volatile cache. Auto-triggers realtime stream subscription if `REALTIME_AUTO_SUBSCRIBE=true`.
+
+### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `ticker` | `string` | ✅ | — | Ticker symbol (e.g. `AAPL`) |
+
+### Response Example
+
+```json
+{
+  "ticker": "AAPL",
+  "price": 224.50,
+  "open": 222.10,
+  "high": 225.00,
+  "low": 221.80,
+  "volume": 45200000,
+  "change": 2.40,
+  "change_pct": 1.08,
+  "source": "tradingview_stream",
+  "timestamp": "2026-08-11T10:15:30Z"
+}
+```
+
+---
+
+## <span className="api-method get">GET</span> `/quotes`
+
+Batch quote snapshot retrieval for multiple tickers.
+
+### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `tickers` | `string` | ✅ | — | Comma-separated list of tickers (e.g. `AAPL,MSFT,TSLA`) |
+
+---
+
+## <span className="api-method post">POST</span> `/realtime/subscribe`
+
+Explicitly subscribe a ticker to the background streaming worker `RealtimePriceWorker`.
+
+### Request Body
+
+```json
+{
+  "ticker": "NVDA"
+}
+```
+
+---
+
+## <span className="api-method delete">DELETE</span> `/realtime/subscribe/{ticker}`
+
+Unsubscribe a ticker from background live streaming.
+
+---
+
+## <span className="api-method get">GET</span> `/realtime/status`
+
+List all active market streaming worker subscriptions.
+
+### Response Example
+
+```json
+{
+  "active_subscriptions": 3,
+  "subscriptions": [
+    {
+      "ticker": "AIR.PA",
+      "subscribed_at": "2026-08-11T08:00:00Z",
+      "last_tick_at": "2026-08-11T10:15:30Z",
+      "tick_count": 1350
+    }
+  ]
+}
+```
+
+
+
+<!-- FILE: /docs/api-reference/specialized.md -->
+
+---
+id: "specialized"
+title: "Specialized Providers API Reference"
+sidebar_label: "Specialized Providers"
+description: "Endpoints for SEC EDGAR insider trades, JustETF metadata, and index constituent lists"
+---
+
+# Specialized Providers API Reference
+
+The Specialized Providers API exposes targeted endpoints for SEC EDGAR insider transactions, JustETF details, and equity index constituents.
+
+---
+
+## <span className="api-method get">GET</span> `/insider-transactions/{ticker}`
+
+Fetch Form 4 insider transactions filed with the US Securities and Exchange Commission (SEC EDGAR). Cached for 12 hours.
+
+### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `ticker` | `string` | ✅ | — | US Equity Ticker (e.g. `AAPL`, `TSLA`) |
+
+### Response Example
+
+```json
+{
+  "ticker": "AAPL",
+  "source": "SEC_EDGAR",
+  "count": 1,
+  "transactions": [
+    {
+      "filing_date": "2026-08-01",
+      "reporting_owner": "COOK TIMOTHY D",
+      "officer_title": "Chief Executive Officer",
+      "transaction_type": "P - Purchase",
+      "shares": 50000,
+      "price_per_share": 220.50,
+      "total_value": 11025000
+    }
+  ]
+}
+```
+
+---
+
+## <span className="api-method get">GET</span> `/etf/{isin}/details`
+
+Scrape ETF metadata, expense ratio (TER), Assets Under Management (AUM), and top 10 holdings from JustETF.
+
+### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `isin` | `string` | ✅ | — | European ETF ISIN (e.g. `IE00B4L5Y983`) |
+
+### Response Example
+
+```json
+{
+  "isin": "IE00B4L5Y983",
+  "name": "iShares Core MSCI World UCITS ETF",
+  "ter_pct": 0.20,
+  "aum_eur": 65000000000,
+  "replication": "Physical",
+  "top_holdings": [
+    { "name": "Apple Inc.", "weight_pct": 4.85 },
+    { "name": "Microsoft Corp.", "weight_pct": 4.20 }
+  ]
+}
+```
+
+---
+
+## <span className="api-method get">GET</span> `/index/{index_name}/constituents`
+
+Fetch current constituent stocks for major financial market indices (`sp500`, `cac40`, `nasdaq100`, `dax`).
+
+### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `index_name` | `string` | ✅ | — | Index name (`sp500`, `cac40`, `nasdaq100`, `dax`) |
+
+
+
+<!-- FILE: /docs/api-reference/technical-indicators.md -->
+
+---
+id: "technical-indicators"
+title: "Technical Indicators API Reference"
+sidebar_label: "Technical Indicators"
+description: "Compute trend, momentum, volatility, and volume technical indicators, batch calculation, and market screening"
+---
+
+# Technical Indicators API Reference
+
+The Technical Indicators API leverages the `pandas-ta` calculation engine to compute 18+ technical indicators, return OHLCV chart overlays, batch multi-ticker indicator calculations, and screen markets based on technical criteria.
+
+---
+
+## <span className="api-method get">GET</span> `/technical/{ticker}`
+
+Calculate a single technical indicator for a ticker.
+
+### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `ticker` | `string` | ✅ | — | Financial ticker (e.g. `AIR.PA`) |
+| `indicator` | `string` | ✅ | — | Indicator code (`sma`, `ema`, `rsi`, `macd`, `bbands`, `stoch`, `atr`, `obv`, `adx`, `vwap`, etc.) |
+| `period` | `integer` | ❌ | `14` | Main lookback period |
+| `resolution` | `string` | ❌ | `d` | Candle resolution (`d`, `w`, `m`) |
+
+### Response Example
+
+```json
+{
+  "ticker": "AIR.PA",
+  "indicator": "rsi",
+  "period": 14,
+  "count": 50,
+  "values": [
+    { "time": "2026-08-10T00:00:00Z", "value": 58.42 },
+    { "time": "2026-08-11T00:00:00Z", "value": 61.15 }
+  ]
+}
+```
+
+---
+
+## <span className="api-method get">GET</span> `/technical/{ticker}/multi`
+
+Compute multiple technical indicators in a single HTTP request.
+
+### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `ticker` | `string` | ✅ | — | Ticker symbol |
+| `indicators` | `string` | ✅ | — | Comma-separated indicator list (e.g. `rsi,sma,macd`) |
+| `period` | `integer` | ❌ | `14` | Default period applied to simple indicators |
+
+---
+
+## <span className="api-method get">GET</span> `/technical/{ticker}/chart`
+
+Retrieve combined OHLCV candles overlaid with selected technical indicator series formatted for charting libraries (TradingView Lightweight Charts, Highcharts).
+
+---
+
+## <span className="api-method post">POST</span> `/technical/batch`
+
+Batch calculation across multiple tickers and indicators.
+
+### Request Body
+
+```json
+{
+  "tickers": ["AAPL", "MSFT", "GOOGL"],
+  "indicators": [
+    { "name": "rsi", "period": 14 },
+    { "name": "sma", "period": 50 }
+  ]
+}
+```
+
+---
+
+## <span className="api-method get">GET</span> `/technical/list`
+
+Retrieve the catalog of supported technical indicators, default parameters, and descriptions.
+
+---
+
+## <span className="api-method get">GET</span> `/technical/screen`
+
+Screen database assets against technical conditions (e.g., RSI under oversold threshold 30).
+
+### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `indicator` | `string` | ✅ | — | Indicator to evaluate (e.g. `rsi`) |
+| `condition` | `string` | ✅ | — | Logical operator (`lt`, `gt`, `crosses_above`, `crosses_below`) |
+| `target_value` | `number` | ✅ | — | Numeric threshold (e.g. `30.0`) |
+
+
+
+<!-- FILE: /docs/api-reference/valuation-dcf.md -->
+
+---
+id: "valuation-dcf"
+title: "DCF Valuation API Reference"
+sidebar_label: "Valuation (DCF)"
+description: "Intrinsic value calculations, WACC estimation, multi-model consensus, and sensitivity matrix endpoints"
+---
+
+# DCF Valuation API Reference
+
+The Valuation API executes Discounted Cash Flow (DCF) intrinsic value models, computes Dynamic Weighted Average Cost of Capital (WACC), builds multi-model consensus reports, and generates sensitivity matrices.
+
+---
+
+## <span className="api-method get">GET</span> `/dcf/{ticker}`
+
+Compute default intrinsic value using the Free Cash Flow (FCF) DCF model. Results cached in Redis for 6 hours.
+
+### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `ticker` | `string` | ✅ | — | Ticker symbol (e.g. `AAPL`) |
+
+### Response Example
+
+```json
+{
+  "ticker": "AAPL",
+  "model": "FCF",
+  "current_price": 224.50,
+  "intrinsic_value": 248.20,
+  "margin_of_safety_pct": 10.56,
+  "recommendation": "UNDERVALUED",
+  "wacc": 0.0845,
+  "terminal_growth_rate": 0.025,
+  "projections": [
+    { "year": 1, "fcf": 115000000000, "pv": 105990000000 },
+    { "year": 2, "fcf": 124000000000, "pv": 105430000000 },
+    { "year": 3, "fcf": 133000000000, "pv": 104270000000 },
+    { "year": 4, "fcf": 142000000000, "pv": 102550000000 },
+    { "year": 5, "fcf": 151000000000, "pv": 100290000000 }
+  ],
+  "terminal_value": 2580000000000,
+  "enterprise_value": 3098430000000
+}
+```
+
+---
+
+## <span className="api-method post">POST</span> `/dcf/{ticker}`
+
+Run a customized DCF valuation with custom growth rates, risk-free rate, or WACC overrides (bypasses Redis cache).
+
+### Request Body
+
+```json
+{
+  "projection_years": 5,
+  "revenue_growth_rate": 0.08,
+  "operating_margin": 0.30,
+  "risk_free_rate": 0.042,
+  "terminal_growth_rate": 0.02
+}
+```
+
+---
+
+## <span className="api-method get">GET</span> `/dcf/{ticker}/compare`
+
+Compare consensus intrinsic valuations across all three DCF models: **Free Cash Flow (FCF)**, **Earnings Per Share (EPS)**, and **Dividend Discount Model (DDM)**.
+
+---
+
+## <span className="api-method get">GET</span> `/dcf/{ticker}/sensitivity`
+
+Generate a 5x5 sensitivity matrix analyzing how intrinsic value changes across combinations of WACC (discount rate) and terminal growth rate.
+
+### Response Example
+
+```json
+{
+  "ticker": "AAPL",
+  "sensitivity_matrix": {
+    "wacc_axis": [0.075, 0.080, 0.0845, 0.090, 0.095],
+    "growth_axis": [0.015, 0.020, 0.025, 0.030, 0.035],
+    "values": [
+      [275.40, 284.10, 294.20, 305.80, 319.40],
+      [252.10, 259.30, 267.80, 277.50, 288.70],
+      [234.80, 241.00, 248.20, 256.40, 265.80]
+    ]
+  }
+}
+```
+
+
+
+<!-- FILE: /docs/architecture/concurrency.md -->
+
+---
+id: "concurrency"
+title: "Concurrency & Async Execution"
+sidebar_label: "Concurrency & Async"
+description: "How Fonrex manages synchronous blocking calls within an asynchronous FastAPI event loop"
+---
+
+# Concurrency & Async Execution
+
+FastAPI relies on an asynchronous event loop (`asyncio`). Blocking operations—such as CPU-heavy pandas calculations, synchronous database ORM calls, or synchronous network requests (`yfinance`, `requests`)—must never be executed directly on the main event loop thread.
+
+## The `run_sync` Helper (`concurrency.py`)
+
+Fonrex provides `run_sync()` in `concurrency.py` as a unified abstraction for executing blocking synchronous code safely inside worker threads:
+
+```python
+from concurrency import run_sync
+
+# Offloads a synchronous blocking function to the default ThreadPoolExecutor
+result = await run_sync(sync_blocking_function, arg1, arg2, kwarg=value)
+```
+
+## Internal Architecture
+
+```
+FastAPI Event Loop (Async)
+       │
+       ├─► Async HTTP Router Endpoint (async def)
+       │         │
+       │         ├─► Calls run_sync(DatabaseService.get_asset, ticker)
+       │         │         │
+       │         │         ▼
+       │         │   ThreadPoolExecutor Worker Thread
+       │         │   (Runs synchronous SQLAlchemy ORM query)
+       │         │         │
+       │         │   ◄─────┘
+       │         │
+       │   ◄─────┘ Event Loop remains unblocked for other requests!
+       │
+       └─► Processes other concurrent HTTP / WS connections
+```
+
+## Guidelines for Developers
+
+1. **Async Routers**: Define router functions with `async def`.
+2. **Synchronous Services**: If a service method interacts with `DatabaseService` or `yfinance`, invoke it via `await run_sync(service.method, ...)` from the router.
+3. **Async Services**: Services that utilize `redis.asyncio` or `httpx.AsyncClient` (`NewsService`, `CanaryMonitor`) can be awaited directly without `run_sync`.
+
+
+
+<!-- FILE: /docs/architecture/data-model.md -->
+
+---
+id: "data-model"
+title: "Data Model & Schema Reference"
+sidebar_label: "Data Model"
+description: "Detailed entity relationship diagrams, database schemas, and TimescaleDB hypertable definitions"
+---
+
+# Data Model & Schema Reference
+
+Fonrex uses a 3-tier asset representation schema (`assets` ➔ `asset_listings` ➔ `asset_mappings`) to cleanly handle instruments, multi-exchange listings, and provider-specific identifiers.
+
+## Entity Relationship Diagram
+
+```mermaid
+erDiagram
+    ASSETS ||--o{ ASSET_LISTINGS : "has listings"
+    ASSETS ||--o{ ASSET_MAPPINGS : "has mappings"
+    ASSET_LISTINGS ||--o{ ASSET_MAPPINGS : "has provider mappings"
+    ASSETS ||--o{ PRICES_EOD : "has daily bars"
+    ASSETS ||--o{ PRICES_INTRADAY : "has intraday ticks"
+    ASSETS ||--o| FUNDAMENTALS_HIGHLIGHTS : "has highlights"
+    ASSETS ||--o{ FINANCIAL_STATEMENTS : "has statements"
+    ASSETS ||--o{ NEWS_ARTICLES : "has news"
+
+    ASSETS {
+        int id PK
+        string isin UK "NOT NULL index"
+        string name
+        string sector
+        string industry
+        string quote_type
+    }
+
+    ASSET_LISTINGS {
+        int id PK
+        int asset_id FK
+        string ticker
+        string exchange
+        string currency
+        bool is_primary
+    }
+
+    ASSET_MAPPINGS {
+        int id PK
+        int asset_listing_id FK
+        string provider_name
+        string provider_ticker
+        string provider_url
+    }
+
+    PRICES_EOD {
+        timestamp time PK
+        int asset_id FK
+        float open
+        float high
+        float low
+        float close
+        bigint volume
+    }
+
+    PRICES_INTRADAY {
+        timestamp timestamp PK
+        int asset_id FK
+        float open
+        float high
+        float low
+        float close
+        bigint volume
+    }
+```
+
+## Key Database Tables
+
+### 1. `assets`
+Represents the canonical financial instrument (e.g., Apple Inc. or Airbus SE).
+- **`id`** (Integer, PK, Autoincrement)
+- **`isin`** (String(12), Partial Unique Index `uq_assets_isin_not_null` WHERE `isin IS NOT NULL`)
+- **`name`** (String(255))
+- **`sector`** / **`industry`** (String(100))
+- **`quote_type`** (Enum: `EQUITY`, `ETF`, `MUTUALFUND`, `INDEX`)
+
+### 2. `asset_listings`
+Represents exchange-specific trading listings.
+- Unique Constraint: `uq_asset_listing_identity` on `(asset_id, ticker, exchange, currency)`.
+- Flags: `is_primary` (Boolean), `is_active` (Boolean).
+
+### 3. `asset_mappings`
+Maps external provider tickers or custom page URLs.
+- Unique Constraint: `(asset_listing_id, provider_name)`.
+
+### 4. `prices_eod` (PostgreSQL Table)
+Daily historical OHLCV price series.
+- Unique Index: `ix_prices_eod_asset_resolution_time` on `(asset_id, resolution, time)`.
+
+### 5. `prices_intraday` (TimescaleDB Hypertable)
+High-frequency 1-minute candle storage.
+- Partitioned daily by time interval (`INTERVAL '1 day'`).
+- Automated retention policy: Purges chunks older than 30 days.
+
+### 6. `provider_health_log` (TimescaleDB Hypertable)
+Outlier checks and health metrics per provider.
+- Composite Primary Key: `(id, checked_at)`.
+- Automated retention policy: 30 days.
+
+
+
+<!-- FILE: /docs/architecture/hexagonal.md -->
+
+---
+id: "hexagonal"
+title: "Hexagonal Architecture (Ports & Adapters)"
+sidebar_label: "Hexagonal Architecture"
+description: "Explanation of hexagonal architecture principles, port interfaces, and adapter boundary enforcement in Fonrex"
+---
+
+# Hexagonal Architecture
+
+Fonrex strictly adheres to **Hexagonal Architecture** (Ports and Adapters) in its core domain modules. This decouples core business logic from transport frameworks (FastAPI), database ORMs (SQLAlchemy), and external scrapers (`yfinance`, `BeautifulSoup`).
+
+## Layer Organization
+
+```
+┌──────────────────────────────────────────────────────────┐
+│                   Adapters (Outer Layer)                 │
+│  ┌───────────────────┐        ┌───────────────────────┐  │
+│  │ HTTP Routers      │        │ SQLAlchemy ORM        │  │
+│  │ (FastAPI)         │        │ (database/assets.py)  │  │
+│  └─────────┬─────────┘        └───────────▲───────────┘  │
+└────────────┼──────────────────────────────┼──────────────┘
+             │ Implements Ports             │
+┌────────────▼──────────────────────────────┴──────────────┐
+│                    Application / Domain                  │
+│  ┌───────────────────┐        ┌───────────────────────┐  │
+│  │ Ports             │ ◄──────┤ Use Cases             │  │
+│  │ (use_cases/ports) │        │ (use_cases/fundam...) │  │
+│  └───────────────────┘        └───────────────────────┘  │
+└──────────────────────────────────────────────────────────┘
+```
+
+## Architectural Rules
+
+1. **`use_cases/` Directory Isolation**:
+   - MUST NOT import `fastapi`, `starlette`, `sqlalchemy`, `yfinance`, or `requests`.
+   - MUST NOT handle HTTP status codes or DB connection pooling directly.
+   - Communicates exclusively via domain entities, dataclasses, and abstract Ports defined in `use_cases/ports.py`.
+
+2. **Abstract Ports (`use_cases/ports.py`)**:
+   - `FinancialsRepositoryPort`: Contract for persisting fundamental snapshots.
+   - `FinancialProviderPort`: Abstract interface for upstream providers (`fetch(ticker, isin)`).
+   - `CachePort`: Contract for key-value TTL operations.
+
+3. **Adapters (`routers/`, `database/`, `financials/`)**:
+   - HTTP Routers (`routers/fundamentals.py`) translate query parameters into Use Case input objects and catch domain exceptions (`use_cases/errors.py`) to map them to standard HTTP status codes (`404 Not Found`, `422 Unprocessable Entity`).
+
+## Exception Mapping Table
+
+| Domain Exception (`use_cases/errors.py`) | HTTP Status Code (`routers/errors.py`) |
+|---|---|
+| `ResourceNotFound` | `404 Not Found` |
+| `InvalidInput` | `422 Unprocessable Entity` |
+| `DependencyUnavailable` | `503 Service Unavailable` |
+| `UpstreamFailure` | `502 Bad Gateway` |
+
+
+
+<!-- FILE: /docs/architecture/migrations.md -->
+
+---
+id: "migrations"
+title: "Schema Migrations (Alembic)"
+sidebar_label: "Schema Migrations"
+description: "How schema migrations and TimescaleDB hypertable policies are managed with Alembic"
+---
+
+# Schema Migrations (Alembic)
+
+Fonrex uses **Alembic** to manage database schema evolutions. Migrations run in an isolated environment prior to API service startup to ensure schema consistency.
+
+## Migration History
+
+| Revision ID | Description | Key Changes |
+|---|---|---|
+| `001_initial` | Initial schema | `assets`, `prices_eod`, `fundamentals` |
+| `008_realtime` | Realtime streaming | `prices_intraday` hypertable, `realtime_subscriptions` |
+| `009_isin_listings` | Asset & listing refactor | `asset_listings`, `asset_mappings`, partial ISIN unique index |
+| `010_news_articles` | News aggregation | `news_articles` table with `url` unique constraint |
+| `011_provider_monitoring` | Provider health suite | `provider_health_log` hypertable, `provider_health_daily`, `provider_alerts` |
+
+## Migration Execution Flow
+
+1. At container startup, `entrypoint.sh` executes `alembic upgrade head`.
+2. `main.py` checks current schema status via `database/migrations.py`.
+3. If the stored revision in `alembic_version` does not match `head`, `main.py` marks `app.state.db_available = False` to prevent queries against incomplete schemas.
+
+## Creating a New Migration
+
+To add a new table or column, generate a migration script inside the running container:
+
+```bash
+docker compose exec fonrex-api alembic revision -m "add_column_to_table"
+```
+
+Edit the generated file in `alembic/versions/` and apply it:
+
+```bash
+docker compose exec fonrex-api alembic upgrade head
+```
+
+
+
+<!-- FILE: /docs/architecture/overview.md -->
+
+---
+id: "overview"
+title: "Architecture Overview"
+sidebar_label: "System Overview"
+description: "High-level architectural overview and data flow diagrams of the Fonrex system"
+---
+
+# Architecture Overview
+
+Fonrex is designed as a modular financial data processing pipeline. It decouples market data providers, business logic, storage engines, and client transport protocols.
+
+## High-Level System Architecture
+
+```mermaid
+flowchart TD
+    subgraph Client Space
+        Client[HTTP / WebSocket Clients]
+    end
+
+    subgraph API [FastAPI Service Layer]
+        Main[main.py]
+        CM[ConnectionManager]
+        Worker[RealtimePriceWorker]
+        VL[ValidationLayer]
+        Canary[CanaryMonitor]
+        NS[NewsService]
+        DCF[DCFService]
+    end
+
+    subgraph External Data Sources
+        TV[TradingView WS]
+        YF[yfinance / Yahoo]
+        P1[ZoneBourse / Gurufocus]
+        P2[SEC EDGAR / JustETF]
+        NP[7x News Web Scrapers]
+    end
+
+    subgraph Storage & Cache
+        Redis[(Redis 7 Cache / PubSub)]
+        DB[(PostgreSQL / TimescaleDB)]
+    end
+
+    Client -- REST HTTP --> Main
+    Client -- WebSocket --> CM
+    CM -- Subscribes --> Redis
+    
+    Worker -- Streams ticks --> TV
+    Worker -- Cache & Publish --> Redis
+    Worker -- Persist 1min candles --> DB
+
+    Main --> DB
+    Main --> Redis
+    Main --> YF
+    Main --> P1
+    Main --> P2
+
+    NS --> NP
+    NS --> Redis
+    NS --> DB
+
+    VL --> DB
+    Canary --> P1
+    Canary --> DB
+```
+
+## Key Components
+
+1. **FastAPI Transport Layer (`routers/`)**: Receives incoming REST and WebSocket requests, converts transport DTOs to internal business entities, and handles status codes.
+2. **Use Case Layer (`use_cases/`)**: Contains pure application business rules. Free from FastAPI or SQLAlchemy dependencies.
+3. **Storage & Services (`database/`, `cache/`, `historical/`)**: Interfaces with TimescaleDB hypertables for OHLCV bars and Redis for volatile caches.
+4. **Scraping & Providers (`financials/providers/`, `news/providers/`)**: Asynchronous connectors scraping financial metrics, insider trades, and financial news.
+5. **Quality Assurance (`monitoring/`)**: Performs real-time consensus checking and automated daily canary synthetic queries against upstream providers.
+
+
+
+<!-- FILE: /docs/contributing/architecture-rules.md -->
+
+---
+id: "architecture-rules"
+title: "Architecture Rules & Guidelines"
+sidebar_label: "Architecture Rules"
+description: "Architectural constraints, module boundaries, and coding standards for Fonrex contributors"
+---
+
+# Architecture Rules & Guidelines
+
+To maintain code quality, maintainability, and hexagonal separation, all code contributions MUST follow these rules:
+
+## 1. Strict Layering Boundaries
+
+- **`use_cases/`**: Pure business logic. MUST NOT import `fastapi`, `sqlalchemy`, or provider implementations directly.
+- **`routers/`**: Transport layer. Translates HTTP requests to use case inputs and maps domain exceptions to HTTP status codes.
+- **`concurrency.py`**: Blocking synchronous operations (SQLAlchemy, Pandas, yfinance) MUST be executed via `run_sync()`.
+
+## 2. Identifier Strategy
+
+- Always use `(asset_id, ticker, exchange, currency)` resolution via `DatabaseService.get_asset_context()`.
+- Do not assume a ticker uniquely identifies a stock globally (`TSLA` can be a stock or an ETP). Always respect ISIN mappings.
+
+## 3. Data Integrity & Validation
+
+- All provider inputs MUST pass through `ValidationLayer` checks before being exposed to end users.
+- Do not mask symptoms by returning dummy fallbacks or swallowing exceptions silently.
+
+
+
+<!-- FILE: /docs/contributing/changelog.md -->
+
+---
+id: "changelog"
+title: "Fonrex Version Changelog"
+sidebar_label: "Changelog"
+description: "Project history, feature additions, schema migrations, and version updates"
+---
+
+# Fonrex Version Changelog
+
+## v2.0.0 (2026-08)
+
+### Major Features
+- **Docusaurus v3 Documentation Suite**: Complete technical documentation structure generated under `documentation/`.
+- **Provider Health Monitoring (Phase 12)**: Implemented `ValidationLayer`, `CanaryMonitor`, `provider_health_log` TimescaleDB hypertable, daily consensus aggregation, and 7 REST health endpoints (`/health/*`).
+- **Valuation & DCF Engine (Phase 11)**: Integrated FCF, EPS, and DDM intrinsic value models with dynamic WACC calculation and sensitivity matrices (`/dcf/*`).
+- **News Aggregator (Phase 10)**: Multi-provider scraping engine (`NewsService`) across 7 sources with `ON CONFLICT (url)` deduplication and Redis caching (`/news/*`).
+- **ISIN Asset Architecture (Phase 9)**: Refactored asset database schema into `assets`, `asset_listings`, and `asset_mappings` with partial unique ISIN index.
+
+### 🐛 Bug Fixes & Refactoring
+- Legacy codebase cleanup (`eod/`, `record/`, `seed_assets.py` purged).
+- Standalone ISIN deduplication tool `scripts/clean_isin_duplicates.py`.
+- Thread pool executor concurrency boundaries via `concurrency.py`.
+
+
+
+<!-- FILE: /docs/contributing/setup.md -->
+
+---
+id: "setup"
+title: "Development Environment Setup"
+sidebar_label: "Dev Setup"
+description: "How to set up a local Python virtual environment, install dev dependencies, and run tests"
+---
+
+# Development Environment Setup
+
+This guide explains how to set up a local development environment for contributing to Fonrex.
+
+## Prerequisites
+
+- **Python 3.12**
+- **Docker & Docker Compose**
+- **Git**
+
+## Step-by-Step Setup
+
+### 1. Fork and Clone Repository
+
+```bash
+git clone https://github.com/fonrex/fonrex.git
+cd fonrex
+```
+
+### 2. Create Virtual Environment
+
+```bash
+python3.12 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
+
+### 3. Install Dependencies
+
+Install main and development dependencies:
+
+```bash
+pip install -r requirements.txt
+pip install -r requirements-dev.txt
+```
+
+### 4. Start Local Backing Services (Database & Redis)
+
+Start PostgreSQL and Redis in Docker while developing python code locally:
+
+```bash
+docker compose up -d fonrex-db fonrex-redis
+```
+
+### 5. Run Database Migrations
+
+Apply migrations to your local test database:
+
+```bash
+alembic upgrade head
+```
+
+### 6. Run FastAPI Server in Reload Mode
+
+```bash
+uvicorn main:app --reload --port 5000
+```
+
+Access local interactive API docs at `http://localhost:5000/docs`.
+
+
+
+<!-- FILE: /docs/contributing/testing.md -->
+
+---
+id: "testing"
+title: "Testing Guidelines & Execution"
+sidebar_label: "Testing Guidelines"
+description: "How to run unit, integration, and architecture tests with pytest"
+---
+
+# Testing Guidelines & Execution
+
+Fonrex relies on `pytest` for unit, integration, and architectural verification.
+
+## Running Tests
+
+Execute the complete test suite:
+
+```bash
+pytest
+```
+
+### Run Specific Test Modules
+
+```bash
+# Test technical indicators engine
+pytest tests/test_technical_indicators.py
+
+# Test DCF valuation calculations
+pytest tests/test_dcf_service.py
+
+# Test News Aggregator & scrapers
+pytest tests/test_news_service.py
+
+# Test Provider Monitoring & Validation Layer
+pytest tests/test_monitoring.py
+```
+
+### Run Tests with Coverage Report
+
+```bash
+pytest --cov=. --cov-report=term-missing
+```
+
+## Writing Tests
+
+1. Place unit tests inside `tests/`. Name test files `test_*.py`.
+2. Use `pytest-mock` to mock external scraping network requests (`httpx`, `requests`, `yfinance`).
+3. Ensure no external web requests are made during unit test execution.
+
+
+
+<!-- FILE: /docs/deployment/database-migrations.md -->
+
+---
+id: "database-migrations"
+title: "Database Migrations in Production"
+sidebar_label: "Database Migrations"
+description: "How to safely apply Alembic database schema migrations in zero-downtime production environments"
+---
+
+# Database Migrations in Production
+
+Running database schema migrations safely in production requires isolating schema DDL operations from the application container lifecycle.
+
+## Safe Migration Workflow
+
+1. **Pre-Deployment Check**: Test migration scripts in a staging environment matching production TimescaleDB versions:
+   ```bash
+   alembic current
+   alembic heads
+   ```
+2. **Execute Migrations Before Code Rollout**:
+   Trigger the one-shot migration profile container:
+   ```bash
+   docker compose --profile migrate run --rm fonrex-migrate
+   ```
+3. **Deploy New API Containers**:
+   Once `alembic upgrade head` finishes successfully, update your API application image:
+   ```bash
+   docker compose up -d fonrex-api
+   ```
+4. **Rollback Strategy**:
+   If a migration fails, revert to the previous migration revision:
+   ```bash
+   docker compose --profile migrate run --rm fonrex-migrate alembic downgrade -1
+   ```
+
+
+
+<!-- FILE: /docs/deployment/docker.md -->
+
+---
+id: "docker"
+title: "Docker Production Deployment"
+sidebar_label: "Docker Deployment"
+description: "Production containerization, reverse proxy setup, and Docker Compose deployment patterns"
+---
+
+# Docker Production Deployment
+
+This guide outlines best practices for deploying Fonrex in production environments using Docker, NGINX, and TLS/SSL encryption.
+
+## Production `docker-compose.yml` Overrides
+
+Create a `docker-compose.prod.yml` file to tune resource limits and restart policies:
+
+```yaml
+version: '3.8'
+
+services:
+  fonrex-api:
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4096M
+        reservations:
+          cpus: '0.5'
+          memory: 1024M
+
+  fonrex-db:
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 4096M
+
+  fonrex-redis:
+    restart: always
+    command: redis-server --save 60 1 --loglevel notice --maxmemory 512mb --maxmemory-policy allkeys-lru
+```
+
+## Running Production Stack
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+```
+
+## NGINX Reverse Proxy Example
+
+```nginx
+server {
+    listen 443 ssl http2;
+    server_name api.fonrex.io;
+
+    ssl_certificate /etc/letsencrypt/live/api.fonrex.io/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/api.fonrex.io/privkey.pem;
+
+    location / {
+        proxy_pass http://127.0.0.1:5000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /ws/ {
+        proxy_pass http://127.0.0.1:5000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_set_header Host $host;
+    }
+}
+```
+
+
+
+<!-- FILE: /docs/deployment/environment-variables.md -->
+
+---
+id: "environment-variables"
+title: "Environment Variables Deployment Reference"
+sidebar_label: "Environment Variables"
+description: "Comprehensive deployment reference for all environment variables used by python modules"
+---
+
+# Environment Variables Deployment Reference
+
+Below is the complete inventory of environment variables referenced across all Fonrex Python modules (`os.getenv(...)`).
+
+## 1. Database & Persistence
+
+- `DATABASE_URL`: Full PostgreSQL connection URL.
+- `ASYNC_DATABASE_URL`: AsyncPG driver connection URL (derived automatically if empty).
+- `POSTGRES_DB`: PostgreSQL database name.
+- `POSTGRES_USER`: PostgreSQL username.
+- `POSTGRES_PASSWORD`: PostgreSQL password.
+
+## 2. In-Memory Cache & Pub/Sub
+
+- `REDIS_URL`: Connection string for Redis.
+- `CACHE_TTL`: Global default cache TTL in seconds.
+
+## 3. Web & Application Server
+
+- `FLASK_ENV` / `ENVIRONMENT`: Environment mode (`production`, `development`).
+- `SECRET_KEY`: Cryptographic signing secret.
+- `PORT`: HTTP listener port (default `5000`).
+
+## 4. Market Data & Streaming
+
+- `TV_MAX_CONNECTIONS`: Max WebSocket connections to TradingView.
+- `TV_RECONNECT_DELAY`: Initial delay for WebSocket reconnect backoff.
+- `REALTIME_QUOTE_TTL`: Snapshot TTL in Redis.
+- `REALTIME_AUTO_SUBSCRIBE`: Flag to enable auto-subscriptions on quote requests.
+
+## 5. Indicator Calculation
+
+- `TECHNICAL_CACHE_ENABLED`: Enable/disable Redis caching of indicator series.
+- `TECHNICAL_DEFAULT_LIMIT`: Default OHLCV window size.
+- `TECHNICAL_MAX_BATCH_TICKERS`: Max tickers per batch API call.
+- `TECHNICAL_MAX_BATCH_INDICATORS`: Max indicators per batch call.
+
+## 6. Provider Quality & Health
+
+- `VALIDATION_OUTLIER_THRESHOLD`: Max allowed consensus deviation (e.g. `0.50`).
+- `VALIDATION_MIN_PROVIDERS`: Minimum provider count for consensus calculation.
+- `CANARY_RUN_HOUR`: Hour UTC to trigger daily canary checks (0-23).
+- `CANARY_PROVIDER_SEMAPHORE`: Max parallel canary check workers.
+
+
+
+<!-- FILE: /docs/deployment/production-checklist.md -->
+
+---
+id: "production-checklist"
+title: "Production Deployment Checklist"
+sidebar_label: "Production Checklist"
+description: "Mandatory security, performance, monitoring, and database backup checklist before going live"
+---
+
+# Production Deployment Checklist
+
+Before going live with a production Fonrex instance, verify every item on this checklist:
+
+## 🔒 Security & Environment
+- [ ] Changed default PostgreSQL password in `.env` (`POSTGRES_PASSWORD`).
+- [ ] Changed `SECRET_KEY` in `.env` to a cryptographically random 64-character string.
+- [ ] Ensured `SEC_EDGAR_EMAIL` contains a valid corporate contact email.
+- [ ] Restricted access to PostgreSQL port `5432` and Redis port `6379` via firewall rules (only accessible internally to `fonrex-api`).
+- [ ] Configured TLS 1.3 / SSL certificates on NGINX / reverse proxy.
+
+## ⚡ Performance & Caching
+- [ ] Verified Redis memory policy is set to `maxmemory-policy allkeys-lru`.
+- [ ] Configured PostgreSQL `shared_buffers` and `work_mem` for TimescaleDB workloads.
+- [ ] Verified TimescaleDB intraday automatic retention chunk purges are operational.
+
+## Health Monitoring & Backups
+- [ ] Tested `/health` and `/health/providers` API endpoints.
+- [ ] Configured daily `pg_dump` backups for `assets`, `asset_listings`, and `fundamentals` tables.
+- [ ] Verified daily Canary checks run automatically at 06:00 UTC.
+
+
+
+<!-- FILE: /docs/getting-started/configuration.md -->
+
+---
+id: "configuration"
+title: "System Configuration"
+sidebar_label: "Configuration"
+description: "Complete reference of Fonrex environment variables and runtime settings"
+---
+
+# System Configuration
+
+Fonrex is configured using environment variables specified in `.env`. Below is the complete table of supported variables categorized by application subsystem.
+
+## Database & Cache
+
+| Variable | Default Value | Required | Description |
+|---|---|---|---|
+| `DATABASE_URL` | `postgresql://fonrex:fonrex_password@localhost:5432/fonrex` | ✅ | Primary PostgreSQL/TimescaleDB connection string |
+| `ASYNC_DATABASE_URL` | Auto-derived from `DATABASE_URL` | ❌ | AsyncPG connection string for asynchronous workers |
+| `POSTGRES_DB` | `fonrex` | ✅ | PostgreSQL database name |
+| `POSTGRES_USER` | `fonrex` | ✅ | PostgreSQL username |
+| `POSTGRES_PASSWORD` | `fonrex_password` | ✅ | PostgreSQL password |
+| `REDIS_URL` | `redis://localhost:6379/0` | ✅ | Redis instance URL |
+| `CACHE_TTL` | `300` | ❌ | Default API cache TTL in seconds (5 minutes) |
+
+## Specialized Data Providers
+
+| Variable | Default Value | Required | Description |
+|---|---|---|---|
+| `OPENFIGI_API_KEY` | `""` | ❌ | Optional OpenFIGI API key for higher rate limits |
+| `SEC_EDGAR_EMAIL` | `contact@fonrex.io` | ✅ | Contact email sent in HTTP User-Agent header to SEC EDGAR |
+
+## Historical Ingestion
+
+| Variable | Default Value | Required | Description |
+|---|---|---|---|
+| `INGEST_CONCURRENCY` | `5` | ❌ | Number of parallel worker threads during bulk ingestion |
+| `INGEST_YF_DELAY` | `0.5` | ❌ | Delay in seconds between consecutive Yahoo Finance requests |
+| `INGEST_TV_DELAY` | `2.0` | ❌ | Delay in seconds between TradingView historical requests |
+| `INGEST_BATCH_SIZE` | `1000` | ❌ | Batch size for SQL `INSERT ... ON CONFLICT` statements |
+
+## Realtime Streaming
+
+| Variable | Default Value | Required | Description |
+|---|---|---|---|
+| `TV_MAX_CONNECTIONS` | `10` | ❌ | Maximum simultaneous TradingView WebSocket connections |
+| `TV_RECONNECT_DELAY` | `5` | ❌ | Initial reconnect delay in seconds (exponential backoff) |
+| `REALTIME_QUOTE_TTL` | `60` | ❌ | Redis TTL for realtime quote snapshots in seconds |
+| `REALTIME_AUTO_SUBSCRIBE` | `true` | ❌ | Automatically start WebSocket stream when requesting `/quote/{ticker}` |
+
+## Technical Indicators
+
+| Variable | Default Value | Required | Description |
+|---|---|---|---|
+| `TECHNICAL_CACHE_ENABLED` | `true` | ❌ | Enable Redis caching for technical indicator calculations |
+| `TECHNICAL_DEFAULT_LIMIT` | `500` | ❌ | Default number of candles retrieved for indicator math |
+| `TECHNICAL_MAX_BATCH_TICKERS` | `20` | ❌ | Maximum tickers per `/technical/batch` request |
+| `TECHNICAL_MAX_BATCH_INDICATORS` | `10` | ❌ | Maximum indicators per `/technical/batch` request |
+
+## News Aggregator
+
+| Variable | Default Value | Required | Description |
+|---|---|---|---|
+| `NEWS_CACHE_TTL` | `1800` | ❌ | Redis TTL for news feed results in seconds (30 min) |
+| `NEWS_DEFAULT_LIMIT` | `20` | ❌ | Default article limit per news query |
+| `NEWS_MAX_LIMIT` | `100` | ❌ | Maximum allowed articles per request |
+| `NEWS_PROVIDERS_TIMEOUT` | `10` | ❌ | Global timeout for provider scraping requests in seconds |
+| `NEWS_DEDUP_SIMILARITY` | `0.85` | ❌ | SequenceMatcher similarity threshold for title deduplication |
+
+## Valuation (DCF)
+
+| Variable | Default Value | Required | Description |
+|---|---|---|---|
+| `DCF_CACHE_TTL` | `21600` | ❌ | Redis TTL for DCF valuations in seconds (6 hours) |
+| `DCF_DEFAULT_PROJECTION_YEARS` | `5` | ❌ | Default cash flow projection window in years |
+| `DCF_RISK_FREE_RATE` | `0.04` | ❌ | Default risk-free rate (e.g. 4.0% US 10Y Treasury) |
+| `DCF_EQUITY_RISK_PREMIUM` | `0.055` | ❌ | Default equity risk premium (5.5%) |
+| `DCF_TERMINAL_GROWTH_RATE` | `0.025` | ❌ | Default terminal growth rate (2.5%) |
+
+## Provider Monitoring & Health
+
+| Variable | Default Value | Required | Description |
+|---|---|---|---|
+| `VALIDATION_OUTLIER_THRESHOLD` | `0.50` | ❌ | Consensus deviation threshold (50%) to flag outliers |
+| `VALIDATION_MIN_PROVIDERS` | `2` | ❌ | Minimum agreeing providers required for consensus check |
+| `CANARY_RUN_HOUR` | `6` | ❌ | Daily UTC hour to trigger Canary health suite (0-23) |
+| `CANARY_PROVIDER_SEMAPHORE` | `3` | ❌ | Concurrency limit for canary checks |
+| `ALERT_CANARY_CRITICAL` | `3` | ❌ | Consecutive failed canary checks before critical alert |
+| `ALERT_SUCCESS_RATE_CRITICAL` | `0.70` | ❌ | Provider success rate threshold for critical alert |
+| `ALERT_SUCCESS_RATE_WARNING` | `0.85` | ❌ | Provider success rate threshold for warning alert |
+
+
+
+<!-- FILE: /docs/getting-started/docker-compose.md -->
+
+---
+id: "docker-compose"
+title: "Docker Compose Topology"
+sidebar_label: "Docker Compose"
+description: "Container architecture, health checks, ports, volumes, and lifetime management"
+---
+
+# Docker Compose Topology
+
+Fonrex relies on Docker Compose to orchestrate its multi-service runtime. The architecture isolates backend logic, database persistence, caching, and schema migrations.
+
+## Container Architecture
+
+```
+┌───────────────────────────────────────────────────────────┐
+│                      docker-compose                       │
+│                                                           │
+│  ┌─────────────────┐ ┌─────────────────┐ ┌─────────────┐  │
+│  │   fonrex-api    │ │   fonrex-db     │ │fonrex-redis │  │
+│  │ (FastAPI:5000)  │ │ (TimescaleDB)   │ │  (Redis:7)  │  │
+│  └────────┬────────┘ └────────┬────────┘ └──────┬──────┘  │
+│           │                   │                 │         │
+│           └───────────────────┴─────────────────┘         │
+│                               │                           │
+│                      ┌────────┴────────┐                  │
+│                      │ fonrex-migrate  │                  │
+│                      │  (Alembic CLI)  │                  │
+│                      └─────────────────┘                  │
+└───────────────────────────────────────────────────────────┘
+```
+
+## Service Breakdown
+
+### 1. `fonrex-api`
+- **Container Image**: Custom Python 3.12 (`Dockerfile`)
+- **Port Exposure**: `5000:5000`
+- **Command**: `gunicorn -k uvicorn.workers.UvicornWorker main:app`
+- **Role**: Serves REST endpoints, WebSocket connections, background ingestion tasks, provider monitoring, and DCF calculations.
+
+### 2. `fonrex-db`
+- **Container Image**: `timescale/timescaledb-ha:pg16`
+- **Port Exposure**: `5432:5432`
+- **Volume Mount**: `postgres_data:/var/lib/postgresql/data`
+- **Role**: Primary database holding canonical assets, listings, historical EOD prices, intraday hypertables, fundamentals, news, and health logs.
+
+### 3. `fonrex-redis`
+- **Container Image**: `redis:7-alpine`
+- **Port Exposure**: `6379:6379`
+- **Command**: `redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru`
+- **Role**: High-speed cache for quotes, indicator computations, news feeds, DCF metrics, and WebSocket Pub/Sub broker.
+
+### 4. `fonrex-migrate`
+- **Container Image**: Custom Python 3.12 (`Dockerfile`)
+- **Profiles**: `["migrate"]`
+- **Command**: `alembic upgrade head`
+- **Role**: Isolated one-shot container executing schema migrations safely before application startup.
+
+## Common Operations
+
+### Start Stack
+```bash
+docker compose up -d
+```
+
+### View Live API Logs
+```bash
+docker compose logs -f fonrex-api
+```
+
+### Run Database Migrations Manually
+```bash
+docker compose --profile migrate run --rm fonrex-migrate
+```
+
+### Stop & Remove Containers (Preserving Data)
+```bash
+docker compose down
+```
+
+### Reset All Data Volumes (Destructive)
+```bash
+docker compose down -v
+```
+
+
+
+<!-- FILE: /docs/getting-started/first-api-call.md -->
+
+---
+id: "first-api-call"
+title: "Making Your First API Call"
+sidebar_label: "First API Call"
+description: "Learn how to retrieve financial data, technical indicators, and real-time streams using cURL, Python, and WebSocket clients"
+---
+
+# Making Your First API Call
+
+This guide demonstrates how to interact with Fonrex using REST HTTP endpoints and real-time WebSockets.
+
+## 1. Get EOD Price History
+
+Retrieve End-of-Day (EOD) OHLCV historical prices for **Airbus SE (`AIR.PA`)**.
+
+### cURL
+```bash
+curl -s "http://localhost:5000/eod/AIR.PA?resolution=d&limit=5"
+```
+
+### Python
+```python
+import requests
+
+url = "http://localhost:5000/eod/AIR.PA"
+params = {"resolution": "d", "limit": 5}
+response = requests.get(url, params=params)
+
+data = response.json()
+print(f"Ticker: {data['symbol']}, Total Candles: {len(data['data'])}")
+for bar in data['data']:
+    print(f"Date: {bar['time']} | Close: {bar['close']} {data['currency']}")
+```
+
+### Sample Response
+```json
+{
+  "symbol": "AIR.PA",
+  "name": "Airbus SE",
+  "currency": "EUR",
+  "resolution": "d",
+  "count": 5,
+  "data": [
+    {
+      "time": "2026-08-07T00:00:00Z",
+      "open": 134.20,
+      "high": 136.50,
+      "low": 133.80,
+      "close": 135.90,
+      "adj_close": 135.90,
+      "volume": 1245000
+    }
+  ]
+}
+```
+
+---
+
+## 2. Compute Technical Indicators
+
+Calculate a 14-period **RSI (Relative Strength Index)** for **Apple Inc. (`AAPL`)**.
+
+### cURL
+```bash
+curl -s "http://localhost:5000/technical/AAPL?indicator=rsi&period=14"
+```
+
+### Python
+```python
+import requests
+
+resp = requests.get("http://localhost:5000/technical/AAPL", params={"indicator": "rsi", "period": 14})
+rsi_data = resp.json()
+latest_rsi = rsi_data["values"][-1]
+print(f"AAPL Current RSI(14): {latest_rsi['value']:.2f}")
+```
+
+---
+
+## 3. Connect to Realtime WebSocket Stream
+
+Subscribe to live 1-minute candle ticks for **Tesla (`TSLA`)**.
+
+### JavaScript Browser / Node.js
+```javascript
+const ws = new WebSocket("ws://localhost:5000/ws/realtime/TSLA");
+
+ws.onopen = () => {
+  console.log("Connected to Fonrex Realtime Stream for TSLA");
+};
+
+ws.onmessage = (event) => {
+  const message = JSON.parse(event.data);
+  console.log("Stream Event:", message.type, message.data);
+};
+```
+
+### Python WebSocket Client
+```python
+import asyncio
+import websockets
+import json
+
+async def stream_quote():
+    async with websockets.connect("ws://localhost:5000/ws/realtime/TSLA") as websocket:
+        while True:
+            msg = await websocket.recv()
+            data = json.loads(msg)
+            print(f"[{data['type']}] Close: {data['data'].get('close')} Volume: {data['data'].get('volume')}")
+
+asyncio.run(stream_quote())
+```
+
+
+
+<!-- FILE: /docs/getting-started/installation.md -->
+
+---
+id: "installation"
+title: "Installation Guide"
+sidebar_label: "Installation"
+description: "How to install and run Fonrex using Docker and Docker Compose"
+---
+
+# Installation Guide
+
+This guide walks you through setting up a self-hosted instance of Fonrex using Docker Compose.
+
+## System Requirements
+
+- **Operating System**: Linux, macOS, or Windows with WSL2
+- **Container Runtime**: Docker Engine 24.0+ and Docker Compose v2.20+
+- **Minimum System Resources**:
+  - CPU: 2 Cores
+  - RAM: 4 GB RAM (8 GB recommended for heavy ingestion workloads)
+  - Storage: 10 GB SSD space (dependent on historical tick data volume)
+
+## Step-by-Step Installation
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/fonrex/fonrex.git
+cd fonrex
+```
+
+### 2. Configure Environment Variables
+
+Create your local `.env` configuration file from the template:
+
+```bash
+cp .env.example .env
+```
+
+Default settings are optimized for local development. For production deployments, update database passwords and secret keys.
+
+### 3. Launch Services via Docker Compose
+
+Run the multi-container stack in detached mode:
+
+```bash
+docker compose up -d
+```
+
+This starts four services:
+- `fonrex-api`: FastAPI backend running on port `5000`
+- `fonrex-db`: PostgreSQL 16 with TimescaleDB HA extension on port `5432`
+- `fonrex-redis`: Redis 7 in-memory cache on port `6379`
+- `fonrex-migrate`: One-shot migration container running `alembic upgrade head`
+
+### 4. Verify System Health
+
+Check that the API and backing services are fully operational:
+
+```bash
+curl "http://localhost:5000/health"
+```
+
+Expected JSON response:
+```json
+{
+  "status": "healthy",
+  "database": "connected",
+  "redis": "connected"
+}
+```
+
+### 5. Import Initial Asset Universe
+
+Seed your local database with financial instruments and listings from CSV data:
+
+```bash
+docker compose exec fonrex-api python import_assets.py --file etf.csv
+```
+
+Your API is now ready to serve financial data!
+
+
+
+<!-- FILE: /docs/guides/adding-providers.md -->
+
+---
+id: "adding-providers"
+title: "Guide: Adding a Custom Financial Provider"
+sidebar_label: "Adding a Custom Provider"
+description: "Step-by-step tutorial for creating, registering, and testing a custom financial data provider"
+---
+
+# Guide: Adding a Custom Financial Provider
+
+This guide walks you through implementing a new asynchronous financial provider in Fonrex.
+
+## 1. Create Provider File
+
+Create a new file under `financials/providers/myprovider_provider.py`:
+
+```python
+import logging
+from financials.providers.base import BaseFinancialProvider
+
+logger = logging.getLogger(__name__)
+
+class MyProviderProvider(BaseFinancialProvider):
+    name = "MyProvider"
+    timeout = 8.0  # Network timeout in seconds
+
+    async def fetch(self, ticker: str = None, isin: str = None, **kwargs) -> dict:
+        """
+        Fetch fundamental metrics for a given ticker or ISIN.
+        Return a normalized dictionary of financial indicators.
+        """
+        search_term = ticker or isin
+        if not search_term:
+            return {}
+
+        url = f"https://api.example.com/data/{search_term}"
+        try:
+            response_json = await self._get_json(url)
+            return self._parse(response_json)
+        except Exception as exc:
+            logger.warning("[%s] Failed to fetch data for %s: %s", self.name, search_term, exc)
+            return {}
+
+    def _parse(self, data: dict) -> dict:
+        return {
+          "pe_ratio": data.get("pe"),
+          "dividend_yield": data.get("div_yield"),
+          "market_cap": data.get("mcap")
+        }
+```
+
+## 2. Register Provider in `main.py`
+
+Open `main.py` and register your new provider in the `configure_application_state` function:
+
+```python
+provider_specs = (
+    ("ZoneBourse", "financials.providers.ZoneBourse_provider", "ZoneBourseProvider"),
+    ("MyProvider", "financials.providers.myprovider_provider", "MyProviderProvider"),  # Added
+    ...
+)
+```
+
+## 3. Register Canary Health Test
+
+Add a synthetic test ticker to `monitoring/canary_catalog.py` to ensure your new provider is automatically checked every morning at 06:00 UTC by `CanaryMonitor`.
+
+## 4. Add Unit Tests
+
+Create a unit test in `tests/test_myprovider.py` mocking the HTTP client call:
+
+```python
+import pytest
+from financials.providers.myprovider_provider import MyProviderProvider
+
+@pytest.mark.asyncio
+async def test_myprovider_fetch(mocker):
+    provider = MyProviderProvider()
+    mocker.patch.object(provider, "_get_json", return_value={"pe": 15.4, "div_yield": 0.03})
+    
+    result = await provider.fetch(ticker="AAPL")
+    assert result["pe_ratio"] == 15.4
+    assert result["dividend_yield"] == 0.03
+```
+
+
+
+<!-- FILE: /docs/guides/backtesting-zipline.md -->
+
+---
+id: "backtesting-zipline"
+title: "Backtesting with Zipline & Backtrader"
+sidebar_label: "Backtesting Integration"
+description: "How to export Fonrex historical data for backtesting quantitative strategies with Zipline and Backtrader"
+---
+
+# Backtesting with Zipline & Backtrader
+
+Fonrex provides clean OHLCV historical feeds that can be ingested into Python backtesting frameworks such as **Backtrader** or **Zipline-reloaded**.
+
+## Fetching Data into Pandas DataFrames
+
+Using Python, fetch historical candles directly from Fonrex into a Pandas DataFrame formatted for backtesting:
+
+```python
+import pandas as pd
+import requests
+
+def fetch_fonrex_ohlcv(ticker: str, limit: int = 1000) -> pd.DataFrame:
+    url = f"http://localhost:5000/eod/{ticker}"
+    params = {"resolution": "d", "limit": limit, "format": "json"}
+    response = requests.get(url, params=params)
+    data = response.json()["data"]
+    
+    df = pd.DataFrame(data)
+    df["time"] = pd.to_datetime(df["time"])
+    df.set_index("time", inplace=True)
+    df.sort_index(inplace=True)
+    return df
+
+# Fetch Airbus SE daily prices
+df = fetch_fonrex_ohlcv("AIR.PA")
+print(df.tail())
+```
+
+## Integrating with Backtrader
+
+Pass the Fonrex DataFrame directly into Backtrader:
+
+```python
+import backtrader as bt
+
+class SmaCrossStrategy(bt.Strategy):
+    def __init__(self):
+        self.sma_fast = bt.indicators.SMA(period=10)
+        self.sma_slow = bt.indicators.SMA(period=30)
+        self.crossover = bt.indicators.CrossOver(self.sma_fast, self.sma_slow)
+
+    def next(self):
+        if not self.position and self.crossover > 0:
+            self.buy()
+        elif self.position and self.crossover < 0:
+            self.close()
+
+cerebro = bt.Cerebro()
+data_feed = bt.feeds.PandasData(dataname=df)
+cerebro.adddata(data_feed)
+cerebro.addstrategy(SmaCrossStrategy)
+cerebro.run()
+```
+
+
+
+<!-- FILE: /docs/guides/configure-realtime.md -->
+
+---
+id: "configure-realtime"
+title: "Realtime Streaming & WebSocket Setup"
+sidebar_label: "Realtime Streaming Setup"
+description: "How to configure TradingView WebSocket bridge streaming, Redis Pub/Sub, and TimescaleDB intraday persistence"
+---
+
+# Realtime Streaming & WebSocket Setup
+
+Fonrex includes a real-time market data streaming subsystem capable of maintaining active TradingView WebSocket connections, broadcasting price ticks through Redis Pub/Sub, and persisting 1-minute bars into TimescaleDB hypertables.
+
+## Architecture Data Flow
+
+```
+TradingView WebSocket Bridge
+           │
+           ▼
+  RealtimePriceWorker
+           │
+           ├─► Redis Pub/Sub (`price:{ticker}`) ──► ConnectionManager ──► WS Clients
+           ├─► Redis Key-Value (`quote:{ticker}`) (Snapshot TTL)
+           └─► TimescaleDB `prices_intraday` Hypertable (1-min candles)
+```
+
+## Key Configuration Variables
+
+Ensure the following variables are set in `.env`:
+
+```env
+# Maximum concurrent TradingView WebSocket connections
+TV_MAX_CONNECTIONS=10
+
+# Reconnection delay in seconds
+TV_RECONNECT_DELAY=5
+
+# Redis TTL for quote snapshots (seconds)
+REALTIME_QUOTE_TTL=60
+
+# Auto-subscribe when calling GET /quote/{ticker}
+REALTIME_AUTO_SUBSCRIBE=true
+```
+
+## Subscribing via REST API
+
+Start background streaming for an asset programmatically:
+
+```bash
+curl -X POST "http://localhost:5000/realtime/subscribe" \
+     -H "Content-Type: application/json" \
+     -d '{"ticker": "AIR.PA"}'
+```
+
+Check active subscriptions:
+
+```bash
+curl "http://localhost:5000/realtime/status"
+```
+
+
+
+<!-- FILE: /docs/guides/import-assets.md -->
+
+---
+id: "import-assets"
+title: "Asset CSV Import Pipeline Guide"
+sidebar_label: "CSV Asset Import"
+description: "How to seed and enrich your asset universe using the ISIN-deduplicated CSV pipeline"
+---
+
+# Asset CSV Import Pipeline Guide
+
+Fonrex includes a dedicated asset ingestion pipeline (`import_assets.py`) designed to seed instruments, listings, and provider mappings from CSV files located in `data/isin_data/`.
+
+## Workflow Overview
+
+```
+CSV File (data/isin_data/*.csv)
+       │
+       ▼
+parse_csv() ──► Validates ISIN, ticker length, currency code
+       │        Deduplicates on (isin, ticker, currency)
+       ▼
+AssetImporter.run()
+       │
+       ├─► _upsert_asset()          (1 Asset per ISIN)
+       ├─► _upsert_listing()        (1 AssetListing per ticker/exchange)
+       └─► _create_default_mappings()(Yahoo & Google Finance mappings)
+```
+
+## Running the Pipeline
+
+Execute the pipeline inside the `fonrex-api` container:
+
+### 1. Standard Asset Import
+
+```bash
+docker compose exec fonrex-api python import_assets.py --file etf.csv
+```
+
+### 2. Dry Run Simulation (No Database Writing)
+
+```bash
+docker compose exec fonrex-api python import_assets.py --file etf.csv --dry-run
+```
+
+### 3. Yahoo Profile & Logo Enrichment Only
+
+```bash
+docker compose exec fonrex-api python import_assets.py --enrich-only --limit 50
+```
+
+## Expected CSV Format
+
+Ensure input CSV files placed in `data/isin_data/` follow this header structure:
+
+```csv
+name,isin,ticker,exchange,currency,productType
+Airbus SE,NL0000235190,AIR.PA,XPAR,EUR,STOCK
+Apple Inc.,US0378331005,AAPL,NASDAQ,USD,STOCK
+iShares MSCI World,IE00B4L5Y983,CW8.PA,XPAR,EUR,ETF
+```
+
+
+
+<!-- FILE: /docs/guides/ingest-historical-data.md -->
+
+---
+id: "ingest-historical-data"
+title: "Ingesting Historical Market Data"
+sidebar_label: "Ingest Historical Data"
+description: "Guide to historical daily backfills, gap detection, and global database ingestion CLI"
+---
+
+# Ingesting Historical Market Data
+
+This guide covers how Fonrex handles historical EOD data ingestion, temporal gap detection, fallbacks, and global backfills.
+
+## The Ingestion Pipeline (`HistoricalIngestionService`)
+
+When an ingestion task is triggered (via API or CLI), `HistoricalIngestionService` performs 7 steps:
+
+1. **Listing Resolution**: Maps the requested ticker to its canonical asset ID and exchange listing.
+2. **Gap Detection**: Queries `prices_eod` to find missing date ranges. If data exists up to yesterday, ingestion is skipped (`status: up_to_date`).
+3. **Primary Extraction**: Fetches daily OHLCV bars asynchronously from Yahoo Finance.
+4. **Fallback Extraction**: If Yahoo Finance fails or returns incomplete bars, it seamlessly fails over to a TradingView WebSocket bridge.
+5. **Bar Normalization**: Validates positive prices, fixes inverted high/low boundaries, and cleans missing dates.
+6. **Batch Upsert**: Executes native PostgreSQL `INSERT ... ON CONFLICT (time, asset_id) DO UPDATE` in batches of 1,000 bars.
+7. **Cache Invalidation**: Scans and flushes all Redis historical cache keys for the ticker.
+
+## Ingesting All Tickers via CLI
+
+To backfill historical data for every financial asset stored in your database, run the `scripts/ingest_all.py` CLI utility:
+
+```bash
+docker compose exec fonrex-api python scripts/ingest_all.py
+```
+
+### Options
+
+```bash
+# Limit to 50 assets with 8 parallel concurrency workers
+docker compose exec fonrex-api python scripts/ingest_all.py --limit 50 --concurrency 8
+
+# Force re-ingestion of existing date ranges
+docker compose exec fonrex-api python scripts/ingest_all.py --force
+```
+
+
+
+<!-- FILE: /docs/intro.md -->
+
+---
+id: "intro"
+title: "Introduction to Fonrex"
+sidebar_label: "Introduction"
+description: "Overview of Fonrex open-source self-hosted financial data infrastructure API"
+---
+
+# Introduction to Fonrex
+
+Fonrex is an open-source, self-hosted FastAPI infrastructure for market data, fundamental financials, technical indicators, news aggregation, DCF valuations, and real-time provider health monitoring. Built on top of Python 3.12, PostgreSQL/TimescaleDB, and Redis, Fonrex bridges the gap between institutional-grade financial feeds and self-hosted developer workflows.
+
+Designed with hexagonal architecture principles, Fonrex provides a robust API for quantitative analysts, algorithm traders, and financial applications. It unifies scattered data providers into standardized REST and WebSocket interfaces while ensuring continuous provider validation and fallback logic.
+
+Fonrex is distributed under the **AGPL-3.0** open-source license, giving you full control over your financial data pipeline without API rate-limit lock-ins or costly per-request pricing models.
+
+## Fonrex vs. Commercial Market Data Providers
+
+| Feature | Fonrex Pro | FMP Premium / Commercial APIs |
+|---|---|---|
+| **Hosting** | Self-hosted (Docker) | Cloud SaaS |
+| **Pricing** | Free & Open Source (AGPL-3.0) | $50 – $500+ / month |
+| **Data Storage** | PostgreSQL + TimescaleDB Hypertables | Vendor Managed |
+| **Realtime Streaming** | Native WebSocket + Redis Pub/Sub | Restricted / Upcharge |
+| **Multi-Provider Fallback** | Automated (14+ Fundamentals, 7+ News) | Single Vendor Dependency |
+| **Custom Indicators** | 18+ Built-in + Custom Pandas-TA Engine | Limited API Parameters |
+| **DCF & Valuation** | Custom WACC, FCF, EPS & DDM Models | Black-box / Static Metrics |
+| **Data Quality Check** | Real-time Consensus & Daily Canary Monitors | Proprietary SLA |
+
+## Quick Start (4 Commands)
+
+Deploy a complete Fonrex instance with historical storage, Redis cache, and live API endpoints in 4 simple commands:
+
+```bash
+git clone https://github.com/fonrex/fonrex.git
+cd fonrex
+cp .env.example .env
+docker compose up -d
+```
+
+Verify that your local instance is up and running:
+
+```bash
+curl http://localhost:5000/health
+```
+
+Output:
+```json
+{
+  "status": "healthy",
+  "database": "connected",
+  "redis": "connected",
+  "alembic_version": "011_provider_monitoring"
+}
+```
+
+
+
+<!-- FILE: /docs/monitoring/alerts.md -->
+
+---
+id: "alerts"
+title: "Provider Alerts & Resolution"
+sidebar_label: "Alerts & Resolution"
+description: "Alert classification, severity levels, auto-resolution, and manual resolution workflows"
+---
+
+# Provider Alerts & Resolution
+
+Fonrex automatically creates alerts when provider metrics drop below acceptable health thresholds.
+
+## Alert Typology
+
+| Alert Type | Trigger Condition | Severity | Auto-Resolution |
+|---|---|---|---|
+| `canary_failed` | Provider fails 3 consecutive daily synthetic canary checks | `critical` | ✅ Yes (when next canary succeeds) |
+| `low_success_rate` | Provider 24h success rate drops below 70% | `critical` | ✅ Yes (when success rate > 85%) |
+| `high_outlier_rate` | Over 30% of returned values flagged as consensus outliers | `warning` | ❌ Manual |
+| `latency_spike` | Average provider latency exceeds 3000ms | `warning` | ✅ Yes (when latency < 1500ms) |
+
+## Resolving Alerts Manually
+
+To resolve active warning or critical alerts manually via the REST API:
+
+```bash
+curl -X POST "http://localhost:5000/health/alerts/42/resolve" \
+     -H "Content-Type: application/json" \
+     -d '{"resolution_note": "Upstream HTML layout updated and parser fixed."}'
+```
+
+
+
+<!-- FILE: /docs/monitoring/canary-monitor.md -->
+
+---
+id: "canary-monitor"
+title: "Canary Monitor Suite"
+sidebar_label: "Canary Monitor"
+description: "Daily automated synthetic provider testing, execution scheduling, and metrics aggregation"
+---
+
+# Canary Monitor Suite
+
+The `CanaryMonitor` (`monitoring/canary_monitor.py`) executes automated synthetic queries against all registered providers to monitor provider health, detect upstream DOM/API changes, and generate quality metrics.
+
+## Scheduling
+
+The Canary suite is scheduled daily using `AsyncIOScheduler` (APScheduler):
+
+- **Default Execution Time**: `06:00 UTC` (configurable via `CANARY_RUN_HOUR`).
+- **Concurrency Control**: Semaphore limited to `CANARY_PROVIDER_SEMAPHORE` (default 3 concurrent checks).
+
+## Synthetic Check Workflow
+
+```
+06:00 UTC APScheduler Trigger
+           │
+           ▼
+CanaryMonitor.run_all()
+           │
+           ├─► For each provider in Canary Catalog (monitoring/canary_catalog.py):
+           │    ├── Executes synthetic fetch against benchmark assets (e.g. AAPL, AIR.PA)
+           │    ├── Verifies response latency and HTTP status code
+           │    └── Logs result into TimescaleDB `provider_health_log`
+           │
+           ▼
+CanaryMonitor.aggregate_daily()
+           │ Calculates 24h success rate, avg latency, and canary_passed flag
+           ▼
+Upsert into `provider_health_daily`
+           │
+           ▼
+Check Alert Thresholds ──► Trigger `provider_alerts` if critical
+```
+
+
+
+<!-- FILE: /docs/monitoring/validation-layer.md -->
+
+---
+id: "validation-layer"
+title: "Validation Layer Architecture"
+sidebar_label: "Validation Layer"
+description: "Real-time consensus validation, numerical range boundaries, and outlier rejection algorithms"
+---
+
+# Validation Layer Architecture
+
+The `ValidationLayer` (`monitoring/validation_layer.py`) provides real-time data sanity checking on provider responses before metrics are exposed via the API.
+
+## Range Checks (`FIELD_RANGES`)
+
+Every incoming numerical metric is validated against absolute domain boundaries:
+
+| Field Name | Minimum Allowed | Maximum Allowed | Unit / Description |
+|---|---|---|---|
+| `pe_ratio` | `-500.0` | `2000.0` | Price to Earnings ratio |
+| `dividend_yield` | `0.0` | `0.40` | Dividend yield (0% to 40%) |
+| `beta` | `-5.0` | `10.0` | Market Beta |
+| `roe` | `-5.0` | `5.0` | Return on Equity (-500% to +500%) |
+| `roa` | `-5.0` | `5.0` | Return on Assets |
+| `market_cap` | `1,000,000` | `10,000,000,000,000` | Market Capitalization in local currency |
+
+Values falling outside these bounds are discarded and replaced with `None`.
+
+## Inter-Provider Consensus Check
+
+When 2 or more providers supply a numerical value for the same field:
+
+1. The median value across all agreeing providers is computed: `M = median(V_1, V_2, ..., V_k)`.
+2. For each provider value `V_i`, the absolute percentage deviation is calculated:
+   `deviation = |V_i - M| / M`
+3. If `deviation > VALIDATION_OUTLIER_THRESHOLD` (default `0.50` or 50%), `V_i` is flagged as an **outlier**, logged in `provider_health_log`, and set to `None`.
+
+
+
+<!-- FILE: /docs/providers/adding-custom-provider.md -->
+
+---
+id: "adding-custom-provider"
+title: "Custom Provider Implementation Reference"
+sidebar_label: "Custom Provider Code"
+description: "Code reference skeleton for implementing custom BaseFinancialProvider classes"
+---
+
+# Custom Provider Implementation Reference
+
+Below is the complete skeleton code for creating custom financial scrapers by extending `BaseFinancialProvider`.
+
+```python
+from financials.providers.base import BaseFinancialProvider
+import logging
+
+logger = logging.getLogger(__name__)
+
+class CustomFinancialProvider(BaseFinancialProvider):
+    name = "CustomProvider"
+    timeout = 8.0  # HTTP request timeout in seconds
+
+    async def fetch(self, ticker: str = None, isin: str = None, **kwargs) -> dict:
+        """
+        Main asynchronous entrypoint called by FinancialProviderRunner.
+        """
+        search_target = ticker or isin
+        if not search_target:
+            return {}
+
+        url = f"https://example.com/api/fundamentals/{search_target}"
+        try:
+            # Use self._get_json() or self._get_html() from BaseFinancialProvider
+            data = await self._get_json(url)
+            return self._parse(data, search_target)
+        except Exception as exc:
+            logger.warning("[%s] Scraping error for %s: %s", self.name, search_target, exc)
+            return {}
+
+    def _parse(self, data: dict, ticker: str) -> dict:
+        """
+        Map provider fields to standard Fonrex dictionary keys.
+        """
+        return {
+            "pe_ratio": data.get("pe"),
+            "dividend_yield": data.get("divYield"),
+            "market_cap": data.get("marketCap"),
+            "ebitda": data.get("ebitda"),
+            "net_debt": data.get("netDebt")
+        }
+```
+
+
+
+<!-- FILE: /docs/providers/fundamentals-providers.md -->
+
+---
+id: "fundamentals-providers"
+title: "Fundamental Providers List"
+sidebar_label: "Fundamentals Providers"
+description: "Complete listing of fundamental financial providers, data metrics, regional coverage, and languages"
+---
+
+# Fundamental Providers List
+
+Below is the complete matrix of fundamental data providers built into Fonrex:
+
+| Provider Name | Extracted Financial Metrics | Coverage Region | Language |
+|---|---|---|---|
+| **ZoneBourse** | P/E ratio, Dividend yield, Net debt, ESG rating, Sector | Europe / France | FR |
+| **Gurufocus** | Piotroski F-Score, Beneish M-Score, ROIC, WACC, Margin of Safety | Global (US/EU/Asia) | EN |
+| **YahooFinance** | Market cap, Enterprise Value, Beta, 52-week High/Low, Forward P/E | Global | EN |
+| **GoogleFinance** | Real-time quote delay, Market cap, P/E ratio | Global | EN/FR |
+| **Boursorama** | Consensus analysts, Target price, Earnings dates | France / Euronext | FR |
+| **Barrons** | Analyst price targets, Valuation multiples | US | EN |
+| **WallStreetJournal** | Financial ratios, Balance sheet summary | Global / US | EN |
+| **MarketWatch** | Key statistics, Short interest, Float | Global / US | EN |
+| **MorningStar** | Fair value estimate, Economic moat rating, Star rating | Global | EN |
+| **Investing.com** | Technical consensus, Pivot points, Dividend history | Global | Multi |
+| **Fortuneo** | Euronext Paris consensus & dividends | France | FR |
+| **BourseDirect** | Euronext stock highlights | France | FR |
+| **MSN Finance** | Fundamental key figures, Historical EPS | Global | Multi |
+| **Investir Les Echos** | French market fundamentals & target prices | France | FR |
+
+
+
+<!-- FILE: /docs/providers/news-providers.md -->
+
+---
+id: "news-providers"
+title: "News Aggregator Providers"
+sidebar_label: "News Providers"
+description: "Documentation for the 7 financial news web scraper modules and deduplication logic"
+---
+
+# News Aggregator Providers
+
+The `NewsService` module aggregates news articles from 7 scraping connectors:
+
+## Provider Scraper Matrix
+
+| Scraper Module | Provider Name | Method | Language | Deduplication Key |
+|---|---|---|---|---|
+| `yfinance_news.py` | Yahoo Finance | JSON API (`ticker.news`) | `en` | URL |
+| `google_finance_news.py` | Google Finance | HTML / Embedded JSON | `en` | URL |
+| `zonebourse_news.py` | ZoneBourse | HTML BeautifulSoup | `fr` | URL |
+| `boursorama_news.py` | Boursorama | HTML BeautifulSoup | `fr` | URL |
+| `investing_news.py` | Investing.com | HTML Scraper | `en` | URL |
+| `marketwatch_news.py` | MarketWatch | HTML Scraper | `en` | URL |
+| `msn_finance_news.py` | MSN Finance | JSON API Endpoint | `en` / `fr` | URL |
+
+## News Deduplication Engine
+
+To eliminate cross-posted articles across multiple news outlets, Fonrex enforces a two-tier deduplication algorithm:
+
+1. **Exact URL Deduplication**: Database unique constraint `ON CONFLICT (url) DO UPDATE` in table `news_articles`.
+2. **Title Similarity Matching**: Before inserting new articles into the database feed, Fonrex compares article titles using Python's `difflib.SequenceMatcher`. Titles with a similarity ratio exceeding `NEWS_DEDUP_SIMILARITY` (default `0.85`) are merged under the earliest publication timestamp.
+
+
+
+<!-- FILE: /docs/providers/overview.md -->
+
+---
+id: "overview"
+title: "Providers Architecture Overview"
+sidebar_label: "Overview"
+description: "Overview of multi-provider scraping architecture, timeouts, parallel execution, and consensus filtering"
+---
+
+# Providers Architecture Overview
+
+Fonrex uses a distributed multi-provider scraping architecture to aggregate market indicators, fundamental statistics, and financial news without reliance on a single upstream vendor.
+
+## Execution Flow
+
+```
+GET /fundamental?ticker=AIR.PA
+       │
+       ▼
+FinancialProviderRunner.run()
+       │
+       ├─► Asynchronous Parallel Scraping (asyncio.gather)
+       │    ├── ZoneBourse.fetch()       (Timeout: 8s)
+       │    ├── Gurufocus.fetch()        (Timeout: 8s)
+       │    ├── YahooFinance.fetch()     (Timeout: 5s)
+       │    └── MorningStar.fetch()      (Timeout: 8s)
+       │
+       ▼
+ValidationLayer.validate_results()
+       │ Outlier Check & Range Limits (min/max boundaries)
+       ▼
+StandardFinancials Formatter
+       │ Merges validated metrics across providers
+       ▼
+HTTP JSON Response
+```
+
+## Resilience Strategy
+
+1. **Non-Blocking Gather**: Providers execute in parallel via `asyncio.gather(..., return_exceptions=True)`. A failure or timeout in one provider (e.g. ZoneBourse) does not affect the remaining providers.
+2. **Provider Mapping Fallbacks**: Resolves search parameters in this priority order: `provider_url` ➔ `provider_ticker` ➔ `ISIN` ➔ `ticker`.
+3. **Consensus Outlier Filtering**: The `ValidationLayer` filters out anomalous metrics returned by individual providers before merging responses.
