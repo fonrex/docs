@@ -36,7 +36,7 @@ const config: Config = {
       {
         docs: {
           sidebarPath: './sidebars.ts',
-          editUrl: 'https://github.com/fonrex/fonrex/tree/main/documentation/',
+          editUrl: 'https://github.com/fonrex/docs/tree/main/',
           showLastUpdateTime: false,
           showLastUpdateAuthor: false,
         },
