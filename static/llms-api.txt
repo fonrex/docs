@@ -1,0 +1,965 @@
+# Fonrex Documentation - API Content Dump
+
+> Complete concatenated documentation for LLMs
+
+---
+
+
+
+<!-- FILE: /docs/api-reference/assets.md -->
+
+---
+id: "assets"
+title: "Asset & Listing API Reference"
+sidebar_label: "Assets & Listings"
+description: "Documentation for asset identity resolution, listings, and EOD history endpoints"
+---
+
+# Asset & Listing API Reference
+
+The Asset API manages financial instrument identities, exchange listings, and multi-format EOD history retrieval.
+
+---
+
+## <span className="api-method get">GET</span> `/assets/by-isin/{isin}`
+
+Retrieve a canonical asset instrument and all its active exchange listings by ISIN code.
+
+### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `isin` | `string` | ✅ | — | 12-character ISIN code (e.g. `NL0000235190`) |
+
+### Response Example
+
+```json
+{
+  "id": 42,
+  "isin": "NL0000235190",
+  "name": "Airbus SE",
+  "sector": "Industrials",
+  "industry": "Aerospace & Defense",
+  "quote_type": "EQUITY",
+  "listings": [
+    {
+      "id": 101,
+      "ticker": "AIR.PA",
+      "exchange": "XPAR",
+      "currency": "EUR",
+      "is_primary": true
+    },
+    {
+      "id": 102,
+      "ticker": "AIR.DE",
+      "exchange": "XETR",
+      "currency": "EUR",
+      "is_primary": false
+    }
+  ]
+}
+```
+
+### Examples
+
+#### cURL
+```bash
+curl -s "http://localhost:5000/assets/by-isin/NL0000235190"
+```
+
+#### Python
+```python
+import requests
+
+resp = requests.get("http://localhost:5000/assets/by-isin/NL0000235190")
+data = resp.json()
+print(f"Asset Name: {data['name']}, Listings Count: {len(data['listings'])}")
+```
+
+---
+
+## <span className="api-method get">GET</span> `/listings`
+
+Search exchange listings by ticker, ISIN, exchange, or currency.
+
+### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `ticker` | `string` | ❌ | — | Ticker symbol (e.g. `AAPL`) |
+| `isin` | `string` | ❌ | — | ISIN code |
+| `exchange` | `string` | ❌ | — | Exchange code (e.g. `XPAR`, `NASDAQ`) |
+| `currency` | `string` | ❌ | — | 3-letter currency code (e.g. `EUR`, `USD`) |
+| `limit` | `integer` | ❌ | `50` | Maximum results to return |
+
+---
+
+## <span className="api-method get">GET</span> `/eod/{ticker}`
+
+Retrieve End-of-Day (EOD) historical prices in JSON or CSV format. Auto-triggers historical ingestion if local data is missing.
+
+### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `ticker` | `string` | ✅ | — | Ticker symbol (e.g. `AIR.PA`, `AAPL`) |
+| `period` | `string` | ✅ | — | Historical period window (e.g. `1d`, `5d`, `1mo`, `1y`, `max`) |
+| `resolution` | `string` | ❌ | `d` | Candle resolution (`d`, `w`, `m`) |
+| `format` | `string` | ❌ | `json` | Output format (`json`, `csv`) |
+| `limit` | `integer` | ❌ | `100` | Number of historical bars to return |
+| `order` | `string` | ❌ | `asc` | Sort order by date (`asc`, `desc`) |
+
+### Status Codes
+
+| Code | Description |
+|---|---|
+| 200 | Success |
+| 404 | Asset/Listing not found |
+| 422 | Invalid parameter input |
+
+
+
+<!-- FILE: /docs/api-reference/fundamentals.md -->
+
+---
+id: "fundamentals"
+title: "Fundamental Financials API Reference"
+sidebar_label: "Fundamentals"
+description: "Endpoints for multi-provider fundamental metrics, financial statements, and valuation ratios"
+---
+
+# Fundamental Financials API Reference
+
+The Fundamentals API aggregates financial metrics, key statistics, balance sheets, income statements, cash flows, and analyst consensus across 14+ fundamental providers.
+
+---
+
+## <span className="api-method get">GET</span> `/fundamental`
+
+Aggregate key financial statistics (P/E ratio, Dividend Yield, Market Cap, Enterprise Value, Beta, ESG scores) across providers.
+
+### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `ticker` | `string` | ❌ | — | Ticker symbol (e.g. `TSLA`) |
+| `isin` | `string` | ❌ | — | ISIN code (e.g. `US88160R1014`) |
+| `exchange` | `string` | ❌ | — | Financial exchange code |
+| `currency` | `string` | ❌ | — | Currency filter |
+| `provider` | `string` | ❌ | — | Specific provider override (e.g. `ZoneBourse`, `Gurufocus`, `YahooFinance`) |
+
+### Response Example
+
+```json
+{
+  "asset_profile": {
+    "isin": "US88160R1014",
+    "name": "Tesla, Inc.",
+    "ticker": "TSLA",
+    "sector": "Consumer Cyclical"
+  },
+  "metrics": {
+    "market_cap": 750230000000,
+    "pe_ratio": 62.4,
+    "forward_pe": 48.1,
+    "dividend_yield": 0.0,
+    "beta": 2.34,
+    "price_to_sales": 7.82,
+    "roe": 0.194
+  },
+  "providers_used": ["ZoneBourse", "Gurufocus", "YahooFinance"]
+}
+```
+
+### Examples
+
+#### cURL
+```bash
+curl -s "http://localhost:5000/fundamental?ticker=TSLA"
+```
+
+#### Python
+```python
+import requests
+
+resp = requests.get("http://localhost:5000/fundamental", params={"ticker": "TSLA"})
+data = resp.json()
+print("Market Cap:", data["metrics"]["market_cap"])
+```
+
+---
+
+## <span className="api-method get">GET</span> `/fundamental/deep`
+
+Retrieve deep structured financial data including daily snapshots, financial statements, EPS earnings history, and analyst consensus ratings.
+
+### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `ticker` | `string` | ✅ | — | Ticker symbol (e.g. `AIR.PA`) |
+
+### Response Example
+
+```json
+{
+  "highlights": {
+    "pe_ratio": 28.5,
+    "enterprise_value": 110500000000,
+    "roe": 0.162,
+    "roa": 0.054
+  },
+  "financial_statements": [
+    {
+      "statement_type": "income",
+      "period_type": "annual",
+      "period_end": "2025-12-31",
+      "revenue": 65400000000,
+      "net_income": 4200000000
+    }
+  ],
+  "analyst_ratings": {
+    "consensus": "Buy",
+    "target_mean": 165.0,
+    "strong_buy": 12,
+    "buy": 8,
+    "hold": 4,
+    "sell": 1
+  }
+}
+```
+
+
+
+<!-- FILE: /docs/api-reference/historical.md -->
+
+---
+id: "historical"
+title: "Historical Ingestion API Reference"
+sidebar_label: "Historical Ingestion"
+description: "Endpoints for backfilling historical OHLCV data, bulk ingestion, and historical query routes"
+---
+
+# Historical Ingestion API Reference
+
+The Historical API provides methods to ingest, backfill, and query historical daily OHLCV bar data into TimescaleDB storage.
+
+---
+
+## <span className="api-method post">POST</span> `/historical/ingest`
+
+Trigger a single-asset historical ingestion or backfill.
+
+### Request Body
+
+```json
+{
+  "ticker": "BNP.PA",
+  "resolution": "d",
+  "from_date": "2020-01-01",
+  "to_date": "2026-08-01",
+  "force": false
+}
+```
+
+### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `ticker` | `string` | ✅ | — | Ticker symbol to ingest |
+| `resolution` | `string` | ❌ | `d` | Candle resolution (`d`, `w`, `m`) |
+| `from_date` | `string` | ❌ | — | Start date (`YYYY-MM-DD`) |
+| `to_date` | `string` | ❌ | — | End date (`YYYY-MM-DD`) |
+| `force` | `boolean` | ❌ | `false` | Re-download and overwrite existing database records |
+
+### Response Example
+
+```json
+{
+  "status": "success",
+  "ticker": "BNP.PA",
+  "records_added": 1650,
+  "source": "YahooFinance",
+  "duration_ms": 1240
+}
+```
+
+---
+
+## <span className="api-method post">POST</span> `/historical/ingest/bulk`
+
+Trigger bulk ingestion across multiple tickers with concurrency controls.
+
+### Request Body
+
+```json
+{
+  "tickers": ["AIR.PA", "BNP.PA", "TTE.PA", "MC.PA"],
+  "resolution": "d",
+  "concurrency": 4
+}
+```
+
+### Response Example
+
+```json
+{
+  "total": 4,
+  "successful": 4,
+  "failed": 0,
+  "details": [
+    { "ticker": "AIR.PA", "status": "success", "records_added": 250 },
+    { "ticker": "BNP.PA", "status": "success", "records_added": 250 }
+  ]
+}
+```
+
+---
+
+## <span className="api-method get">GET</span> `/ticker/{symbol}/history`
+
+Query historical OHLCV candles from the `prices_eod` table. Automatically ingests missing data if `auto_ingest=true`.
+
+### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `symbol` | `string` | ✅ | — | Instrument symbol |
+| `resolution` | `string` | ❌ | `d` | Resolution (`d`, `w`, `m`) |
+| `limit` | `integer` | ❌ | `500` | Number of historical bars |
+| `auto_ingest` | `boolean` | ❌ | `true` | Automatically backfill missing bars from yfinance |
+
+### Examples
+
+#### cURL
+```bash
+curl -s "http://localhost:5000/ticker/AAPL/history?limit=10"
+```
+
+#### Python
+```python
+import requests
+
+resp = requests.get("http://localhost:5000/ticker/AAPL/history", params={"limit": 10})
+bars = resp.json()["data"]
+print("Fetched bars:", len(bars))
+```
+
+
+
+<!-- FILE: /docs/api-reference/monitoring.md -->
+
+---
+id: "monitoring"
+title: "Provider Monitoring API Reference"
+sidebar_label: "Provider Monitoring"
+description: "Endpoints for provider health check statuses, canary inspection logs, and automated alerts"
+---
+
+# Provider Monitoring API Reference
+
+The Provider Monitoring API exposes endpoints to query provider health, inspect daily synthetic canary check executions, view outlier alerts, and resolve system incidents.
+
+---
+
+## <span className="api-method get">GET</span> `/health/providers`
+
+Retrieve current health and availability summary across all financial data providers.
+
+### Response Example
+
+```json
+{
+  "total_providers": 14,
+  "healthy_count": 13,
+  "degraded_count": 1,
+  "providers": [
+    {
+      "name": "ZoneBourse",
+      "is_healthy": true,
+      "success_rate": 0.98,
+      "avg_latency_ms": 320,
+      "last_check_at": "2026-08-11T06:00:00Z"
+    },
+    {
+      "name": "Investing",
+      "is_healthy": false,
+      "success_rate": 0.65,
+      "avg_latency_ms": 1450,
+      "last_check_at": "2026-08-11T06:00:00Z"
+    }
+  ]
+}
+```
+
+---
+
+## <span className="api-method get">GET</span> `/health/providers/{name}`
+
+Detailed health statistics, historical latency metrics, and recent outlier events for a single provider.
+
+---
+
+## <span className="api-method get">GET</span> `/health/alerts`
+
+Retrieve active or resolved provider quality alerts.
+
+### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `severity` | `string` | ❌ | — | Filter by severity (`critical`, `warning`, `info`) |
+| `provider` | `string` | ❌ | — | Provider name |
+| `include_resolved` | `boolean` | ❌ | `false` | Include historical resolved alerts |
+
+---
+
+## <span className="api-method post">POST</span> `/health/alerts/{id}/resolve`
+
+Manually mark an alert as resolved with an optional resolution note.
+
+### Request Body
+
+```json
+{
+  "resolution_note": "Upstream rate limit cleared by provider support."
+}
+```
+
+---
+
+## <span className="api-method post">POST</span> `/health/canary/run`
+
+Trigger an immediate background Canary health check across all registered providers or a single target provider.
+
+---
+
+## <span className="api-method get">GET</span> `/health/canary/history`
+
+Historical execution log of daily synthetic canary checks.
+
+---
+
+## <span className="api-method get">GET</span> `/health/stats`
+
+Global data quality statistics over a 7-day rolling window.
+
+
+
+<!-- FILE: /docs/api-reference/news.md -->
+
+---
+id: "news"
+title: "News Aggregator API Reference"
+sidebar_label: "News Aggregator"
+description: "Endpoints for multi-source financial news feeds, ticker-specific articles, and background ingestion"
+---
+
+# News Aggregator API Reference
+
+The News Aggregator API collects, deduplicates, and classifies financial news articles across 7 scrapers: Yahoo Finance, Google Finance, ZoneBourse, Boursorama, Investing.com, MarketWatch, and MSN Finance.
+
+---
+
+## <span className="api-method get">GET</span> `/news/{ticker}`
+
+Retrieve financial news articles mentioning a specific ticker. Results are cached in Redis for 30 minutes.
+
+### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `ticker` | `string` | ✅ | — | Financial ticker (e.g. `AIR.PA`, `AAPL`) |
+| `limit` | `integer` | ❌ | `20` | Number of articles |
+| `lang` | `string` | ❌ | — | Language filter (`en`, `fr`) |
+
+### Response Example
+
+```json
+{
+  "ticker": "AIR.PA",
+  "count": 2,
+  "articles": [
+    {
+      "id": 842,
+      "title": "Airbus Delivers 65 Aircraft in July, Reaffirms Full-Year Target",
+      "summary": "Airbus reported strong commercial airplane deliveries for July...",
+      "url": "https://www.marketwatch.com/story/airbus-delivers-65-aircraft-2026",
+      "source": "MarketWatch",
+      "provider": "marketwatch_news",
+      "author": "Financial Desk",
+      "published_at": "2026-08-10T14:30:00Z",
+      "sentiment": "POSITIVE",
+      "sentiment_score": 0.78,
+      "language": "en"
+    }
+  ]
+}
+```
+
+---
+
+## <span className="api-method get">GET</span> `/news/feed`
+
+Retrieve global financial news feed across all assets.
+
+### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `limit` | `integer` | ❌ | `20` | Maximum items to return |
+| `lang` | `string` | ❌ | — | Filter by language (`en`, `fr`) |
+| `provider` | `string` | ❌ | — | Filter by provider (e.g. `zonebourse_news`) |
+
+---
+
+## <span className="api-method post">POST</span> `/news/{ticker}/refresh`
+
+Trigger an asynchronous background refresh of news scrapers for a ticker without blocking the request.
+
+---
+
+## <span className="api-method get">GET</span> `/news/stats`
+
+Retrieve global news aggregator statistics (total articles indexed, provider breakdown, language counts).
+
+
+
+<!-- FILE: /docs/api-reference/realtime.md -->
+
+---
+id: "realtime"
+title: "Realtime & WebSocket API Reference"
+sidebar_label: "Realtime & WebSockets"
+description: "WebSocket live price streaming, REST quote snapshots, and subscription management endpoints"
+---
+
+# Realtime & WebSocket API Reference
+
+The Realtime API streams live 1-minute market ticks over WebSockets via TradingView bridge connections and Redis Pub/Sub, and exposes high-speed quote REST snapshots.
+
+---
+
+## <span className="api-method ws">WS</span> `/ws/realtime/{ticker}`
+
+Open a persistent WebSocket streaming channel for real-time tick updates on a given ticker.
+
+### Connection Protocol
+
+```javascript
+const ws = new WebSocket("ws://localhost:5000/ws/realtime/AIR.PA");
+```
+
+### Event Messages
+
+Upon connection, the server sends a initial `snapshot` message followed by real-time `tick` events:
+
+#### Initial Snapshot Event
+```json
+{
+  "type": "snapshot",
+  "ticker": "AIR.PA",
+  "data": {
+    "close": 135.90,
+    "open": 134.20,
+    "high": 136.50,
+    "low": 133.80,
+    "volume": 1245000,
+    "timestamp": "2026-08-11T10:15:00Z"
+  }
+}
+```
+
+#### Live Tick Event
+```json
+{
+  "type": "tick",
+  "ticker": "AIR.PA",
+  "data": {
+    "close": 136.10,
+    "change": 0.20,
+    "change_pct": 0.147,
+    "volume": 1246500,
+    "timestamp": "2026-08-11T10:16:00Z"
+  }
+}
+```
+
+---
+
+## <span className="api-method get">GET</span> `/quote/{ticker}`
+
+Retrieve the latest price quote snapshot from the Redis volatile cache. Auto-triggers realtime stream subscription if `REALTIME_AUTO_SUBSCRIBE=true`.
+
+### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `ticker` | `string` | ✅ | — | Ticker symbol (e.g. `AAPL`) |
+
+### Response Example
+
+```json
+{
+  "ticker": "AAPL",
+  "price": 224.50,
+  "open": 222.10,
+  "high": 225.00,
+  "low": 221.80,
+  "volume": 45200000,
+  "change": 2.40,
+  "change_pct": 1.08,
+  "source": "tradingview_stream",
+  "timestamp": "2026-08-11T10:15:30Z"
+}
+```
+
+---
+
+## <span className="api-method get">GET</span> `/quotes`
+
+Batch quote snapshot retrieval for multiple tickers.
+
+### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `tickers` | `string` | ✅ | — | Comma-separated list of tickers (e.g. `AAPL,MSFT,TSLA`) |
+
+---
+
+## <span className="api-method post">POST</span> `/realtime/subscribe`
+
+Explicitly subscribe a ticker to the background streaming worker `RealtimePriceWorker`.
+
+### Request Body
+
+```json
+{
+  "ticker": "NVDA"
+}
+```
+
+---
+
+## <span className="api-method delete">DELETE</span> `/realtime/subscribe/{ticker}`
+
+Unsubscribe a ticker from background live streaming.
+
+---
+
+## <span className="api-method get">GET</span> `/realtime/status`
+
+List all active market streaming worker subscriptions.
+
+### Response Example
+
+```json
+{
+  "active_subscriptions": 3,
+  "subscriptions": [
+    {
+      "ticker": "AIR.PA",
+      "subscribed_at": "2026-08-11T08:00:00Z",
+      "last_tick_at": "2026-08-11T10:15:30Z",
+      "tick_count": 1350
+    }
+  ]
+}
+```
+
+
+
+<!-- FILE: /docs/api-reference/specialized.md -->
+
+---
+id: "specialized"
+title: "Specialized Providers API Reference"
+sidebar_label: "Specialized Providers"
+description: "Endpoints for SEC EDGAR insider trades, JustETF metadata, and index constituent lists"
+---
+
+# Specialized Providers API Reference
+
+The Specialized Providers API exposes targeted endpoints for SEC EDGAR insider transactions, JustETF details, and equity index constituents.
+
+---
+
+## <span className="api-method get">GET</span> `/insider-transactions/{ticker}`
+
+Fetch Form 4 insider transactions filed with the US Securities and Exchange Commission (SEC EDGAR). Cached for 12 hours.
+
+### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `ticker` | `string` | ✅ | — | US Equity Ticker (e.g. `AAPL`, `TSLA`) |
+
+### Response Example
+
+```json
+{
+  "ticker": "AAPL",
+  "source": "SEC_EDGAR",
+  "count": 1,
+  "transactions": [
+    {
+      "filing_date": "2026-08-01",
+      "reporting_owner": "COOK TIMOTHY D",
+      "officer_title": "Chief Executive Officer",
+      "transaction_type": "P - Purchase",
+      "shares": 50000,
+      "price_per_share": 220.50,
+      "total_value": 11025000
+    }
+  ]
+}
+```
+
+---
+
+## <span className="api-method get">GET</span> `/etf/{isin}/details`
+
+Scrape ETF metadata, expense ratio (TER), Assets Under Management (AUM), and top 10 holdings from JustETF.
+
+### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `isin` | `string` | ✅ | — | European ETF ISIN (e.g. `IE00B4L5Y983`) |
+
+### Response Example
+
+```json
+{
+  "isin": "IE00B4L5Y983",
+  "name": "iShares Core MSCI World UCITS ETF",
+  "ter_pct": 0.20,
+  "aum_eur": 65000000000,
+  "replication": "Physical",
+  "top_holdings": [
+    { "name": "Apple Inc.", "weight_pct": 4.85 },
+    { "name": "Microsoft Corp.", "weight_pct": 4.20 }
+  ]
+}
+```
+
+---
+
+## <span className="api-method get">GET</span> `/index/{index_name}/constituents`
+
+Fetch current constituent stocks for major financial market indices (`sp500`, `cac40`, `nasdaq100`, `dax`).
+
+### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `index_name` | `string` | ✅ | — | Index name (`sp500`, `cac40`, `nasdaq100`, `dax`) |
+
+
+
+<!-- FILE: /docs/api-reference/technical-indicators.md -->
+
+---
+id: "technical-indicators"
+title: "Technical Indicators API Reference"
+sidebar_label: "Technical Indicators"
+description: "Compute trend, momentum, volatility, and volume technical indicators, batch calculation, and market screening"
+---
+
+# Technical Indicators API Reference
+
+The Technical Indicators API leverages the `pandas-ta` calculation engine to compute 18+ technical indicators, return OHLCV chart overlays, batch multi-ticker indicator calculations, and screen markets based on technical criteria.
+
+---
+
+## <span className="api-method get">GET</span> `/technical/{ticker}`
+
+Calculate a single technical indicator for a ticker.
+
+:::note Prerequisite
+Requires prior historical data ingestion via `POST /historical/ingest?ticker={ticker}`. Returns `404` (`{"detail": "No historical data found for {ticker}"}`) if no historical data exists for the given ticker.
+:::
+
+### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `ticker` | `string` | ✅ | — | Financial ticker (e.g. `AIR.PA`) |
+| `indicator` | `string` | ✅ | — | Indicator code (`sma`, `ema`, `rsi`, `macd`, `bbands`, `stoch`, `atr`, `obv`, `adx`, `vwap`, etc.) |
+| `period` | `integer` | ❌ | `14` | Main lookback period |
+| `resolution` | `string` | ❌ | `d` | Candle resolution (`d`, `w`, `m`) |
+
+### Response Example
+
+```json
+{
+  "ticker": "AIR.PA",
+  "indicator": "rsi",
+  "period": 14,
+  "count": 50,
+  "values": [
+    { "time": "2026-08-10T00:00:00Z", "value": 58.42 },
+    { "time": "2026-08-11T00:00:00Z", "value": 61.15 }
+  ]
+}
+```
+
+---
+
+## <span className="api-method get">GET</span> `/technical/{ticker}/multi`
+
+Compute multiple technical indicators in a single HTTP request.
+
+### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `ticker` | `string` | ✅ | — | Ticker symbol |
+| `indicators` | `string` | ✅ | — | Comma-separated indicator list (e.g. `rsi,sma,macd`) |
+| `period` | `integer` | ❌ | `14` | Default period applied to simple indicators |
+
+---
+
+## <span className="api-method get">GET</span> `/technical/{ticker}/chart`
+
+Retrieve combined OHLCV candles overlaid with selected technical indicator series formatted for charting libraries (TradingView Lightweight Charts, Highcharts).
+
+---
+
+## <span className="api-method post">POST</span> `/technical/batch`
+
+Batch calculation across multiple tickers and indicators.
+
+### Request Body
+
+```json
+{
+  "tickers": ["AAPL", "MSFT", "GOOGL"],
+  "indicators": [
+    { "name": "rsi", "period": 14 },
+    { "name": "sma", "period": 50 }
+  ]
+}
+```
+
+---
+
+## <span className="api-method get">GET</span> `/technical/list`
+
+Retrieve the catalog of supported technical indicators, default parameters, and descriptions.
+
+---
+
+## <span className="api-method get">GET</span> `/technical/screen`
+
+Screen database assets against technical conditions (e.g., RSI under oversold threshold 30).
+
+### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `indicator` | `string` | ✅ | — | Indicator to evaluate (e.g. `rsi`) |
+| `condition` | `string` | ✅ | — | Logical operator (`lt`, `gt`, `crosses_above`, `crosses_below`) |
+| `target_value` | `number` | ✅ | — | Numeric threshold (e.g. `30.0`) |
+
+
+
+<!-- FILE: /docs/api-reference/valuation-dcf.md -->
+
+---
+id: "valuation-dcf"
+title: "DCF Valuation API Reference"
+sidebar_label: "Valuation (DCF)"
+description: "Intrinsic value calculations, WACC estimation, multi-model consensus, and sensitivity matrix endpoints"
+---
+
+# DCF Valuation API Reference
+
+The Valuation API executes Discounted Cash Flow (DCF) intrinsic value models, computes Dynamic Weighted Average Cost of Capital (WACC), builds multi-model consensus reports, and generates sensitivity matrices.
+
+---
+
+## <span className="api-method get">GET</span> `/dcf/{ticker}`
+
+Compute default intrinsic value using the Free Cash Flow (FCF) DCF model. Results cached in Redis for 6 hours.
+
+### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `ticker` | `string` | ✅ | — | Ticker symbol (e.g. `AAPL`) |
+
+### Response Example
+
+```json
+{
+  "ticker": "AAPL",
+  "model": "FCF",
+  "current_price": 224.50,
+  "intrinsic_value": 248.20,
+  "margin_of_safety_pct": 10.56,
+  "recommendation": "UNDERVALUED",
+  "wacc": 0.0845,
+  "terminal_growth_rate": 0.025,
+  "projections": [
+    { "year": 1, "fcf": 115000000000, "pv": 105990000000 },
+    { "year": 2, "fcf": 124000000000, "pv": 105430000000 },
+    { "year": 3, "fcf": 133000000000, "pv": 104270000000 },
+    { "year": 4, "fcf": 142000000000, "pv": 102550000000 },
+    { "year": 5, "fcf": 151000000000, "pv": 100290000000 }
+  ],
+  "terminal_value": 2580000000000,
+  "enterprise_value": 3098430000000
+}
+```
+
+---
+
+## <span className="api-method post">POST</span> `/dcf/{ticker}`
+
+Run a customized DCF valuation with custom growth rates, risk-free rate, or WACC overrides (bypasses Redis cache).
+
+### Request Body
+
+```json
+{
+  "projection_years": 5,
+  "revenue_growth_rate": 0.08,
+  "operating_margin": 0.30,
+  "risk_free_rate": 0.042,
+  "terminal_growth_rate": 0.02
+}
+```
+
+---
+
+## <span className="api-method get">GET</span> `/dcf/{ticker}/compare`
+
+Compare consensus intrinsic valuations across all three DCF models: **Free Cash Flow (FCF)**, **Earnings Per Share (EPS)**, and **Dividend Discount Model (DDM)**.
+
+---
+
+## <span className="api-method get">GET</span> `/dcf/{ticker}/sensitivity`
+
+Generate a 5x5 sensitivity matrix analyzing how intrinsic value changes across combinations of WACC (discount rate) and terminal growth rate.
+
+### Response Example
+
+```json
+{
+  "ticker": "AAPL",
+  "sensitivity_matrix": {
+    "wacc_axis": [0.075, 0.080, 0.0845, 0.090, 0.095],
+    "growth_axis": [0.015, 0.020, 0.025, 0.030, 0.035],
+    "values": [
+      [275.40, 284.10, 294.20, 305.80, 319.40],
+      [252.10, 259.30, 267.80, 277.50, 288.70],
+      [234.80, 241.00, 248.20, 256.40, 265.80]
+    ]
+  }
+}
+```
+
+
+
