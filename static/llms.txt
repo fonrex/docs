@@ -6,67 +6,79 @@ Fonrex provides high-performance self-hosted financial data pipelines, Timescale
 
 ## Core & Getting Started
 
-- [Introduction](/docs/intro): High-level introduction to Fonrex financial data infrastructure.
-- [Installation](/docs/getting-started/installation): Step-by-step setup guide for local and production environments.
-- [Configuration](/docs/getting-started/configuration): System parameters, database credentials, and environment flags.
-- [First API Call](/docs/getting-started/first-api-call): Making your first authenticated REST API request.
-- [Docker Compose](/docs/getting-started/docker-compose): Multi-container deployment with PostgreSQL, TimescaleDB, and Redis.
+- [Introduction](/docs/intro.md): High-level introduction to Fonrex financial data infrastructure.
+- [Installation](/docs/getting-started/installation.md): Step-by-step setup guide for local and production environments.
+- [Configuration](/docs/getting-started/configuration.md): System parameters, database credentials, and environment flags.
+- [First API Call](/docs/getting-started/first-api-call.md): Making your first authenticated REST API request.
+- [Docker Compose](/docs/getting-started/docker-compose.md): Multi-container deployment with PostgreSQL, TimescaleDB, and Redis.
 
 ## API Reference
 
-- [Assets & Listings](/docs/api-reference/assets): Tickers, ISINs, exchanges, asset metadata, and search endpoints.
-- [Fundamentals](/docs/api-reference/fundamentals): Income statements, balance sheets, cash flow series, and financial ratios.
-- [Historical Prices](/docs/api-reference/historical): OHLCV time-series queries, resampling, and intraday data endpoints.
-- [Realtime Streaming](/docs/api-reference/realtime): WebSocket and Server-Sent Events (SSE) live data stream specs.
-- [Technical Indicators](/docs/api-reference/technical-indicators): Moving averages, RSI, MACD, Bollinger Bands, and custom calculations.
-- [Valuation & DCF Engine](/docs/api-reference/valuation-dcf): Discounted Cash Flow, WACC estimation, and intrinsic value endpoints.
-- [News & Sentiment](/docs/api-reference/news): Financial news aggregation, article extraction, and sentiment scoring.
-- [Health & Monitoring](/docs/api-reference/monitoring): Provider consensus status, validation logs, and system health checks.
-- [Specialized Data](/docs/api-reference/specialized): Crypto, Foreign Exchange (FX), macroeconomics, and commodities endpoints.
+- [Assets & Listings](/docs/api-reference/assets.md): Tickers, ISINs, exchanges, asset metadata, and search endpoints.
+- [Fundamentals](/docs/api-reference/fundamentals.md): Income statements, balance sheets, cash flow series, and financial ratios.
+- [Historical Prices](/docs/api-reference/historical.md): OHLCV time-series queries, resampling, and intraday data endpoints.
+- [Realtime Streaming](/docs/api-reference/realtime.md): WebSocket and Server-Sent Events (SSE) live data stream specs.
+- [Technical Indicators](/docs/api-reference/technical-indicators.md): Moving averages, RSI, MACD, Bollinger Bands, and custom calculations.
+- [Valuation & DCF Engine](/docs/api-reference/valuation-dcf.md): Discounted Cash Flow, WACC estimation, and intrinsic value endpoints.
+- [News & Sentiment](/docs/api-reference/news.md): Financial news aggregation, article extraction, and sentiment scoring.
+- [Health & Monitoring](/docs/api-reference/monitoring.md): Provider consensus status, validation logs, and system health checks.
+- [Specialized Data](/docs/api-reference/specialized.md): Crypto, Foreign Exchange (FX), macroeconomics, and commodities endpoints.
 
 ## Guides & Tutorials
 
-- [Import Assets](/docs/guides/import-assets): Bulk asset onboarding and ticker symbol mapping workflows.
-- [Ingest Historical Data](/docs/guides/ingest-historical-data): Pipeline setup for historical data backfilling.
-- [Configure Realtime](/docs/guides/configure-realtime): Realtime websocket subscription and multiplexing guide.
-- [Backtesting with Zipline](/docs/guides/backtesting-zipline): Integrating Fonrex data pipelines into Zipline and Python backtesters.
-- [Adding Data Providers](/docs/guides/adding-providers): Implementing custom provider adapters with hexagonal architecture.
+- [Import Assets](/docs/guides/import-assets.md): Bulk asset onboarding and ticker symbol mapping workflows.
+- [Ingest Historical Data](/docs/guides/ingest-historical-data.md): Pipeline setup for historical data backfilling.
+- [Configure Realtime](/docs/guides/configure-realtime.md): Realtime websocket subscription and multiplexing guide.
+- [Backtesting with Zipline](/docs/guides/backtesting-zipline.md): Integrating Fonrex data pipelines into Zipline and Python backtesters.
+- [Adding Data Providers](/docs/guides/adding-providers.md): Implementing custom provider adapters with hexagonal architecture.
 
 ## Architecture & System Design
 
-- [System Overview](/docs/architecture/overview): High-level system topology, domain boundaries, and data flows.
-- [Hexagonal Architecture](/docs/architecture/hexagonal): Ports & Adapters design pattern, domain isolation, and interface specs.
-- [Data Model & Schema](/docs/architecture/data-model): PostgreSQL relational schemas and TimescaleDB hypertables design.
-- [Database Migrations](/docs/architecture/migrations): Alembic migration policies, schema versioning, and zero-downtime rules.
-- [Concurrency & Locking](/docs/architecture/concurrency): Async IO concurrency, Redis locks, rate limiters, and job queues.
+- [System Overview](/docs/architecture/overview.md): High-level system topology, domain boundaries, and data flows.
+- [Hexagonal Architecture](/docs/architecture/hexagonal.md): Ports & Adapters design pattern, domain isolation, and interface specs.
+- [Data Model & Schema](/docs/architecture/data-model.md): PostgreSQL relational schemas and TimescaleDB hypertables design.
+- [Database Migrations](/docs/architecture/migrations.md): Alembic migration policies, schema versioning, and zero-downtime rules.
+- [Concurrency & Locking](/docs/architecture/concurrency.md): Async IO concurrency, Redis locks, rate limiters, and job queues.
 
 ## Data Providers
 
-- [Providers Overview](/docs/providers/overview): Supported market data, fundamentals, and news providers list.
-- [Fundamentals Providers](/docs/providers/fundamentals-providers): SEC EDGAR, Yahoo Finance, FMP, and custom adapters.
-- [News Providers](/docs/providers/news-providers): NewsAPI, Benzinga, SEC RSS feeds, and crawler setup.
-- [Adding Custom Provider](/docs/providers/adding-custom-provider): Step-by-step developer guide for adding new provider modules.
+- [Providers Overview](/docs/providers/overview.md): Supported market data, fundamentals, and news providers list.
+- [Fundamentals Providers](/docs/providers/fundamentals-providers.md): SEC EDGAR, Yahoo Finance, FMP, and custom adapters.
+- [News Providers](/docs/providers/news-providers.md): NewsAPI, Benzinga, SEC RSS feeds, and crawler setup.
+- [Adding Custom Provider](/docs/providers/adding-custom-provider.md): Step-by-step developer guide for adding new provider modules.
 
 ## Monitoring & Reliability
 
-- [Validation Layer](/docs/monitoring/validation-layer): Data sanity verification, anomaly detection, and consensus rules.
-- [Canary Monitor](/docs/monitoring/canary-monitor): Automated synthetic API probes and provider availability tracking.
-- [Alerts & Webhooks](/docs/monitoring/alerts): Configuring Slack, Discord, email, and custom webhook alerts.
+- [Validation Layer](/docs/monitoring/validation-layer.md): Data sanity verification, anomaly detection, and consensus rules.
+- [Canary Monitor](/docs/monitoring/canary-monitor.md): Automated synthetic API probes and provider availability tracking.
+- [Alerts & Webhooks](/docs/monitoring/alerts.md): Configuring Slack, Discord, email, and custom webhook alerts.
 
 ## Deployment & Operations
 
-- [Docker Deployment](/docs/deployment/docker): Production Docker setup, container hardening, and multi-stage builds.
-- [Environment Variables](/docs/deployment/environment-variables): Complete reference of all configurable ENV parameters.
-- [Database Migrations Deployment](/docs/deployment/database-migrations): Production database deployment and rollback procedures.
-- [Production Checklist](/docs/deployment/production-checklist): Hardening, backups, health checks, and go-live verification.
+- [Docker Deployment](/docs/deployment/docker.md): Production Docker setup, container hardening, and multi-stage builds.
+- [Environment Variables](/docs/deployment/environment-variables.md): Complete reference of all configurable ENV parameters.
+- [Database Migrations Deployment](/docs/deployment/database-migrations.md): Production database deployment and rollback procedures.
+- [Production Checklist](/docs/deployment/production-checklist.md): Hardening, backups, health checks, and go-live verification.
 
 ## Contributing & Project Rules
 
-- [Setup Guide](/docs/contributing/setup): Setting up developer environment, pre-commit hooks, and tools.
-- [Testing Suite](/docs/contributing/testing): Running unit tests, integration tests, mock providers, and coverage reports.
-- [Architecture Rules](/docs/contributing/architecture-rules): Mandatory architectural guidelines, layer boundaries, and code standards.
-- [Changelog](/docs/contributing/changelog): Detailed release history, version changes, and migration notes.
+- [Setup Guide](/docs/contributing/setup.md): Setting up developer environment, pre-commit hooks, and tools.
+- [Testing Suite](/docs/contributing/testing.md): Running unit tests, integration tests, mock providers, and coverage reports.
+- [Architecture Rules](/docs/contributing/architecture-rules.md): Mandatory architectural guidelines, layer boundaries, and code standards.
+- [Changelog](/docs/contributing/changelog.md): Detailed release history, version changes, and migration notes.
 
 ## Complete Documentation Dump
 
-- [Full LLM Text Dump](/llms-full.txt): Complete concatenated text of all documentation files in a single text document.
+There are two ways to access the LLM-friendly documentation:
+
+* [llms.txt](/llms.txt) is essentially a sitemap, listing all the pages in the documentation.
+
+* [llms-docs.txt](/llms-docs.txt) contains the general documentation (may exceed the context window of your LLM).
+
+* [llms-api.txt](/llms-api.txt) contains the API documentation (may exceed the context window of your LLM).
+
+* [llms-full.txt](/llms-full.txt) contains the entire documentation (may exceed the context window of your LLM).
+
+!!! info
+    In addition, you can access the Markdown source files of the documentation by appending `.md` to the URL
+    of any page.
