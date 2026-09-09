@@ -38,6 +38,7 @@ const sidebars: SidebarsConfig = {
         'guides/configure-realtime',
         'guides/backtesting-zipline',
         'guides/adding-providers',
+        'guides/google-sheets-connector',
       ],
     },
     {
