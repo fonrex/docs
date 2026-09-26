@@ -7,7 +7,19 @@ description: "Project history, feature additions, schema migrations, and version
 
 # Fonrex Version Changelog
 
+## v1.6.0 (2026-09)
+
+### Major Features
+- **OpenBB Workspace Integration**: Native backend adapter router (`/openbb`) supporting 19 interactive widgets and 2 pre-assembled application dashboards (`Fonrex — EU Markets` & `Fonrex — Screener & Macro`).
+- **Dual Header Authentication**: Added support for OpenBB's native `X-API-KEY` custom header alongside standard `Authorization: Bearer` token validation (`auth/dependencies.py`).
+- **Plotly & AgGrid Adapters**: Standardized data transformations for Plotly figures (candlestick charts, technical indicator overlays) and AgGrid tables (deep fundamentals, DCF sensitivity matrix, news, index constituents).
+
+### 🐛 Bug Fixes & Improvements
+- **Docker Volume Logging**: Solved volume permission issues on host environments by ensuring `mkdir -p logs` setup step and added permission troubleshooting guides.
+- **DCF & Provider Updates**: Improved caching and data normalization for DCF valuation models and index constituent providers.
+
 ## v2.0.0 (2026-08)
+
 
 ### Major Features
 - **Docusaurus v3 Documentation Suite**: Complete technical documentation structure generated under `documentation/`.

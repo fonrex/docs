@@ -38,11 +38,12 @@ cp .env.example .env
 
 默认设置已针对本地开发优化。对于生产部署，请更新数据库密码和密钥。
 
-### 3. 通过 Docker Compose 启动服务
+### 3. 创建日志目录并启动服务
 
-在后台模式下运行多容器堆栈：
+确保宿主机上存在 `./logs` 目录以避免容器权限问题，然后启动容器堆栈：
 
 ```bash
+mkdir -p logs
 docker compose up -d
 ```
 
@@ -51,6 +52,7 @@ docker compose up -d
 - `fonrex-db`: PostgreSQL 16 with TimescaleDB HA extension on port `5432`
 - `fonrex-redis`: Redis 7 in-memory cache on port `6379`
 - `fonrex-migrate`: One-shot migration container running `alembic upgrade head`
+
 
 ### 4. 验证系统健康状态
 

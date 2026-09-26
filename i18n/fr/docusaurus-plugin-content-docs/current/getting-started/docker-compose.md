@@ -82,3 +82,23 @@ docker compose down
 ```bash
 docker compose down -v
 ```
+
+---
+
+## Dépannage des Erreurs Courantes
+
+### 1. Erreur de Permission sur le Volume `logs` (`chown permission denied`)
+Sur macOS ou Linux, Docker Desktop peut échouer à initialiser les permissions si le dossier `./logs` est absent ou appartient à root.
+```bash
+mkdir -p logs
+chmod 777 logs
+docker compose up -d
+```
+
+### 2. Conflit de Nom de Conteneur (`container name "/fonrex-db" is already in use`)
+Si des conteneurs précédents existent déjà sur votre hôte :
+```bash
+docker rm -f fonrex-db fonrex-redis fonrex-api
+docker compose up -d
+```
+

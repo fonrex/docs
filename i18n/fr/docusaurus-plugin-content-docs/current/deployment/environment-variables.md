@@ -49,3 +49,10 @@ Below is the complete inventory of environment variables referenced across all F
 - `VALIDATION_MIN_PROVIDERS`: Nombre minimum de providers pour le calcul du consensus.
 - `CANARY_RUN_HOUR`: Heure UTC pour déclencher les contrôles canary quotidiens (0-23).
 - `CANARY_PROVIDER_SEMAPHORE`: Nombre maximum de workers de contrôles canary parallèles.
+
+## 7. Authentification & Intégration OpenBB
+
+- `OPENBB_API_KEY` : Clé API autorisée pour l'intégration OpenBB Workspace.
+- `FONREX_API_KEY` / `FONREX_RELAY_KEY` : Clés API valides configurées pour l'authentification.
+- `FONREX_AUTH_REQUIRED` : Activer l'authentification stricte (`true` ou `false`).
+

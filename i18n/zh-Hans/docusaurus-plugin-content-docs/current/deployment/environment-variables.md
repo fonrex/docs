@@ -49,3 +49,10 @@ Below is the complete inventory of environment variables referenced across all F
 - `VALIDATION_MIN_PROVIDERS`: Minimum provider count for consensus calculation.
 - `CANARY_RUN_HOUR`: 触发每日金丝雀检查的 UTC 小时数 (0-23)。
 - `CANARY_PROVIDER_SEMAPHORE`: Max parallel canary check workers.
+
+## 7. 身份验证与 OpenBB 集成 (Authentication & OpenBB)
+
+- `OPENBB_API_KEY`: 用于 OpenBB Workspace 集成的授权 API 密钥。
+- `FONREX_API_KEY` / `FONREX_RELAY_KEY`: 已配置的有效 API 身份验证密钥。
+- `FONREX_AUTH_REQUIRED`: 是否开启强制身份验证 (`true` 或 `false`)。
+
