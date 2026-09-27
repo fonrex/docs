@@ -37,11 +37,12 @@ cp .env.example .env
 
 Default settings are optimized for local development. For production deployments, update database passwords and secret keys.
 
-### 3. Launch Services via Docker Compose
+### 3. Ensure Log Directory & Launch Services
 
-Run the multi-container stack in detached mode:
+Ensure the `./logs` volume directory exists on the host to avoid container permission issues, then start the stack:
 
 ```bash
+mkdir -p logs
 docker compose up -d
 ```
 
@@ -50,6 +51,7 @@ This starts four services:
 - `fonrex-db`: PostgreSQL 16 with TimescaleDB HA extension on port `5432`
 - `fonrex-redis`: Redis 7 in-memory cache on port `6379`
 - `fonrex-migrate`: One-shot migration container running `alembic upgrade head`
+
 
 ### 4. Verify System Health
 

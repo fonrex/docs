@@ -8,7 +8,19 @@ description: "Historique du projet, ajouts de fonctionnalités, migrations de sc
 
 # Historique des Versions de Fonrex
 
+## v1.6.0 (2026-09)
+
+### Fonctionnalités Majeures
+- **Intégration OpenBB Workspace** : Routeur d'adaptateurs backend natif (`/openbb`) prenant en charge 19 widgets interactifs et 2 applications pré-configurées (`Fonrex — EU Markets` & `Fonrex — Screener & Macro`).
+- **Authentification Double En-tête** : Prise en charge de l'en-tête personnalisé natif d'OpenBB `X-API-KEY` aux côtés du jeton standard `Authorization: Bearer` (`auth/dependencies.py`).
+- **Adaptateurs Plotly & AgGrid** : Normalisation des données pour figures Plotly (chandeliers, indicateurs surimposés) et tableaux AgGrid (fondamentaux approfondis, matrice de sensibilité DCF, actualités, composants d'indices).
+
+### 🐛 Correctifs & Améliorations
+- **Logging des Volumes Docker** : Résolution des erreurs de permission sur les volumes hôtes via l'étape `mkdir -p logs` et ajout des guides de dépannage.
+- **Mises à Jour DCF & Fournisseurs** : Amélioration du cache et de la normalisation pour les modèles d'évaluation DCF et les composants d'indices.
+
 ## v2.0.0 (2026-08)
+
 
 ### Major Fonctionnalités
 - **Docusaurus v3 Documentation Suite**: Complete technical documentation structure generated under `documentation/`.

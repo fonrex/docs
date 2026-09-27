@@ -38,11 +38,12 @@ cp .env.example .env
 
 Les paramètres par défaut sont optimisés pour le développement local. Pour les déploiements en production, mettez à jour les mots de passe et clés secrètes.
 
-### 3. Lancer les Services via Docker Compose
+### 3. Créer le Répertoire de Logs et Lancer les Services
 
-Exécutez la pile multi-conteneurs en mode détaché :
+Assurez-vous que le répertoire de volume `./logs` existe sur l'hôte pour éviter les erreurs de permission, puis lancez la pile de services :
 
 ```bash
+mkdir -p logs
 docker compose up -d
 ```
 
@@ -51,6 +52,7 @@ Cela démarre quatre services :
 - `fonrex-db`: PostgreSQL 16 with TimescaleDB HA extension on port `5432`
 - `fonrex-redis`: Redis 7 in-memory cache on port `6379`
 - `fonrex-migrate`: One-shot migration container running `alembic upgrade head`
+
 
 ### 4. Vérifier la Santé du Système
 

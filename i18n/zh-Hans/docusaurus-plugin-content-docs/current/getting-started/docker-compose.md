@@ -82,3 +82,23 @@ docker compose down
 ```bash
 docker compose down -v
 ```
+
+---
+
+## 常见问题排查 (Troubleshooting)
+
+### 1. `logs` 目录权限不足 (`chown permission denied`)
+在 macOS 或 Linux 上，如果 `./logs` 目录不存在或归属于 root 账户，Docker Desktop 可能会出现初始化权限失败：
+```bash
+mkdir -p logs
+chmod 777 logs
+docker compose up -d
+```
+
+### 2. 容器名称冲突 (`container name "/fonrex-db" is already in use`)
+如果宿主机上已存在同名的旧容器：
+```bash
+docker rm -f fonrex-db fonrex-redis fonrex-api
+docker compose up -d
+```
+

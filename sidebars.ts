@@ -27,6 +27,7 @@ const sidebars: SidebarsConfig = {
         'api-reference/news',
         'api-reference/monitoring',
         'api-reference/specialized',
+        'api-reference/openbb',
       ],
     },
     {
@@ -39,6 +40,7 @@ const sidebars: SidebarsConfig = {
         'guides/backtesting-zipline',
         'guides/adding-providers',
         'guides/google-sheets-connector',
+        'guides/openbb-workspace',
       ],
     },
     {
