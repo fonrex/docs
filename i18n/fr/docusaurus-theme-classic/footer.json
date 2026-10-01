@@ -27,6 +27,10 @@
     "message": "GitHub",
     "description": "The label of footer link with label=GitHub linking to https://github.com/fonrex/fonrex"
   },
+  "link.item.label.LinkedIn": {
+    "message": "LinkedIn",
+    "description": "The label of footer link with label=LinkedIn linking to https://linkedin.com/company/fonrex"
+  },
   "link.item.label.Issues": {
     "message": "Issues",
     "description": "The label of footer link with label=Issues linking to https://github.com/fonrex/fonrex/issues"

@@ -15,6 +15,10 @@
     "message": "fonrex.io",
     "description": "Navbar item with label fonrex.io"
   },
+  "item.label.LinkedIn": {
+    "message": "LinkedIn",
+    "description": "Navbar item with label LinkedIn"
+  },
   "item.label.GitHub": {
     "message": "GitHub",
     "description": "Navbar item with label GitHub"

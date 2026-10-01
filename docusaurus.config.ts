@@ -72,6 +72,11 @@ const config: Config = {
           position: 'right',
         },
         {
+          href: 'https://linkedin.com/company/fonrex',
+          label: 'LinkedIn',
+          position: 'right',
+        },
+        {
           href: 'https://github.com/fonrex/fonrex',
           label: 'GitHub',
           position: 'right',
@@ -93,6 +98,7 @@ const config: Config = {
           title: 'Community',
           items: [
             { label: 'GitHub', href: 'https://github.com/fonrex/fonrex' },
+            { label: 'LinkedIn', href: 'https://linkedin.com/company/fonrex' },
             { label: 'Issues', href: 'https://github.com/fonrex/fonrex/issues' },
           ],
         },
