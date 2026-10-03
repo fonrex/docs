@@ -1,13 +1,4 @@
 {
-  "homepage.tagline": {
-    "message": "Infrastructure de données financières open-source"
-  },
-  "homepage.button.getStarted": {
-    "message": "Commencer"
-  },
-  "homepage.button.apiReference": {
-    "message": "Référence API"
-  },
   "homepage.description": {
     "message": "API d'infrastructure de données financières open-source auto-hébergée"
   },
@@ -568,5 +559,245 @@
   "theme.tags.tagsPageTitle": {
     "message": "Tags",
     "description": "The title of the tag list page"
+  },
+  "homepage.meta.title": {
+    "message": "Documentation"
+  },
+  "homepage.ai.title": {
+    "message": "Utiliser cette doc avec l'IA"
+  },
+  "homepage.ai.description": {
+    "message": "Fournissez toute la documentation à votre LLM ou assistant de code grâce au standard llms.txt."
+  },
+  "homepage.news.title": {
+    "message": "Nouveautés"
+  },
+  "homepage.news.all": {
+    "message": "Changelog complet"
+  },
+  "homepage.explore.title": {
+    "message": "Explorer Fonrex"
+  },
+  "homepage.explore.lead": {
+    "message": "Accédez directement au domaine sur lequel vous travaillez."
+  },
+  "homepage.help.title": {
+    "message": "Besoin d'aide ?"
+  },
+  "homepage.help.description": {
+    "message": "Fonrex est open source (AGPL-3.0). Signalez un bug, posez une question ou améliorez cette documentation."
+  },
+  "homepage.help.issues": {
+    "message": "Ouvrir une issue"
+  },
+  "homepage.help.contributing": {
+    "message": "Guide de contribution"
+  },
+  "homepage.help.github": {
+    "message": "Code source sur GitHub"
+  },
+  "homepage.hero.eyebrow": {
+    "message": "Documentation"
+  },
+  "homepage.hero.title": {
+    "message": "Documentation Fonrex"
+  },
+  "homepage.hero.subtitle": {
+    "message": "Tout ce qu'il faut pour auto-héberger, interroger et étendre Fonrex — l'API open-source de données financières."
+  },
+  "homepage.hero.search.placeholder": {
+    "message": "Rechercher guides, endpoints, fournisseurs…"
+  },
+  "homepage.hero.search.label": {
+    "message": "Rechercher dans la documentation"
+  },
+  "homepage.hero.search.button": {
+    "message": "Rechercher"
+  },
+  "homepage.hero.quicklinks.label": {
+    "message": "Pages populaires"
+  },
+  "homepage.pathways.title": {
+    "message": "Choisissez votre parcours"
+  },
+  "homepage.pathways.lead": {
+    "message": "Un onboarding guidé adapté à votre rôle."
+  },
+  "homepage.quickstart.title": {
+    "message": "Démarrer en 3 étapes"
+  },
+  "homepage.quickstart.lead": {
+    "message": "Lancez la stack avec Docker Compose, renseignez vos clés fournisseurs, puis faites votre première requête."
+  },
+  "homepage.quickstart.cta": {
+    "message": "Lancer le quickstart"
+  },
+  "homepage.quicklinks.docker": {
+    "message": "Installer avec Docker"
+  },
+  "homepage.quicklinks.firstCall": {
+    "message": "Premier appel API"
+  },
+  "homepage.quicklinks.dcf": {
+    "message": "Valorisation DCF"
+  },
+  "homepage.quicklinks.websocket": {
+    "message": "Streaming WebSocket"
+  },
+  "homepage.quicklinks.sheets": {
+    "message": "Google Sheets"
+  },
+  "homepage.explore.rest.title": {
+    "message": "API REST"
+  },
+  "homepage.explore.rest.description": {
+    "message": "Interrogez actifs, historiques OHLCV et actualités via l'interface REST FastAPI."
+  },
+  "homepage.explore.rest.link.assets": {
+    "message": "Actifs & recherche"
+  },
+  "homepage.explore.rest.link.historical": {
+    "message": "Prix historiques"
+  },
+  "homepage.explore.rest.link.news": {
+    "message": "Actualités"
+  },
+  "homepage.explore.realtime.title": {
+    "message": "Streaming temps réel"
+  },
+  "homepage.explore.realtime.description": {
+    "message": "Diffusez des bougies en direct via WebSockets, adossés à Redis Pub/Sub."
+  },
+  "homepage.explore.realtime.link.api": {
+    "message": "API WebSocket"
+  },
+  "homepage.explore.realtime.link.configure": {
+    "message": "Configurer le temps réel"
+  },
+  "homepage.explore.realtime.link.alerts": {
+    "message": "Alertes"
+  },
+  "homepage.explore.valuation.title": {
+    "message": "Valorisation & indicateurs"
+  },
+  "homepage.explore.valuation.description": {
+    "message": "Valeur intrinsèque DCF, fondamentaux et indicateurs techniques calculés côté serveur."
+  },
+  "homepage.explore.valuation.link.dcf": {
+    "message": "Valorisation DCF"
+  },
+  "homepage.explore.valuation.link.indicators": {
+    "message": "Indicateurs techniques"
+  },
+  "homepage.explore.valuation.link.fundamentals": {
+    "message": "Fondamentaux"
+  },
+  "homepage.explore.integrations.title": {
+    "message": "Intégrations"
+  },
+  "homepage.explore.integrations.description": {
+    "message": "Utilisez Fonrex depuis Google Sheets, OpenBB Workspace ou des backtests Zipline."
+  },
+  "homepage.explore.integrations.link.sheets": {
+    "message": "Connecteur Google Sheets"
+  },
+  "homepage.explore.integrations.link.openbb": {
+    "message": "OpenBB Workspace"
+  },
+  "homepage.explore.integrations.link.zipline": {
+    "message": "Backtesting Zipline"
+  },
+  "homepage.explore.providers.title": {
+    "message": "Fournisseurs de données"
+  },
+  "homepage.explore.providers.description": {
+    "message": "Bascule multi-fournisseurs (SEC EDGAR, Yahoo Finance, FMP…) et adaptateurs personnalisés."
+  },
+  "homepage.explore.providers.link.overview": {
+    "message": "Vue d’ensemble"
+  },
+  "homepage.explore.providers.link.fundamentals": {
+    "message": "Fournisseurs de fondamentaux"
+  },
+  "homepage.explore.providers.link.custom": {
+    "message": "Ajouter un fournisseur"
+  },
+  "homepage.explore.ops.title": {
+    "message": "Auto-hébergement & ops"
+  },
+  "homepage.explore.ops.description": {
+    "message": "Déployez avec Docker, configurez vos environnements et passez en production."
+  },
+  "homepage.explore.ops.link.docker": {
+    "message": "Déploiement Docker"
+  },
+  "homepage.explore.ops.link.env": {
+    "message": "Variables d'environnement"
+  },
+  "homepage.explore.ops.link.checklist": {
+    "message": "Checklist de production"
+  },
+  "homepage.quickstart.step.install": {
+    "message": "Installer"
+  },
+  "homepage.quickstart.step.configure": {
+    "message": "Configurer"
+  },
+  "homepage.quickstart.step.firstCall": {
+    "message": "Premier appel"
+  },
+  "homepage.pathways.quant.title": {
+    "message": "Quant & algo-trader"
+  },
+  "homepage.pathways.quant.description": {
+    "message": "Séries temporelles, indicateurs, backtesting."
+  },
+  "homepage.pathways.analyst.title": {
+    "message": "Analyste financier"
+  },
+  "homepage.pathways.analyst.description": {
+    "message": "DCF, fondamentaux, Sheets & OpenBB."
+  },
+  "homepage.pathways.developer.title": {
+    "message": "Développeur d'applications"
+  },
+  "homepage.pathways.developer.description": {
+    "message": "REST, WebSockets, bascule de fournisseurs."
+  },
+  "homepage.pathways.devops.title": {
+    "message": "DevOps & admin infra"
+  },
+  "homepage.pathways.devops.description": {
+    "message": "Docker, TimescaleDB, monitoring."
+  },
+  "homepage.news.v160.title": {
+    "message": "Intégration OpenBB Workspace"
+  },
+  "homepage.news.v160.summary": {
+    "message": "19 widgets, 2 tableaux de bord prêts à l’emploi et authentification par en-tête X-API-KEY."
+  },
+  "homepage.news.v200.title": {
+    "message": "Monitoring de santé des fournisseurs"
+  },
+  "homepage.news.v200.summary": {
+    "message": "Couche de validation, Canary monitor et 7 endpoints /health."
+  },
+  "homepage.news.v200dcf.title": {
+    "message": "Moteur de valorisation DCF"
+  },
+  "homepage.news.v200dcf.summary": {
+    "message": "Modèles FCF, EPS et DDM avec WACC dynamique et matrices de sensibilité."
+  },
+  "theme.SearchBar.noResultsText": {
+    "message": "No results"
+  },
+  "theme.SearchBar.seeAllOutsideContext": {
+    "message": "See all results outside \"{context}\""
+  },
+  "theme.SearchBar.searchInContext": {
+    "message": "See all results within \"{context}\""
+  },
+  "theme.SearchPage.searchContext.everywhere": {
+    "message": "Everywhere"
   }
 }

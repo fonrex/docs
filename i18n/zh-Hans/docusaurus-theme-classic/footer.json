@@ -23,6 +23,22 @@
     "message": "参与贡献",
     "description": "The label of footer link with label=Contributing linking to /docs/contributing/setup"
   },
+  "link.item.label.GitHub": {
+    "message": "GitHub",
+    "description": "The label of footer link with label=GitHub linking to https://github.com/fonrex/fonrex"
+  },
+  "link.item.label.Issues": {
+    "message": "Issues",
+    "description": "The label of footer link with label=Issues linking to https://github.com/fonrex/fonrex/issues"
+  },
+  "link.item.label.fonrex.io": {
+    "message": "fonrex.io",
+    "description": "The label of footer link with label=fonrex.io linking to https://fonrex.io"
+  },
+  "copyright": {
+    "message": "Copyright © 2026 Fonrex. Licensed under AGPL-3.0.",
+    "description": "The footer copyright"
+  },
   "link.item.label.LinkedIn": {
     "message": "LinkedIn",
     "description": "The label of footer link with label=LinkedIn linking to https://linkedin.com/company/fonrex"

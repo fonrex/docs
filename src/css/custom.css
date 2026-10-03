@@ -10,13 +10,19 @@
   --ifm-color-primary-lightest: #fdb87a;
   --ifm-code-font-size: 95%;
   --docusaurus-highlighted-code-line-bg: rgba(249, 115, 22, 0.1);
+
+  --fonrex-card-border: rgba(249, 115, 22, 0.15);
+  --fonrex-hero-glow: radial-gradient(ellipse 60% 90% at 15% 0%, rgba(249, 115, 22, 0.12) 0%, rgba(249, 115, 22, 0) 70%);
 }
 
 [data-theme='dark'] {
   --ifm-color-primary: #F97316;
-  --ifm-background-color: #0d1117;
-  --ifm-navbar-background-color: #161b22;
-  --ifm-footer-background-color: #0d1117;
+  --ifm-background-color: #0b0f17;
+  --ifm-navbar-background-color: #111723;
+  --ifm-footer-background-color: #0b0f17;
+  --ifm-background-surface-color: #111723;
+  --fonrex-card-border: rgba(255, 255, 255, 0.08);
+  --fonrex-hero-glow: radial-gradient(ellipse 60% 90% at 15% 0%, rgba(249, 115, 22, 0.18) 0%, rgba(11, 15, 23, 0) 70%);
 }
 
 /* Logo dans la navbar */
@@ -26,7 +32,7 @@
 
 /* Badges dans les titres d'API */
 .api-method {
-  font-family: monospace;
+  font-family: var(--ifm-font-family-monospace);
   padding: 2px 8px;
   border-radius: 4px;
   font-size: 0.85em;

@@ -14,7 +14,20 @@ const config: Config = {
     format: 'detect',
     mermaid: true,
   },
-  themes: ['@docusaurus/theme-mermaid'],
+  themes: [
+    '@docusaurus/theme-mermaid',
+    [
+      '@easyops-cn/docusaurus-search-local',
+      {
+        hashed: true,
+        language: ['en', 'fr', 'zh'],
+        indexBlog: false,
+        docsRouteBasePath: '/docs',
+        highlightSearchTermsOnTargetPage: true,
+        explicitSearchResultPath: true,
+      },
+    ],
+  ],
   i18n: {
     defaultLocale: 'en',
     locales: ['en', 'fr', 'zh-Hans'],
@@ -61,6 +74,16 @@ const config: Config = {
           sidebarId: 'docs',
           position: 'left',
           label: 'Documentation',
+        },
+        {
+          to: '/docs/api-reference/assets',
+          label: 'API Reference',
+          position: 'left',
+        },
+        {
+          to: '/docs/contributing/changelog',
+          label: 'Changelog',
+          position: 'left',
         },
         {
           type: 'localeDropdown',
@@ -113,11 +136,6 @@ const config: Config = {
     },
     prism: {
       additionalLanguages: ['python', 'bash', 'sql', 'json'],
-    },
-    algolia: {
-      appId: 'YOUR_APP_ID',
-      apiKey: 'YOUR_SEARCH_API_KEY',
-      indexName: 'fonrex',
     },
   } satisfies Preset.ThemeConfig,
 };

@@ -11,7 +11,7 @@
 
 > Official documentation portal for **Fonrex** — Open-source financial data infrastructure.
 
-This repository contains the source code, markdown docs, assets, and translation files for the official [Fonrex Documentation](https://docs.fonrex.io), built with [Docusaurus 3](https://docusaurus.io/).
+This repository contains the source code, markdown docs, assets, and translation files for the official [Fonrex Documentation](https://fonrex.io), built with [Docusaurus 3](https://docusaurus.io/).
 
 ---
 

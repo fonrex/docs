@@ -12,6 +12,13 @@ Fonrex provides high-performance self-hosted financial data pipelines, Timescale
 - [First API Call](/docs/getting-started/first-api-call.md): Making your first authenticated REST API request.
 - [Docker Compose](/docs/getting-started/docker-compose.md): Multi-container deployment with PostgreSQL, TimescaleDB, and Redis.
 
+## User Pathways & Guided Journeys
+
+- [Quant & Algo-Trader Pathway](/docs/pathways/quant-trader.md): Step-by-step guide for quantitative analysts, Pandas-TA indicators, and Zipline integration.
+- [Financial Analyst Pathway](/docs/pathways/financial-analyst.md): No-code guide for DCF valuations, Google Sheets connector, and OpenBB Workspace setup.
+- [App Developer Pathway](/docs/pathways/app-developer.md): Integration guide for REST API, WebSockets streaming, and multi-provider fallbacks.
+- [DevOps & Infra Admin Pathway](/docs/pathways/devops-admin.md): Deployment guide for Docker Compose, TimescaleDB, Redis, and Canary monitoring.
+
 ## API Reference
 
 - [Assets & Listings](/docs/api-reference/assets.md): Tickers, ISINs, exchanges, asset metadata, and search endpoints.
