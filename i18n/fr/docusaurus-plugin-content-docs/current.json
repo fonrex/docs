@@ -34,5 +34,9 @@
   "sidebar.docs.category.Contributing": {
     "message": "Contribution & Tests",
     "description": "The label for category 'Contributing' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.🚀 Parcours Guidés": {
+    "message": "🚀 Parcours Guidés",
+    "description": "The label for category '🚀 Parcours Guidés' in sidebar 'docs'"
   }
 }

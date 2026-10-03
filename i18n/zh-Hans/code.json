@@ -1,15 +1,6 @@
 {
-  "homepage.tagline": {
-    "message": "开源金融数据基础设施"
-  },
-  "homepage.button.getStarted": {
-    "message": "快速开始"
-  },
-  "homepage.button.apiReference": {
-    "message": "API 参考"
-  },
   "homepage.description": {
-    "message": "自托管开源金融数据基础设施 API"
+    "message": "自托管的开源金融数据基础设施 API"
   },
   "theme.ErrorPageContent.title": {
     "message": "页面已崩溃。",
@@ -568,5 +559,245 @@
   "theme.tags.tagsPageTitle": {
     "message": "标签",
     "description": "The title of the tag list page"
+  },
+  "homepage.meta.title": {
+    "message": "文档"
+  },
+  "homepage.ai.title": {
+    "message": "配合 AI 使用本文档"
+  },
+  "homepage.ai.description": {
+    "message": "通过 llms.txt 标准，将完整文档提供给您的 LLM 或编程助手。"
+  },
+  "homepage.news.title": {
+    "message": "最新动态"
+  },
+  "homepage.news.all": {
+    "message": "完整更新日志"
+  },
+  "homepage.explore.title": {
+    "message": "探索 Fonrex"
+  },
+  "homepage.explore.lead": {
+    "message": "直接进入您正在处理的领域。"
+  },
+  "homepage.help.title": {
+    "message": "需要帮助？"
+  },
+  "homepage.help.description": {
+    "message": "Fonrex 是开源项目（AGPL-3.0）。欢迎报告问题、提问或改进本文档。"
+  },
+  "homepage.help.issues": {
+    "message": "提交 Issue"
+  },
+  "homepage.help.contributing": {
+    "message": "贡献指南"
+  },
+  "homepage.help.github": {
+    "message": "GitHub 源代码"
+  },
+  "homepage.hero.eyebrow": {
+    "message": "文档"
+  },
+  "homepage.hero.title": {
+    "message": "Fonrex 文档"
+  },
+  "homepage.hero.subtitle": {
+    "message": "自托管、查询和扩展 Fonrex（开源金融数据 API）所需的一切。"
+  },
+  "homepage.hero.search.placeholder": {
+    "message": "搜索指南、接口、数据源…"
+  },
+  "homepage.hero.search.label": {
+    "message": "搜索文档"
+  },
+  "homepage.hero.search.button": {
+    "message": "搜索"
+  },
+  "homepage.hero.quicklinks.label": {
+    "message": "热门页面"
+  },
+  "homepage.pathways.title": {
+    "message": "选择您的学习路径"
+  },
+  "homepage.pathways.lead": {
+    "message": "根据您的角色定制的引导式入门。"
+  },
+  "homepage.quickstart.title": {
+    "message": "三步快速上手"
+  },
+  "homepage.quickstart.lead": {
+    "message": "使用 Docker Compose 启动服务，配置数据源密钥，然后发出第一个请求。"
+  },
+  "homepage.quickstart.cta": {
+    "message": "开始快速入门"
+  },
+  "homepage.quicklinks.docker": {
+    "message": "使用 Docker 安装"
+  },
+  "homepage.quicklinks.firstCall": {
+    "message": "第一次 API 调用"
+  },
+  "homepage.quicklinks.dcf": {
+    "message": "DCF 估值"
+  },
+  "homepage.quicklinks.websocket": {
+    "message": "WebSocket 实时流"
+  },
+  "homepage.quicklinks.sheets": {
+    "message": "Google Sheets"
+  },
+  "homepage.explore.rest.title": {
+    "message": "REST API"
+  },
+  "homepage.explore.rest.description": {
+    "message": "通过 FastAPI REST 接口查询资产、OHLCV 历史数据和新闻。"
+  },
+  "homepage.explore.rest.link.assets": {
+    "message": "资产与搜索"
+  },
+  "homepage.explore.rest.link.historical": {
+    "message": "历史价格"
+  },
+  "homepage.explore.rest.link.news": {
+    "message": "新闻"
+  },
+  "homepage.explore.realtime.title": {
+    "message": "实时数据流"
+  },
+  "homepage.explore.realtime.description": {
+    "message": "基于 Redis Pub/Sub，通过 WebSocket 推送实时 K 线。"
+  },
+  "homepage.explore.realtime.link.api": {
+    "message": "WebSocket API"
+  },
+  "homepage.explore.realtime.link.configure": {
+    "message": "配置实时数据"
+  },
+  "homepage.explore.realtime.link.alerts": {
+    "message": "告警"
+  },
+  "homepage.explore.valuation.title": {
+    "message": "估值与指标"
+  },
+  "homepage.explore.valuation.description": {
+    "message": "服务端计算 DCF 内在价值、基本面数据和技术指标。"
+  },
+  "homepage.explore.valuation.link.dcf": {
+    "message": "DCF 估值"
+  },
+  "homepage.explore.valuation.link.indicators": {
+    "message": "技术指标"
+  },
+  "homepage.explore.valuation.link.fundamentals": {
+    "message": "基本面"
+  },
+  "homepage.explore.integrations.title": {
+    "message": "集成"
+  },
+  "homepage.explore.integrations.description": {
+    "message": "在 Google Sheets、OpenBB Workspace 或 Zipline 回测中使用 Fonrex。"
+  },
+  "homepage.explore.integrations.link.sheets": {
+    "message": "Google Sheets 连接器"
+  },
+  "homepage.explore.integrations.link.openbb": {
+    "message": "OpenBB Workspace"
+  },
+  "homepage.explore.integrations.link.zipline": {
+    "message": "Zipline 回测"
+  },
+  "homepage.explore.providers.title": {
+    "message": "数据源"
+  },
+  "homepage.explore.providers.description": {
+    "message": "多数据源自动切换（SEC EDGAR、Yahoo Finance、FMP…）及自定义适配器。"
+  },
+  "homepage.explore.providers.link.overview": {
+    "message": "数据源概览"
+  },
+  "homepage.explore.providers.link.fundamentals": {
+    "message": "基本面数据源"
+  },
+  "homepage.explore.providers.link.custom": {
+    "message": "添加自定义数据源"
+  },
+  "homepage.explore.ops.title": {
+    "message": "自托管与运维"
+  },
+  "homepage.explore.ops.description": {
+    "message": "使用 Docker 部署、配置环境并投入生产。"
+  },
+  "homepage.explore.ops.link.docker": {
+    "message": "Docker 部署"
+  },
+  "homepage.explore.ops.link.env": {
+    "message": "环境变量"
+  },
+  "homepage.explore.ops.link.checklist": {
+    "message": "生产环境检查清单"
+  },
+  "homepage.quickstart.step.install": {
+    "message": "安装"
+  },
+  "homepage.quickstart.step.configure": {
+    "message": "配置"
+  },
+  "homepage.quickstart.step.firstCall": {
+    "message": "第一次调用"
+  },
+  "homepage.pathways.quant.title": {
+    "message": "量化与算法交易者"
+  },
+  "homepage.pathways.quant.description": {
+    "message": "时间序列、指标、回测。"
+  },
+  "homepage.pathways.analyst.title": {
+    "message": "金融分析师"
+  },
+  "homepage.pathways.analyst.description": {
+    "message": "DCF、基本面、Sheets 与 OpenBB。"
+  },
+  "homepage.pathways.developer.title": {
+    "message": "应用开发者"
+  },
+  "homepage.pathways.developer.description": {
+    "message": "REST、WebSocket、数据源切换。"
+  },
+  "homepage.pathways.devops.title": {
+    "message": "DevOps 与基础设施管理员"
+  },
+  "homepage.pathways.devops.description": {
+    "message": "Docker、TimescaleDB、监控。"
+  },
+  "homepage.news.v160.title": {
+    "message": "OpenBB Workspace 集成"
+  },
+  "homepage.news.v160.summary": {
+    "message": "19 个组件、2 个预置仪表板，以及 X-API-KEY 请求头认证。"
+  },
+  "homepage.news.v200.title": {
+    "message": "数据源健康监控"
+  },
+  "homepage.news.v200.summary": {
+    "message": "验证层、Canary 监控和 7 个 /health 接口。"
+  },
+  "homepage.news.v200dcf.title": {
+    "message": "DCF 估值引擎"
+  },
+  "homepage.news.v200dcf.summary": {
+    "message": "FCF、EPS 和 DDM 模型，支持动态 WACC 和敏感性矩阵。"
+  },
+  "theme.SearchBar.noResultsText": {
+    "message": "没有找到任何文档"
+  },
+  "theme.SearchBar.seeAllOutsideContext": {
+    "message": "查看“{context}”以外的全部结果"
+  },
+  "theme.SearchBar.searchInContext": {
+    "message": "查看“{context}”以内的全部结果"
+  },
+  "theme.SearchPage.searchContext.everywhere": {
+    "message": "所有"
   }
 }

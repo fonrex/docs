@@ -5,6 +5,17 @@ const sidebars: SidebarsConfig = {
     'intro',
     {
       type: 'category',
+      label: 'Guided Pathways',
+      collapsed: false,
+      items: [
+        'pathways/quant-trader',
+        'pathways/financial-analyst',
+        'pathways/app-developer',
+        'pathways/devops-admin',
+      ],
+    },
+    {
+      type: 'category',
       label: 'Getting Started',
       collapsed: false,
       items: [
