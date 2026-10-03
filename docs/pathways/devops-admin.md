@@ -1,41 +1,33 @@
 ---
 id: "devops-admin"
-title: "🛡️ Pathway: DevOps & Infra Admin"
-sidebar_label: "🛡️ DevOps & Infra Admin"
-description: "Installation, high-availability deployment, monitoring, and multi-provider configuration guide for SREs and system admins."
+title: "DevOps & Infra Admin Pathway"
+sidebar_label: "DevOps & Infra Admin"
+description: "Installation, high-availability deployment, monitoring, and multi-provider configuration guide for SREs and system admins"
 ---
 
-# 🛡️ Pathway: DevOps & Infra Admin
+# DevOps & Infra Admin Pathway
 
-This pathway is designed for **DevOps Engineers, SREs, and System Administrators** responsible for deploying, maintaining, securing, and monitoring Fonrex instances.
+This pathway provides an infrastructure deployment guide for **DevOps Engineers, SREs, and System Administrators** responsible for maintaining Fonrex instances, TimescaleDB hypertables, Redis cache clusters, and provider canary probes.
 
-> [!TIP]
-> **Goal:** Deploy a resilient architecture with TimescaleDB (Hypertables) and Redis, configure data provider API keys, and enable synthetic canary probes.
-
----
-
-### ⏱️ Estimated Time: 15 minutes
-
----
-
-## 📌 Step 1: System Topology
-
-Fonrex relies on a 3-tier containerized stack:
-- **FastAPI / Uvicorn**: Async Python 3.12 application server.
-- **PostgreSQL + TimescaleDB**: Relational database + hypertables for OHLCV time-series.
-- **Redis**: High-performance cache and WebSocket Pub/Sub broker.
+| Tier / Component | Technology Stack | Operational Purpose |
+|---|---|---|
+| **App Server** | FastAPI / Uvicorn (Python 3.12) | Asynchronous API router & provider manager |
+| **Time-Series Database** | PostgreSQL 16 + TimescaleDB | Relational schemas & OHLCV hypertables |
+| **Cache & Message Broker** | Redis 7 | Response cache & WebSocket Pub/Sub broker |
+| **Synthetic Monitoring** | Canary Health Probes | Automated multi-provider SLA & consensus checks |
 
 ---
 
-## 📌 Step 2: Environment Variables Setup
+## 1. System Topology & Environment Configuration
 
-Copy and edit the `.env` configuration file:
+Copy and configure environment variables for database credentials and external API keys:
 
 ```bash
 cp .env.example .env
 ```
 
-Principales variables à vérifier :
+Key configuration parameters in `.env`:
+
 ```env
 POSTGRES_USER=fonrex
 POSTGRES_PASSWORD=secure_password_here
@@ -49,34 +41,34 @@ PROVIDER_CONSENSUS_THRESHOLD=0.95
 CANARY_CHECK_INTERVAL_SECONDS=300
 ```
 
-*(See the [Environment Variables Reference](/docs/deployment/environment-variables) for full list).*
-
 ---
 
-## 📌 Step 3: Docker Compose & Migration Execution
+## 2. Docker Compose Deployment & Migrations
 
-Spin up the stack and automatically execute Alembic migrations on startup:
+Spin up multi-container infrastructure and run Alembic database migrations:
 
 ```bash
 docker compose -f docker-compose.yml up -d --build
 ```
 
-Check container status:
+Verify container runtime status:
+
 ```bash
 docker compose ps
 ```
 
 ---
 
-## 📌 Step 4: Health & Canary Monitoring
+## 3. Provider Health & Canary Probe Diagnostics
 
-Query the health probe endpoint to track data provider availability and response latency:
+Query the health monitoring endpoint to track data provider availability, latency, and error rates:
 
-```bash
-curl http://localhost:5000/api/v1/monitoring/canary
+```http
+GET /api/v1/monitoring/canary
 ```
 
-Example response:
+Diagnostic payload schema:
+
 ```json
 {
   "timestamp": "2024-01-15T12:00:00Z",
@@ -90,8 +82,8 @@ Example response:
 
 ---
 
-## 🎯 Suggested Next Steps
+## Next Steps
 
-- 🚀 [Production Checklist](/docs/deployment/production-checklist)
-- 📊 [Canary Monitor & Alerts Guide](/docs/monitoring/canary-monitor)
-- 🔄 [Database Migrations Deployment Guide](/docs/deployment/database-migrations)
+- Review the [Production Checklist](/docs/deployment/production-checklist)
+- Review the [Canary Monitor & Alerts Guide](/docs/monitoring/canary-monitor)
+- Review the [Database Migrations Deployment Guide](/docs/deployment/database-migrations)
