@@ -1,70 +1,59 @@
 ---
 id: "app-developer"
-title: "Parcours Développeur Application"
-sidebar_label: "Développeur Application"
-description: "Guide d'intégration technique pour développeurs : API REST, WebSockets temps réel et fallbacks multi-providers"
+title: "💻 Parcours : Développeur Application"
+sidebar_label: "💻 Parcours Développeur"
+description: "Guide d'intégration API REST et WebSockets pour les développeurs web et mobile."
 ---
 
-# Parcours Développeur Application
+# 💻 Parcours : Développeur Application
 
-Ce parcours fournit un guide d'intégration technique pour les **Développeurs Software, Web et Mobile** intégrant l'API Fonrex dans leurs applications (React, Vue, Node.js, Python, Go, Flutter).
+Ce parcours s'adresse aux **Développeurs Software, Web et Mobile** souhaitant intégrer l'API Fonrex dans leurs applications (React, Vue, Node.js, Python, Go, Flutter, etc.).
 
-| Protocole d'intégration | Architecture | Usage principal |
-|---|---|---|
-| **API REST FastAPI** | JSON / OpenAPI | Recherche d'actifs, séries historiques, fondamentaux, DCF |
-| **WebSockets Redis** | Streaming Pub/Sub | Souscription aux cours en direct |
-| **Moteur Multi-Provider** | Ports & Adapters Hexagonaux | Basculement automatique et fallback provider |
+> [!TIP]
+> **Objectif du parcours :** Apprendre à effectuer des requêtes REST optimisées, souscrire à des flux WebSockets en temps réel et gérer la recherche d'actifs.
 
 ---
 
-## 1. Documentation OpenAPI & Swagger
-
-Fonrex génère automatiquement une spécification OpenAPI / Swagger via FastAPI :
-
-- **Interface Swagger UI** : `http://localhost:5000/docs`
-- **Interface ReDoc** : `http://localhost:5000/redoc`
-- **Schéma JSON OpenAPI** : `http://localhost:5000/openapi.json`
+### ⏱️ Durée estimée : 10 minutes
 
 ---
 
-## 2. Intégration API REST (Recherche d'actifs)
+## 📌 Étape 1 : Exploration de l'API & Swagger UI
 
-Recherchez des symboles ou des paires de devises via l'endpoint de recherche :
+Fonrex fournit une documentation OpenAPI / Swagger interactive générée automatiquement par FastAPI.
 
-```http
-GET /api/v1/assets/search?q=Apple
-```
+Accédez à la documentation Swagger locale :
+- `http://localhost:5000/docs` ou `http://localhost:5000/redoc`
 
-Implémentation TypeScript :
+---
+
+## 📌 Étape 2 : Première requête REST (Recherche d'actifs)
+
+Recherchez des tickers ou des paires de devises via l'endpoint `/api/v1/assets/search` :
 
 ```typescript
-interface AssetResult {
-  symbol: string;
-  name: string;
-  exchange: string;
-  asset_type: string;
-}
-
-async function searchAssets(query: string): Promise<AssetResult[]> {
+// Exemple en TypeScript / JavaScript (fetch)
+async function searchAssets(query: string) {
   const response = await fetch(`http://localhost:5000/api/v1/assets/search?q=${encodeURIComponent(query)}`);
-  if (!response.ok) {
-    throw new Error(`Erreur HTTP! Statut: ${response.status}`);
-  }
   const data = await response.json();
   return data.results;
 }
+
+// Utilisation
+searchAssets('Apple').then(results => console.log(results));
 ```
 
 ---
 
-## 3. Streaming de données WebSockets en temps réel
+## 📌 Étape 3 : Flux de données en Temps Réel (WebSockets)
 
-Souscrivez aux flux de prix en direct gérés par multiplexage Redis Pub/Sub :
+Pour afficher des cours en direct sans surcharger le serveur, souscrivez au flux WebSocket alimenté par Redis Pub/Sub :
 
 ```javascript
 const ws = new WebSocket('ws://localhost:5000/ws/v1/realtime');
 
 ws.onopen = () => {
+  console.log('⚡ Connecté au WebSocket Fonrex');
   ws.send(JSON.stringify({
     action: 'subscribe',
     symbols: ['AAPL', 'TSLA']
@@ -72,29 +61,29 @@ ws.onopen = () => {
 };
 
 ws.onmessage = (event) => {
-  const payload = JSON.parse(event.data);
-  console.log(`Mise à jour cours ${payload.symbol}: $${payload.price}`);
+  const priceUpdate = JSON.parse(event.data);
+  console.log(`📈 Nouveaux cours ${priceUpdate.symbol}: $${priceUpdate.price}`);
 };
 ```
 
-> **Note** : Pour la stratégie de reconnexion automatique et le multiplexage, consultez le [Guide de configuration Temps Réel](/docs/guides/configure-realtime).
+*(Consultez le [Guide de configuration Temps Réel](/docs/guides/configure-realtime) pour la gestion des reconnexions et du multiplexage).*
 
 ---
 
-## 4. Gestion des erreurs et Fallback Multi-Provider
+## 📌 Étape 4 : Gestion des erreurs et Fallback multi-providers
 
-Fonrex gère automatiquement les défaillances des API tierces. Si le provider primaire échoue, le moteur de fallback renvoie les données du provider secondaire avec un statut HTTP `200 OK` et un en-tête de diagnostic :
+Fonrex masque la complexité des API tierces. Si le provider primaire échoue, le moteur de fallback de Fonrex renvoie automatiquement les données du provider secondaire avec le statut HTTP `200 OK` et un header de diagnostic.
 
 ```typescript
 const res = await fetch('http://localhost:5000/api/v1/fundamentals/income-statement?symbol=AAPL');
-const providerSource = res.headers.get('X-Fonrex-Provider-Source');
-console.log(`Provider utilisé : ${providerSource}`); // ex: 'fmp', 'sec-edgar', 'yfinance'
+const providerUsed = res.headers.get('X-Fonrex-Provider-Source');
+console.log(`Données servies par : ${providerUsed}`);
 ```
 
 ---
 
-## Prochaines étapes
+## 🎯 Prochaines étapes suggérées
 
-- Consulter la [Référence API Realtime & WebSockets](/docs/api-reference/realtime)
-- Consulter la [Référence API Assets](/docs/api-reference/assets)
-- Consulter le document [Spécifications Architecture Hexagonale](/docs/architecture/hexagonal)
+- ⚡ [Référence de l'API Realtime & WebSockets](/docs/api-reference/realtime)
+- 🔍 [Référence de l'API Assets](/docs/api-reference/assets)
+- 🏗️ [Architecture Hexagonale & Ports/Adapters](/docs/architecture/hexagonal)

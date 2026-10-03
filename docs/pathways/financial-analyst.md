@@ -1,78 +1,68 @@
 ---
 id: "financial-analyst"
-title: "Financial Analyst Pathway"
-sidebar_label: "Financial Analyst"
-description: "Onboarding guide for financial analysts: DCF valuation models, fundamental statement extraction, Google Sheets connector, and OpenBB Workspace"
+title: "📊 Pathway: Financial Analyst"
+sidebar_label: "📊 Financial Analyst"
+description: "No-code / low-code onboarding for financial analysts: DCF valuation, Google Sheets connector, and OpenBB Workspace."
 ---
 
-# Financial Analyst Pathway
+# 📊 Pathway: Financial Analyst
 
-This pathway provides a technical onboarding guide for **Financial Analysts and Valuation Specialists**. It covers fundamental financial statement extractions, Discounted Cash Flow (DCF) valuation models, and automated integrations with Google Sheets and OpenBB Workspace.
+This pathway is tailored for **Financial Analysts and Investors** seeking to automate fundamental research, build Discounted Cash Flow (DCF) models, and feed spreadsheets without writing complex backend code.
 
-| Feature Area | Integration Type | Output Format |
-|---|---|---|
-| **Google Sheets Connector** | Apps Script / `IMPORTDATA` | CSV / Cell values |
-| **OpenBB Workspace** | REST Router (`/openbb`) | Metric tiles, AgGrid tables, Plotly charts |
-| **DCF Valuation Engine** | FastAPI Backend | Free Cash Flow, EPS & DDM Intrinsic values |
+> [!TIP]
+> **Goal:** Connect Fonrex to your daily tools (Google Sheets, OpenBB Workspace) and automate financial statement extraction and valuation models.
 
 ---
 
-## 1. Accessing Instance Endpoints
+### ⏱️ Estimated Time: 5 minutes
 
-Ensure your Fonrex instance is active or accessible via host configuration:
+---
 
-```http
-GET /health
+## 📌 Step 1: Accessing Your Fonrex Instance
+
+Ensure your Fonrex instance is running (or request the access URL from your infrastructure team):
+- Default local URL: `http://localhost:5000`
+
+---
+
+## 📌 Step 2: Connecting Google Sheets (No-Code)
+
+Feed your financial models directly inside Google Sheets:
+
+1. Open your Google Sheets document.
+2. Use the **Fonrex Sheets Connector** extension or `=IMPORTDATA()` function:
+   ```excel
+   =IMPORTDATA("http://localhost:5000/api/v1/fundamentals/ratios?symbol=AAPL&format=csv")
+   ```
+3. Automatically retrieve updated P/E Ratios, Free Cash Flows, Operating Margins, and ROE.
+
+*(See the [Google Sheets Connector Guide](/docs/guides/google-sheets-connector) for custom functions).*
+
+---
+
+## 📌 Step 3: Configuring OpenBB Terminal Workspace
+
+Visualize your Fonrex data in the institutional OpenBB Workspace interface:
+
+1. Open your **OpenBB Terminal**.
+2. Add the custom Fonrex data source in your backend settings.
+3. Load the preconfigured Fonrex dashboard layout.
+
+![OpenBB Workspace Fonrex](/img/template-preview.png)
+
+*(Follow the [OpenBB Workspace Guide](/docs/guides/openbb-workspace) to customize your widgets).*
+
+---
+
+## 📌 Step 4: Valuation & DCF Models
+
+Query the automatic valuation engine to calculate intrinsic share value:
+
+```bash
+curl "http://localhost:5000/api/v1/valuation/dcf?symbol=AAPL&wacc=0.085&growth_rate=0.05"
 ```
 
-Default local base URL: `http://localhost:5000`
-
----
-
-## 2. Google Sheets Integration
-
-Connect spreadsheet models directly to Fonrex endpoints using standard formulas or custom Apps Script wrappers:
-
-### Direct Formula Usage
-
-```excel
-=IMPORTDATA("http://localhost:5000/api/v1/fundamentals/ratios?symbol=AAPL&format=csv")
-```
-
-### Custom Apps Script Functions
-
-| Function Signature | Return Description |
-|---|---|
-| `=FONREX_PE("AIR.PA")` | Price-to-Earnings Ratio |
-| `=FONREX_DIVIDEND_YIELD("AIR.PA")` | Dividend Yield (decimal format) |
-| `=FONREX_INTRINSIC_VALUE("AAPL")` | DCF Intrinsic Value per share |
-
-> **Note**: Custom cell formulas are cached by Google for 30 minutes. For real-time updates, use menu-driven refresh scripts. Refer to the [Google Sheets Connector Guide](/docs/guides/google-sheets-connector).
-
----
-
-## 3. OpenBB Terminal Workspace Configuration
-
-Fonrex exposes specialized `/openbb` endpoints designed for OpenBB Terminal (Cloud and Desktop):
-
-1. Open OpenBB Workspace.
-2. Add Fonrex as a custom backend data source (`http://localhost:5000/openbb`).
-3. Load the default Fonrex workspace dashboard layout.
-
-> **Note**: For custom authentication setup and widget manifests, refer to the [OpenBB Workspace Guide](/docs/guides/openbb-workspace).
-
----
-
-## 4. Automated DCF Valuation Engine
-
-Query intrinsic share value calculations derived from WACC, terminal growth rates, and Free Cash Flow models:
-
-```http
-GET /api/v1/valuation/dcf?symbol=AAPL&wacc=0.085&growth_rate=0.05
-```
-
-Response payload schema:
-
+Example response:
 ```json
 {
   "symbol": "AAPL",
@@ -86,8 +76,8 @@ Response payload schema:
 
 ---
 
-## Next Steps
+## 🎯 Suggested Next Steps
 
-- Review the [Fundamentals & Financial Ratios API Reference](/docs/api-reference/fundamentals)
-- Review the [DCF Valuation Engine API Reference](/docs/api-reference/valuation-dcf)
-- Review the [OpenBB Integration API Reference](/docs/api-reference/openbb)
+- 🏛️ [Fundamentals & Ratios API Reference](/docs/api-reference/fundamentals)
+- 💰 [DCF Valuation Engine API Reference](/docs/api-reference/valuation-dcf)
+- 📰 [News & Sentiment API Reference](/docs/api-reference/news)

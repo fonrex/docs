@@ -5,7 +5,7 @@ const sidebars: SidebarsConfig = {
     'intro',
     {
       type: 'category',
-      label: 'Guided Pathways',
+      label: '🚀 Parcours Guidés',
       collapsed: false,
       items: [
         'pathways/quant-trader',
