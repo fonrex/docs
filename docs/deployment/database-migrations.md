@@ -2,32 +2,56 @@
 id: "database-migrations"
 title: "Database Migrations in Production"
 sidebar_label: "Database Migrations"
-description: "How to safely apply Alembic database schema migrations in zero-downtime production environments"
+description: "Upgrade an instance safely: back up, migrate, check, and restore if needed"
 ---
 
 # Database Migrations in Production
 
-Running database schema migrations safely in production requires isolating schema DDL operations from the application container lifecycle.
+The API container applies `alembic upgrade head` at every start. An upgrade of Fonrex is therefore an upgrade of the schema: prepare it.
 
-## Safe Migration Workflow
+## Upgrade procedure
 
-1. **Pre-Deployment Check**: Test migration scripts in a staging environment matching production TimescaleDB versions:
+1. **Back up the database**:
+
    ```bash
-   alembic current
-   alembic heads
+   docker compose exec -T db pg_dump -U fonrex -d fonrex -Fc > fonrex-$(date +%F).dump
    ```
-2. **Execute Migrations Before Code Rollout**:
-   Trigger the one-shot migration profile container:
+
+2. **Update the code**: `git pull`.
+3. **Migrate alone** (optional, to see the migrations run before the API starts):
+
    ```bash
+   docker compose --profile migrate build fonrex-migrate
    docker compose --profile migrate run --rm fonrex-migrate
    ```
-3. **Deploy New API Containers**:
-   Once `alembic upgrade head` finishes successfully, update your API application image:
-   ```bash
-   docker compose up -d fonrex-api
-   ```
-4. **Rollback Strategy**:
-   If a migration fails, revert to the previous migration revision:
-   ```bash
-   docker compose --profile migrate run --rm fonrex-migrate alembic downgrade -1
-   ```
+
+4. **Start the new version**: `docker compose up -d --build`.
+5. **Check**: `docker compose logs fonrex-api` shows the migrations applied, then `curl http://localhost:5000/health` and a few requests with your key. A database left behind the code makes its routes answer `503`.
+
+## Rolling back
+
+Restore the backup taken in step 1 with the previous version of the code (see [Docker Compose](../getting-started/docker-compose.md#backing-up-the-database)). Prefer it to `alembic downgrade`: some downgrades cannot give back what the upgrade removed (migration 008 drops tables; migration 014 keeps one bar per instrument and date when going back).
+
+## Notable migrations
+
+| Migration | What to know |
+|---|---|
+| 014 — prices per listing | Rebuilds `prices_eod` with one series per listing and re-dates the existing bars to their trading session. Runs by itself; nothing is downloaded again. If a series looks wrong afterwards: `POST /historical/ingest?ticker=<ticker>&force_refresh=true` |
+| 015 — dividend yields as ratios | Converts stored dividend yields from percentages to ratios |
+
+The full list is in [Schema migrations](../architecture/migrations.md).
+
+## Testing migrations
+
+The database tests apply the migrations to a real TimescaleDB, on existing data, down and up again:
+
+```bash
+make test-db     # throwaway container of the image of docker-compose.yml, port 54329
+```
+
+To run them against your own server (a temporary database is created and dropped):
+
+```bash
+FONREX_TEST_DATABASE_URL=postgresql://fonrex:<password>@localhost:5432/fonrex \
+    pytest tests/test_timescale_integration.py
+```

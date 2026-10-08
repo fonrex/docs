@@ -2,176 +2,76 @@
 id: "openbb"
 title: "OpenBB Workspace Integration API"
 sidebar_label: "OpenBB Integration"
-description: "API reference for OpenBB Workspace adapters, widget discovery, pre-assembled apps, and authentication"
+description: "The /openbb routes and discovery files that feed OpenBB Workspace widgets"
 ---
 
 # OpenBB Workspace Integration API
 
-Fonrex provides native backend endpoints designed for **OpenBB Workspace** (Desktop and Cloud). The `/openbb` router translates Fonrex core financial domain models into the strict schema contracts required by OpenBB widgets:
+The `/openbb` routes serve the widgets of [OpenBB Workspace](https://openbb.co) from your own instance. Each route calls the Fonrex route it adapts and reshapes the answer into one of the three formats OpenBB expects:
 
-- **Metric tiles** (`type: "metric"`): `[ { "label": "...", "value": ..., "delta": ... } ]`
-- **Plotly charts** (`type: "chart"`): `Plotly.js` figure JSON object `{ "data": [...], "layout": {...} }`
-- **Data tables** (`type: "table"`): Flat array of records `[ { ... }, { ... } ]` for AgGrid
+- **metric**: a list of tiles `[{"label": "...", "value": ..., "delta": ...}]`
+- **chart**: a Plotly figure `{"data": [...], "layout": {...}}`
+- **table**: a flat list of rows `[{...}, {...}]` for AgGrid
 
----
+Setup is described in the [OpenBB Workspace guide](../guides/openbb-workspace.md).
 
 ## Authentication
 
-OpenBB Workspace supports custom header authentication for REST backend connections. Fonrex validates request credentials through dual extraction:
+| Route | Key |
+|---|---|
+| `GET /widgets.json`, `GET /apps.json` | None — OpenBB fetches them before a key is configured |
+| `GET /openbb/...` | Required, in the `X-API-KEY` header (or `Authorization: Bearer`) |
 
-| Method | Header | Usage Example |
-|---|---|---|
-| **API Key Header (Recommended)** | `X-API-KEY: frx_live_...` | Native custom header configured in OpenBB Workspace |
-| **Bearer Token** | `Authorization: Bearer frx_live_...` | Standard HTTP clients & curl requests |
+A read-only key (`FONREX_READ_ONLY_API_KEYS`) is enough for every widget. CORS accepts the origins of `OPENBB_ALLOWED_ORIGIN` (`https://pro.openbb.co` by default).
 
-> **Note**: Both header formats resolve to the same underlying key validation logic. If authentication is enabled on your instance, set `OPENBB_API_KEY` or `FONREX_API_KEY` in your `.env` file.
+## Discovery files
 
----
+- `GET /widgets.json` — the 19 widgets: for each one, its name, category, type, route and parameters (`integrations/openbb/widgets.json`).
+- `GET /apps.json` — two pre-assembled dashboards, **Fonrex — EU Markets** and **Fonrex — Screener & Macro** (`integrations/openbb/apps.json`).
 
-## Discovery & App Endpoints
+## Routes
 
-### Discover Available Widgets
+| Widget | Type | Route | Adapts |
+|---|---|---|---|
+| `fonrex_quote` | metric | `GET /openbb/quote/{ticker}` | `/quote/{ticker}` |
+| `fonrex_macro_rates` | metric | `GET /openbb/macro/rates` | `/macro/rates` |
+| `fonrex_eod` | chart | `GET /openbb/eod/{ticker}` (`period` 1y by default) | `/eod/{ticker}` |
+| `fonrex_history` | chart | `GET /openbb/ticker/{symbol}/history` | `/ticker/{symbol}/history` |
+| `fonrex_technical` | chart | `GET /openbb/technical/{ticker}` | `/technical/{ticker}` |
+| `fonrex_technical_multi` | chart | `GET /openbb/technical/{ticker}/multi` | `/technical/{ticker}/multi` |
+| `fonrex_technical_chart` | chart | `GET /openbb/technical/{ticker}/chart` | `/technical/{ticker}/chart` |
+| `fonrex_fundamentals` | table | `GET /openbb/fundamental` | `/fundamental` |
+| `fonrex_fundamentals_deep` | table | `GET /openbb/fundamental/deep` | `/fundamental/deep` |
+| `fonrex_quotes_batch` | table | `GET /openbb/quotes` | `/quotes` |
+| `fonrex_screener` | table | `GET /openbb/technical/screen` | `/technical/screen` |
+| `fonrex_news` | table | `GET /openbb/news/{ticker}` | `/news/{ticker}` |
+| `fonrex_news_feed` | table | `GET /openbb/news/feed` | `/news/feed` |
+| `fonrex_dcf` | table | `GET /openbb/dcf/{ticker}` | `/dcf/{ticker}` |
+| `fonrex_dcf_compare` | table | `GET /openbb/dcf/{ticker}/compare` | `/dcf/{ticker}/compare` |
+| `fonrex_dcf_sensitivity` | table | `GET /openbb/dcf/{ticker}/sensitivity` | `/dcf/{ticker}/sensitivity` |
+| `fonrex_insider_transactions` | table | `GET /openbb/insider-transactions/{ticker}` | `/insider-transactions/{ticker}` |
+| `fonrex_etf_details` | table | `GET /openbb/etf/{isin}/details` | `/etf/{isin}/details` |
+| `fonrex_index_constituents` | table | `GET /openbb/index/{index_name}/constituents` | `/index/{index_name}/constituents` |
 
-```http
-GET /openbb/widgets.json
+Each route takes the parameters of the route it adapts (see the corresponding API reference page), with a few differences: `/openbb/fundamental` has no `fmt`; `/openbb/technical/{ticker}/multi` has no `include_ohlcv` and defaults to `sma_20,ema_50,rsi_14`; `/openbb/technical/{ticker}/chart` defaults to `sma_20,rsi_14`; `/openbb/news/feed` returns 20 articles by default.
+
+`GET /openbb/quote/{ticker}` never starts a realtime stream: the quote is real time once the ticker is subscribed with `POST /realtime/subscribe`, and the delayed Yahoo Finance price otherwise.
+
+## Example
+
+```bash
+curl -s -H "X-API-KEY: $FONREX_API_KEY" "http://localhost:5000/openbb/quote/AIR.PA"
 ```
 
-Returns the complete manifest of 19 interactive widgets provided by your Fonrex instance. OpenBB Workspace automatically queries this endpoint when adding Fonrex as a custom data source.
-
-### Retrieve Pre-Assembled Dashboard Apps
-
-```http
-GET /openbb/apps.json
+```json
+[
+  { "label": "AIR.PA Price", "value": 154.6, "delta": 0.13 },
+  { "label": "Change", "value": "+0.20", "delta": "+0.13%" },
+  { "label": "Previous Close", "value": 154.4, "delta": null },
+  { "label": "Day High", "value": 155.48, "delta": null },
+  { "label": "Day Low", "value": 155.1, "delta": null },
+  { "label": "Volume", "value": 18250, "delta": null }
+]
 ```
 
-Returns pre-assembled app configurations for OpenBB Workspace, including:
-1. **Fonrex — EU Markets**: Single-ticker analysis dashboard (Overview, Valuation, Technicals, News tabs).
-2. **Fonrex — Screener & Macro**: Market discovery dashboard (Technical Screener and FRED Macro Context).
-
----
-
-## Data Endpoints
-
-### Metric Endpoints (`type: "metric"`)
-
-#### Latest Quote Metric
-```http
-GET /openbb/quote/{ticker}
-```
-Returns real-time price snapshot, change percent, volume, and daily high/low as metric tiles.
-
-#### Macro Interest Rates
-```http
-GET /openbb/macro/rates
-```
-Returns current macro-economic interest rates and yields (FRED API integration) as metric tiles.
-
----
-
-### Chart Endpoints (`type: "chart"`)
-
-#### EOD Candlestick Chart
-```http
-GET /openbb/eod/{ticker}?period=1y&order=a
-```
-Returns daily OHLCV price history as a Plotly Candlestick figure with auto-ingestion capabilities.
-
-#### Ticker Historical Candles
-```http
-GET /openbb/ticker/{symbol}/history?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD&interval=1D
-```
-Returns filtered historical candles as a Plotly chart.
-
-#### Single Technical Indicator Chart
-```http
-GET /openbb/technical/{ticker}?indicator=rsi&period=14
-```
-Returns a single technical indicator time-series formatted as a Plotly line chart.
-
-#### Multi-Indicator Chart
-```http
-GET /openbb/technical/{ticker}/multi?indicators=sma_20,ema_50,rsi_14
-```
-Returns multiple technical indicators overlaid in a single Plotly figure.
-
-#### Overlaid Technical Chart
-```http
-GET /openbb/technical/{ticker}/chart?indicators=sma_20,rsi_14
-```
-Returns candlestick price history with overlaid indicator lines and subplots.
-
----
-
-### Table Endpoints (`type: "table"`)
-
-#### Multi-Provider Fundamentals
-```http
-GET /openbb/fundamental?ticker=AAPL
-```
-Flattens multi-provider fundamental metrics (P/E, ROE, Dividend Yield, Market Cap) into table row records.
-
-#### Deep Fundamental Statements & ESG
-```http
-GET /openbb/fundamental/deep?ticker=AAPL&sections=all
-```
-Returns financial statements, ESG scores, analyst consensus, and corporate metrics.
-
-#### Batch Quotes Table
-```http
-GET /openbb/quotes?tickers=AAPL,MSFT,SAP.DE
-```
-Returns real-time price snapshots for multiple tickers as a structured table.
-
-#### DCF Intrinsic Valuation
-```http
-GET /openbb/dcf/{ticker}
-```
-Returns DCF intrinsic valuation results (Free Cash Flow, EPS, Dividend Discount Models).
-
-#### DCF Models Comparison
-```http
-GET /openbb/dcf/{ticker}/compare
-```
-Returns side-by-side comparative analysis of all 3 DCF models.
-
-#### DCF Sensitivity Matrix
-```http
-GET /openbb/dcf/{ticker}/sensitivity?model=fcf&wacc_min=0.06&wacc_max=0.16&growth_min=0.01&growth_max=0.05
-```
-Returns WACC × terminal growth rate sensitivity grid.
-
-#### Technical Screener Table
-```http
-GET /openbb/technical/screen?indicator=rsi&operator=lt&value=30
-```
-Screens instruments matching indicator thresholds and returns tabular results.
-
-#### Aggregated News Table
-```http
-GET /openbb/news/{ticker}?limit=20
-```
-Returns deduplicated financial news from 7 integrated sources for a ticker.
-
-#### News Feed
-```http
-GET /openbb/news/feed?limit=20
-```
-Returns global market news feed items.
-
-#### Insider Transactions
-```http
-GET /openbb/insider_transactions/{ticker}?limit=20
-```
-Returns SEC Form 4 insider trading activity (US equities).
-
-#### ETF Details
-```http
-GET /openbb/etf/{isin}/details
-```
-Returns UCITS ETF metadata, fund size, TER, holdings, and sector allocations.
-
-#### Index Constituents
-```http
-GET /openbb/index/{index_name}/constituents
-```
-Returns list of constituent companies for major indices (`sp500`, `cac40`, `nasdaq100`, `dax`).
+This example is a delayed Yahoo Finance quote. Tiles without a value (no previous close, no volume…) are left out.

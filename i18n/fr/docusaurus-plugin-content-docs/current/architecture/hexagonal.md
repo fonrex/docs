@@ -1,55 +1,62 @@
 ---
 id: "hexagonal"
-title: "Architecture Hexagonale (Ports & Adaptateurs)"
-sidebar_label: "Architecture Hexagonale"
-description: "Explication des principes d'architecture hexagonale, interfaces de ports et limites d'adaptateurs dans Fonrex"
+title: "Couches & ports"
+sidebar_label: "Couches & ports"
+description: "Comment Fonrex sépare les adaptateurs HTTP, la logique applicative et les adaptateurs vers l'extérieur, et dans quelle mesure chaque fonctionnalité suit ce découpage"
 ---
 
+# Couches & ports
 
-# Architecture Hexagonale
+Le code est organisé par fonctionnalité et, à l'intérieur d'une fonctionnalité, en trois niveaux :
 
-Fonrex respecte strictement l'**Architecture Hexagonale** (Ports et Adaptateurs) dans ses modules du domaine. Cela isole la logique métier des frameworks de transport (FastAPI), des ORM (SQLAlchemy) et des scrapers externes (`yfinance`, `BeautifulSoup`).
-
-## Organisation en Couches
+1. **Adaptateurs HTTP** (`routers/`) : analysent la requête, appellent le niveau inférieur, traduisent les erreurs en statuts HTTP.
+2. **Logique applicative** : cas d'usage (`use_cases/`) ou services fonctionnels (`historical/`, `technical/`, `news/`, `valuation/`, `monitoring/`, `macro/`).
+3. **Adaptateurs vers l'extérieur** : dépôts SQLAlchemy (`database/`), Redis (`cache/`), fournisseurs (`financials/providers/`, `news/providers/`, `historical/providers.py`).
 
 ```
-┌──────────────────────────────────────────────────────────┐
-│                   Adapters (Outer Layer)                 │
-│  ┌───────────────────┐        ┌───────────────────────┐  │
-│  │ HTTP Routers      │        │ SQLAlchemy ORM        │  │
-│  │ (FastAPI)         │        │ (database/assets.py)  │  │
-│  └─────────┬─────────┘        └───────────▲───────────┘  │
-└────────────┼──────────────────────────────┼──────────────┘
-             │ Implements Ports             │
-┌────────────▼──────────────────────────────┴──────────────┐
-│                    Application / Domain                  │
-│  ┌───────────────────┐        ┌───────────────────────┐  │
-│  │ Ports             │ ◄──────┤ Use Cases             │  │
-│  │ (use_cases/ports) │        │ (use_cases/fundam...) │  │
-│  └───────────────────┘        └───────────────────────┘  │
-└──────────────────────────────────────────────────────────┘
+┌──────────────── routers/ (FastAPI) ────────────────┐
+│  parse request → call use case → map errors        │
+└──────────────────────────┬─────────────────────────┘
+                           ▼
+┌──────── use_cases/ — depends on ports only ────────┐
+│  GetFundamentals, GetDeepFundamentals, GetQuote…   │
+│  use_cases/ports.py: repository, cache, providers  │
+└──────────────────────────┬─────────────────────────┘
+                           ▼ implemented by
+┌──── database/, cache/, financials/providers/ ──────┐
+│  SQLAlchemy, Redis, HTTP                           │
+└────────────────────────────────────────────────────┘
 ```
 
-## Règles d'Architecture
+## Dans quelle mesure chaque fonctionnalité le suit
 
-1. **`use_cases/` Directory Isolation**:
-   - MUST NOT import `fastapi`, `starlette`, `sqlalchemy`, `yfinance`, or `requests`.
-   - MUST NOT handle HTTP status codes or DB connection pooling directly.
-   - Communicates exclusively via domain entities, dataclasses, and abstract Ports defined in `use_cases/ports.py`.
+| Fonctionnalité | Routeur | Logique applicative | Derrière des ports ? |
+|---|---|---|---|
+| Fondamentaux | `routers/fundamentals.py` | `use_cases/fundamentals.py` | Oui (`use_cases/ports.py`) |
+| Fournisseurs spécialisés | `routers/specialized.py` | `use_cases/specialized.py` | Oui |
+| Temps réel | `routers/realtime.py` | `use_cases/realtime.py` | En partie : le protocole WebSocket est dans le routeur |
+| Indicateurs techniques | `routers/technical.py` | `technical/indicator_service.py` | Oui (`technical/contracts.py`) |
+| Surveillance | `routers/monitoring.py` | `monitoring/` | En partie : le canary et la couche de validation utilisent `monitoring/ports.py` ; les requêtes de lecture des routes sont écrites dans le routeur |
+| Historique et EOD | `routers/historical.py`, `routers/assets.py` | `historical/ingestion_service.py`, `database/query.py` | Non |
+| Valorisation | `routers/valuation.py` | `valuation/dcf_service.py` | Non |
+| Actualités | `routers/news.py` | `news/news_service.py` | Non |
+| Macro, exploitation | `routers/macro.py`, `routers/admin.py` | `macro/`, `database/maintenance.py`, `cache/` | Non |
 
-2. **Abstract Ports (`use_cases/ports.py`)**:
-   - `FinancialsRepositoryPort`: Contract for persisting fundamental snapshots.
-   - `FinancialProviderPort` : Interface abstraite pour les providers en amont (`fetch(ticker, isin)`).
-   - `CachePort`: Contract for key-value TTL operations.
+La couche de cas d'usage est le modèle cible ; les autres fonctionnalités appellent directement leurs services.
 
-3. **Adapters (`routers/`, `database/`, `financials/`)**:
-   - Les routeurs HTTP (`routers/fundamentals.py`) traduisent les paramètres de requête en objets d'entrée Use Case et capturent les exceptions du domaine (`use_cases/errors.py`) pour les associer aux codes de statut HTTP standards (`404 Not Found`, `422 Unprocessable Entity`).
+## Règles garanties par des tests
 
-## Table de Correspondance des Exceptions
+- `technical/` n'importe ni FastAPI, ni SQLAlchemy, ni Redis, ni les modèles ORM ; `monitoring/` n'importe ni SQLAlchemy ni les modèles ORM (`tests/test_exception_boundaries.py`).
+- Le code bloquant (sessions SQLAlchemy, pandas, yfinance) est atteint via `concurrency.run_sync()` depuis le code asynchrone (`tests/test_async_boundary.py`) : voir [Concurrence](concurrency.md).
+- Les routeurs traduisent les erreurs applicatives avec `routers/errors.py`.
 
-| Domain Exception (`use_cases/errors.py`) | HTTP Status Code (`routers/errors.py`) |
+## Correspondance des erreurs
+
+| Erreur applicative (`use_cases/errors.py`) | Statut HTTP |
 |---|---|
+| `InvalidInput` | `400 Bad Request` |
 | `ResourceNotFound` | `404 Not Found` |
-| `InvalidInput` | `422 Unprocessable Entity` |
 | `DependencyUnavailable` | `503 Service Unavailable` |
-| `UpstreamFailure` | `502 Bad Gateway` |
+| `UpstreamFailure` | `500 Internal Server Error` |
+
+Les indicateurs techniques ont leurs propres erreurs : indicateur inconnu `400`, aucun prix `404`, trop peu de barres `422`.

@@ -1,100 +1,84 @@
 ---
 id: "app-developer"
-title: "应用开发者使用路径"
+title: "应用开发者路径"
 sidebar_label: "应用开发者"
-description: "开发者技术集成指南：REST API、实时 WebSockets 流与多数据源降级"
+description: "在应用中集成 Fonrex 实例：身份验证、REST 路由、WebSocket 流、错误和缓存"
 ---
 
-# 应用开发者使用路径
+# 应用开发者路径
 
-本路径为将 Fonrex 金融端点集成至外部应用（React, Vue, Node.js, Python, Go, Flutter 等）的**软件与 Web/移动端开发者**提供技术集成指南。
+本路径面向从应用（Web、移动端、脚本）调用 Fonrex 实例的开发者。
 
-| 集成协议 | 架构 | 主要用途 |
-|---|---|---|
-| **FastAPI REST API** | JSON / OpenAPI | 资产搜索、历史 K 线、基本面、DCF 估值 |
-| **Redis WebSockets** | Pub/Sub 流 | 订阅实时价格更新 |
-| **多数据源引擎** | 端口与适配器 (Hexagonal) | 自动故障转移与 Provider 降级 |
+| 协议 | 用途 |
+|---|---|
+| REST（JSON、OpenAPI） | 目录、价格、基本面数据、指标、估值、新闻 |
+| WebSocket | 实时 tick，每个 ticker 一个连接 |
 
----
+## 1. OpenAPI
 
-## 1. OpenAPI 与 Swagger 文档
+您的实例会发布自己的规范：
 
-Fonrex 通过 FastAPI 动态生成交互式 OpenAPI / Swagger 规范：
+- Swagger UI：`http://localhost:5000/docs`
+- ReDoc：`http://localhost:5000/redoc`
+- OpenAPI JSON：`http://localhost:5000/openapi.json`
 
-- **Swagger UI**：`http://localhost:5000/docs`
-- **ReDoc**：`http://localhost:5000/redoc`
-- **OpenAPI JSON Schema**：`http://localhost:5000/openapi.json`
+如果您的技术栈支持，可以根据 `openapi.json` 生成客户端。
 
----
+## 2. 身份验证
 
-## 2. REST API 集成 (资产搜索示例)
-
-搜索股票代码或货币对：
-
-```http
-GET /api/v1/assets/search?q=Apple
-```
-
-TypeScript 实现：
+每个请求都需发送密钥：`X-API-KEY: <key>` 或 `Authorization: Bearer <key>`。`401` 表示缺少密钥，`403` 表示密钥未知，或在会修改数据的路由上使用了只读密钥。浏览器或移动应用会把密钥保存在用户设备上：请为其提供**只读**密钥。
 
 ```typescript
-interface AssetResult {
-  symbol: string;
-  name: string;
-  exchange: string;
-  asset_type: string;
+const FONREX = "http://localhost:5000";
+
+async function fonrex<T>(path: string, key: string): Promise<T> {
+  const response = await fetch(`${FONREX}${path}`, { headers: { "X-API-KEY": key } });
+  if (!response.ok) {
+    throw new Error(`${response.status}: ${await response.text()}`);
+  }
+  return response.json() as Promise<T>;
 }
 
-async function searchAssets(query: string): Promise<AssetResult[]> {
-  const response = await fetch(`http://localhost:5000/api/v1/assets/search?q=${encodeURIComponent(query)}`);
-  if (!response.ok) {
-    throw new Error(`HTTP 错误! 状态: ${response.status}`);
-  }
-  const data = await response.json();
-  return data.results;
-}
+type Listing = { id: number; ticker: string; exchange: string; currency: string; isin: string; name: string; is_primary: boolean };
+
+const { listings } = await fonrex<{ count: number; listings: Listing[] }>(
+  "/listings?isin=NL0000235190", key,
+);
 ```
 
----
+## 3. 正确识别金融工具
 
-## 3. 实时 WebSocket 数据流
+ticker 不是全局标识符：同一金融工具有多个上市品种（listing，不同货币、不同交易所），而同一个 ticker 在别处可能代表另一个金融工具。请按 ISIN 查找金融工具（`/assets/by-isin/{isin}`、`/listings?isin=`），并在多个上市品种共用一个 ticker 时，向价格路由传递 `currency` 或 `exchange`。
 
-订阅由 Redis Pub/Sub 复用支持的实时价格流：
+## 4. 实时数据
 
 ```javascript
-const ws = new WebSocket('ws://localhost:5000/ws/v1/realtime');
-
-ws.onopen = () => {
-  ws.send(JSON.stringify({
-    action: 'subscribe',
-    symbols: ['AAPL', 'TSLA']
-  }));
-};
-
+const ws = new WebSocket(`ws://localhost:5000/ws/realtime/AIR.PA?token=${key}`);
 ws.onmessage = (event) => {
-  const payload = JSON.parse(event.data);
-  console.log(`实时价格更新 ${payload.symbol}: $${payload.price}`);
+  const message = JSON.parse(event.data);
+  switch (message.type) {
+    case "snapshot":
+    case "tick":
+      render(message.data.close);
+      break;
+    case "not_streaming":
+      showDelayed(message.error);
+      break;
+  }
 };
 ```
 
-> **注意**：参考 [实时配置指南](/docs/guides/configure-realtime)。
+每个 ticker 一个连接。价格以十进制字符串形式到达。只读密钥不会启动流；请在服务端使用 `POST /realtime/subscribe` 订阅 ticker。请参阅[实时数据](../api-reference/realtime.md)。
 
----
+## 5. 错误和缓存
 
-## 4. 错误处理与多 Provider 降级
-
-Fonrex 自动抽象底层供应商故障。如果主要数据源失败，降级引擎会自动查询次要 Provider 并返回包含诊断标头的 HTTP `200 OK` 响应：
-
-```typescript
-const res = await fetch('http://localhost:5000/api/v1/fundamentals/income-statement?symbol=AAPL');
-const providerSource = res.headers.get('X-Fonrex-Provider-Source');
-console.log(`数据源 Provider: ${providerSource}`);
-```
-
----
+- 错误响应体为 `{"detail": "..."}`，`/eod` 除外（`{"error", "message", "reason"}`）。
+- `503` 表示实例的某项服务不可用（数据库未迁移、Redis 宕机、worker 未启动）。
+- 大多数响应都缓存在 Redis 中（EOD 24 小时、基本面数据 1 小时、DCF 6 小时、新闻 30 分钟…）；在支持的路由上，`nocache`、`refresh` 或 `force_refresh` 参数可以绕过缓存。
+- 基本面数据响应会报告其来源（`Sources`）；没有标明数据提供方的响应头。
 
 ## 后续步骤
 
-- 参考 [实时流 API 参考](/docs/api-reference/realtime)
-- 参考 [资产 API 参考](/docs/api-reference/assets)
-- 参考 [六边形架构规范](/docs/architecture/hexagonal)
+- [资产与上市品种](../api-reference/assets.md)
+- [实时数据配置](../guides/configure-realtime.md)
+- [分层与端口](../architecture/hexagonal.md)

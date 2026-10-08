@@ -1,66 +1,63 @@
 ---
 id: "setup"
-title: "Configuration de l'Environnement de Développement"
-sidebar_label: "Config Dev"
-description: "Configuration d'un environnement virtuel Python local, installation des dépendances dev et exécution des tests"
+title: "Mise en place de l'environnement de développement"
+sidebar_label: "Environnement de dev"
+description: "Exécuter Fonrex depuis les sources avec des dépendances verrouillées, une base locale et le contrôle qualité"
 ---
 
-
-# Configuration de l'Environnement de Développement
-
-Ce guide explique comment configurer un environnement de développement local pour contribuer à Fonrex.
+# Mise en place de l'environnement de développement
 
 ## Prérequis
 
-- **Python 3.12**
-- **Docker & Docker Compose**
-- **Git**
+- Python 3.12
+- Docker et Docker Compose (base de données et Redis)
+- Git, et `make`
 
-## Configuration Étape par Étape
-
-### 1. Forker et Cloner le Dépôt
+## 1. Cloner et créer un environnement virtuel
 
 ```bash
 git clone https://github.com/fonrex/fonrex.git
 cd fonrex
-```
-
-### 2. Créer l'Environnement Virtuel
-
-```bash
 python3.12 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+source venv/bin/activate          # Windows: venv\Scripts\activate
 ```
 
-### 3. Installer les Dépendances
-
-Install main and development dependencies:
+## 2. Installer les dépendances verrouillées
 
 ```bash
-pip install -r requirements.txt
-pip install -r requirements-dev.txt
+make install-dev
 ```
 
-### 4. Démarrer les Services Locaux (Base de Données & Redis)
+Cette commande installe `requirements-dev.lock` : des versions exactes, chacune vérifiée par rapport à son hash, soit les mêmes paquets que l'image Docker et la CI. Après avoir modifié `requirements*.txt`, rafraîchissez les verrous avec `make lock` (nécessite `uv`) ; ne modifiez jamais les fichiers `.lock` à la main.
 
-Start PostgreSQL and Redis in Docker while developing python code locally:
+## 3. Démarrer la base de données et Redis
 
 ```bash
-docker compose up -d fonrex-db fonrex-redis
+cp .env.example .env              # set FONREX_API_KEY
+docker compose up -d db redis
 ```
 
-### 5. Exécuter les Migrations de Base de Données
+Les deux sont publiés sur `127.0.0.1` : les adresses `localhost` de `.env.example` les atteignent donc.
 
-Apply migrations to your local test database:
+## 4. Migrer et lancer l'API
 
 ```bash
 alembic upgrade head
+make run                          # uvicorn --reload on port 5000, loads .env
 ```
 
-### 6. Exécuter le Serveur FastAPI en Mode Reload
+La documentation interactive se trouve à `http://localhost:5000/docs`.
+
+Pour exécuter plutôt votre copie de travail dans Docker, sans reconstruire à chaque modification :
 
 ```bash
-uvicorn main:app --reload --port 5000
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up
 ```
 
-Access local interactive API docs at `http://localhost:5000/docs`.
+## 5. Lancer le contrôle qualité
+
+```bash
+make ci
+```
+
+Voir [Tests](testing.md). Avant d'ouvrir une pull request, lisez les [Règles d'architecture](architecture-rules.md) : chaque règle est garantie par un test. Les titres de pull request suivent Conventional Commits (`feat`, `fix`, `docs`, `chore`, `refactor`, `perf`, `test`), avec un sujet en minuscules.

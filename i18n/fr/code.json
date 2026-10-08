@@ -711,7 +711,8 @@
     "message": "Fournisseurs de données"
   },
   "homepage.explore.providers.description": {
-    "message": "Bascule multi-fournisseurs (SEC EDGAR, Yahoo Finance, FMP…) et adaptateurs personnalisés."
+    "message": "Yahoo Finance, 13 sites analysés, SEC EDGAR et JustETF — validés, avec leur source.",
+    "description": "Homepage"
   },
   "homepage.explore.providers.link.overview": {
     "message": "Vue d’ensemble"
@@ -762,7 +763,8 @@
     "message": "Développeur d'applications"
   },
   "homepage.pathways.developer.description": {
-    "message": "REST, WebSockets, bascule de fournisseurs."
+    "message": "REST, WebSockets, authentification.",
+    "description": "Homepage"
   },
   "homepage.pathways.devops.title": {
     "message": "DevOps & admin infra"
@@ -782,12 +784,6 @@
   "homepage.news.v200.summary": {
     "message": "Couche de validation, Canary monitor et 7 endpoints /health."
   },
-  "homepage.news.v200dcf.title": {
-    "message": "Moteur de valorisation DCF"
-  },
-  "homepage.news.v200dcf.summary": {
-    "message": "Modèles FCF, EPS et DDM avec WACC dynamique et matrices de sensibilité."
-  },
   "theme.SearchBar.noResultsText": {
     "message": "No results"
   },
@@ -799,5 +795,13 @@
   },
   "theme.SearchPage.searchContext.everywhere": {
     "message": "Everywhere"
+  },
+  "homepage.news.oct2026.title": {
+    "message": "Sécurité par défaut et prix par cotation",
+    "description": "Homepage"
+  },
+  "homepage.news.oct2026.summary": {
+    "message": "Clé d'API obligatoire par défaut, clés en lecture seule, prix stockés par cotation, symboles Yahoo vérifiés.",
+    "description": "Homepage"
   }
 }

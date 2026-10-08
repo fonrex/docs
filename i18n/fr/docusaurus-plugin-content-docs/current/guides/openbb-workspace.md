@@ -2,98 +2,84 @@
 id: "openbb-workspace"
 title: "Connecter Fonrex à OpenBB Workspace"
 sidebar_label: "Guide OpenBB Workspace"
-description: "Guide étape par étape pour connecter vos pipelines de données auto-hébergées Fonrex à OpenBB Workspace"
+description: "Connecter votre instance Fonrex auto-hébergée aux widgets et tableaux de bord d'OpenBB Workspace"
 ---
 
 # Connecter Fonrex à OpenBB Workspace
 
-[OpenBB Workspace](https://openbb.co) est une plateforme moderne et open-source de terminal financier et de tableaux de bord. Fonrex intègre des adaptateurs natifs qui vous permettent de connecter directement votre instance API auto-hébergée à OpenBB Workspace.
-
-Grâce à cette connexion, vous apportez les données fondamentales des marchés européens, les évaluations DCF, les calculs d'indicateurs techniques personnalisés et les actualités financières multi-sources directement dans votre espace de travail OpenBB (Desktop ou Cloud).
-
----
+[OpenBB Workspace](https://openbb.co) peut utiliser votre instance Fonrex comme backend personnalisé : données fondamentales européennes, valorisations DCF, indicateurs techniques et actualités apparaissent sous forme de widgets OpenBB.
 
 ## Prérequis
 
-Avant de commencer, assurez-vous de disposer de :
+1. Une instance Fonrex en cours d'exécution, joignable par OpenBB. OpenBB Workspace dans le navigateur (`pro.openbb.co`) appelle votre instance depuis votre navigateur : `http://localhost:5000` fonctionne quand le navigateur tourne sur la même machine ; sinon, exposez l'instance via un tunnel ou votre réseau.
+2. Une clé d'API de l'instance. Une clé **en lecture seule** (`FONREX_READ_ONLY_API_KEYS`) suffit pour tous les widgets, et c'est celle qu'il faut utiliser.
 
-1. Une instance API Fonrex en cours d'exécution (accessible en local sur `http://localhost:5000` ou via un nom de domaine / relay distant).
-2. L'application OpenBB Workspace (version Desktop ou interface Web).
-3. Si l'authentification est activée sur votre instance (`FONREX_AUTH_REQUIRED=true` ou `OPENBB_API_KEY` défini), munissez-vous de votre clé API (ex: `frx_live_...`).
+## Étape 1 — Ajouter Fonrex comme source de données
 
----
+1. Dans OpenBB Workspace, faites un clic droit sur le tableau de bord et sélectionnez **Add data** (ou ouvrez les connexions de backend).
+2. Saisissez l'URL de votre instance, par exemple `http://localhost:5000` ou `https://myfonrex.share.zrok.io`.
+3. OpenBB lit `/widgets.json` et liste les 19 widgets. Ce fichier et `/apps.json` répondent sans clé.
 
-## Guide de Configuration Étape par Étape
+## Étape 2 — Ajouter la clé
 
-### Étape 1 : Ajouter Fonrex comme Source de Données dans OpenBB
+Ajoutez un en-tête personnalisé à la connexion :
 
-1. Ouvrez **OpenBB Workspace**.
-2. Faites un clic droit sur votre grille de travail et sélectionnez **"Add data"** (ou ouvrez **Backend Connections** dans les Paramètres).
-3. Entrez l'URL backend de votre instance Fonrex :
-   - Pour un développement local : `http://localhost:5000`
-   - Pour un déploiement distant : `https://votre-instance-fonrex.com`
-4. OpenBB Workspace interrogera automatiquement `/openbb/widgets.json` afin de découvrir les 19 widgets disponibles.
+- **Nom** : `X-API-KEY`
+- **Valeur** : `frx_live_...`
 
-### Étape 2 : Configurer les En-têtes d'Authentification
+Toutes les routes `/openbb/...` l'exigent.
 
-Si votre serveur Fonrex requiert une clé API :
+## Étape 3 — Importer les tableaux de bord
 
-1. Dans la fenêtre de configuration du backend dans OpenBB, ajoutez un en-tête de requête personnalisé :
-   - Nom de l'en-tête (Header) : `X-API-KEY`
-   - Valeur de l'en-tête : `frx_live_votre_cle_api`
-2. Alternativement, le format standard `Authorization: Bearer frx_live_...` est également supporté.
-3. Cliquez sur **Save Connection**.
+`/apps.json` contient deux tableaux de bord :
 
-### Étape 3 : Importer les Applications de Tableau de Bord
+**Fonrex — EU Markets** — un ticker :
+- *Overview* : cours, taux macro, graphique EOD, données fondamentales détaillées, actualités
+- *Valuation* : valorisation DCF, comparaison des modèles et matrice de sensibilité
+- *Technical* : graphique technique et graphique multi-indicateurs
+- *News* : actualités du ticker et flux global
+- *Watchlist* : cours en lot
 
-Fonrex propose deux applications pré-configurées via `/openbb/apps.json` :
+**Fonrex — Screener & Macro** — découverte :
+- *Screener* : screener technique (par exemple RSI < 30)
+- *Macro Context* : taux FRED et composants des indices
 
-#### 1. Fonrex — EU Markets
-Une suite d'analyse complète par ticker comprenant :
-- **Onglet Aperçu (Overview)** : Instantanés de cotation, données fondamentales approfondies et graphique en chandeliers EOD.
-- **Onglet Évaluation (Valuation)** : Calcul de la valeur intrinsèque par modèle DCF et matrice de sensibilité WACC × croissance.
-- **Onglet Analyse Technique (Technical)** : Graphiques d'indicateurs techniques superposés (RSI, SMA, MACD).
-- **Onglet Actualités (News)** : Flux d'actualités dédoublonnées issues de 7 fournisseurs financiers.
+Importez-les depuis le menu Apps d'OpenBB, ou ajoutez les widgets un par un à votre propre tableau de bord.
 
-#### 2. Fonrex — Screener & Macro
-Un espace de travail pour la génération d'idées et l'analyse contextuelle :
-- **Onglet Screener** : Tableau de screener technique en temps réel.
-- **Onglet Contexte Macro (Macro Context)** : Taux d'intérêt macroéconomiques majeurs (FRED) et composants des principaux indices (S&P 500, CAC 40, NASDAQ 100, DAX).
+## Widgets
 
-Pour importer :
-1. Ouvrez le menu **Apps / Marketplace** dans OpenBB.
-2. Sélectionnez **"Import App"** et choisissez **Fonrex — EU Markets**.
-
----
-
-## Tableau Récapitulatif des Widgets
-
-| Widget ID | Nom | Catégorie | Type de Sortie |
+| Widget | Nom | Catégorie | Type |
 |---|---|---|---|
-| `fonrex_fundamentals` | Fondamentaux Fonrex | Fundamentals | Tableau |
-| `fonrex_fundamentals_deep` | Fondamentaux Approfondis | Fundamentals | Tableau |
-| `fonrex_eod` | Historique EOD Fonrex | Historical | Graphique (Plotly) |
-| `fonrex_history` | Historique OHLCV | Historical | Graphique (Plotly) |
-| `fonrex_quote` | Cotation Temps Réel | Market Data | Métrique |
-| `fonrex_quotes_batch` | Cotations en Lot | Market Data | Tableau |
-| `fonrex_technical` | Indicateur Technique | Technical | Graphique (Plotly) |
-| `fonrex_technical_multi` | Multi-Indicateurs | Technical | Graphique (Plotly) |
-| `fonrex_technical_chart` | Graphique Technique Complet | Technical | Graphique (Plotly) |
-| `fonrex_screener` | Screener Technique | Technical | Tableau |
-| `fonrex_news` | Actualités du Ticker | News | Tableau |
-| `fonrex_news_feed` | Flux d'Actualités Global | News | Tableau |
-| `fonrex_dcf` | Évaluation DCF | Valuation | Tableau |
-| `fonrex_dcf_compare` | Comparaison Modèles DCF | Valuation | Tableau |
-| `fonrex_dcf_sensitivity` | Matrice de Sensibilité DCF | Valuation | Tableau |
-| `fonrex_insider_transactions` | Transactions d'Initiés | Fundamentals | Tableau |
-| `fonrex_etf_details` | Détails ETF | Fundamentals | Tableau |
-| `fonrex_index_constituents` | Composants des Indices | Market Data | Tableau |
-| `fonrex_macro_rates` | Taux Macroéconomiques | Macro | Métrique |
+| `fonrex_fundamentals` | Fonrex Fundamentals | Fundamentals | table |
+| `fonrex_fundamentals_deep` | Fonrex Deep Fundamentals | Fundamentals | table |
+| `fonrex_insider_transactions` | Fonrex Insider Transactions | Fundamentals | table |
+| `fonrex_etf_details` | Fonrex ETF Details | Fundamentals | table |
+| `fonrex_eod` | Fonrex EOD History | Historical | chart |
+| `fonrex_history` | Fonrex OHLCV History | Historical | chart |
+| `fonrex_quote` | Fonrex Quote | Market Data | metric |
+| `fonrex_quotes_batch` | Fonrex Batch Quotes | Market Data | table |
+| `fonrex_index_constituents` | Fonrex Index Constituents | Market Data | table |
+| `fonrex_technical` | Fonrex Technical Indicator | Technical | chart |
+| `fonrex_technical_multi` | Fonrex Multi-Indicator | Technical | chart |
+| `fonrex_technical_chart` | Fonrex Technical Chart | Technical | chart |
+| `fonrex_screener` | Fonrex Technical Screener | Technical | table |
+| `fonrex_news` | Fonrex News | News | table |
+| `fonrex_news_feed` | Fonrex News Feed | News | table |
+| `fonrex_dcf` | Fonrex DCF Valuation | Valuation | table |
+| `fonrex_dcf_compare` | Fonrex DCF Models Comparison | Valuation | table |
+| `fonrex_dcf_sensitivity` | Fonrex DCF Sensitivity Matrix | Valuation | table |
+| `fonrex_macro_rates` | Fonrex Macro Rates | Macro | metric |
 
----
+Les routes correspondantes sont listées dans la [référence de l'API OpenBB](../api-reference/openbb.md).
 
-## Dépannage des Problèmes de Connexion
+## Bon à savoir
 
-- **Connexion refusée** : Vérifiez via `docker compose ps` que le conteneur `fonrex-api` est bien démarré et que le port `5000` est exposé.
-- **Erreurs 401 / 403** : Vérifiez que l'en-tête `X-API-KEY` dans OpenBB correspond à la clé configurée dans le fichier `.env` de Fonrex.
-- **Erreurs CORS** : Si vous utilisez OpenBB Web, assurez-vous que votre serveur autorise les requêtes de l'origine OpenBB ou définissez `CORS_ORIGINS=*` dans `.env`.
+- **Cours** : le widget de cours ne démarre jamais de flux temps réel. Il affiche le prix en temps réel une fois le ticker abonné (`POST /realtime/subscribe` avec une clé à accès complet), et sinon le prix différé de Yahoo Finance.
+- **Les prix et les indicateurs** ont besoin des prix du ticker en base de données ; le widget EOD les ingère à la première utilisation.
+- **Le DCF** a besoin des données fondamentales détaillées du ticker : ouvrez d'abord le widget de données fondamentales détaillées.
+
+## Dépannage
+
+- **Connexion refusée** : vérifiez `docker compose ps` et qu'OpenBB peut joindre l'URL.
+- **401 / 403** : l'en-tête `X-API-KEY` est absent ou ne correspond à aucune clé de votre `.env` (redémarrez l'API après l'avoir modifié).
+- **Erreur CORS** : le navigateur appelle votre instance depuis l'origine OpenBB. `OPENBB_ALLOWED_ORIGIN` (par défaut `https://pro.openbb.co`) liste les origines autorisées, séparées par des virgules.

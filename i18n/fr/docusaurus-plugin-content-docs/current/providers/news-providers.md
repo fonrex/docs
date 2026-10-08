@@ -1,30 +1,37 @@
 ---
 id: "news-providers"
-title: "Providers de l'Agrégateur d'Actualités"
-sidebar_label: "Providers d'Actualités"
-description: "Documentation pour les 7 modules de scraping d'actualités financières et logique de déduplication"
+title: "Fournisseurs de l'agrégateur d'actualités"
+sidebar_label: "Fournisseurs d'actualités"
+description: "Les 7 fournisseurs d'actualités, leurs correspondances et la déduplication des articles"
 ---
 
+# Fournisseurs de l'agrégateur d'actualités
 
-# Agrégateur d'Actualités Providers
+`NewsService` (`news/news_service.py`) interroge en parallèle les sept fournisseurs de `news/providers/` pour `GET /news/{ticker}`.
 
-The `NewsService` module aggregates news articles from 7 scraping connectors:
+| Module | Source | Méthode | Langue |
+|---|---|---|---|
+| `yfinance_news.py` | Yahoo Finance | `yfinance` (`ticker.news`), ticker tel que saisi | `en` |
+| `google_finance_news.py` | Google Finance | JSON intégré, HTML en solution de repli | Déduite du suffixe du ticker |
+| `zonebourse_news.py` | ZoneBourse | HTML | `fr` |
+| `boursorama_news.py` | Boursorama | HTML | `fr` |
+| `investing_news.py` | Investing.com | HTML, nécessite une correspondance | `en` |
+| `marketwatch_news.py` | MarketWatch | HTML | `en` |
+| `msn_finance_news.py` | MSN Finance | Endpoint JSON, HTML en solution de repli | `en` |
 
-## Matrice des Scrapers d'Actualités
+## Correspondances
 
-| Scraper Module | Provider Name | Method | Language | Deduplication Key |
-|---|---|---|---|---|
-| `yfinance_news.py` | Yahoo Finance | JSON API (`ticker.news`) | `en` | URL |
-| `google_finance_news.py` | Google Finance | HTML / Embedded JSON | `en` | URL |
-| `zonebourse_news.py` | ZoneBourse | HTML BeautifulSoup | `fr` | URL |
-| `boursorama_news.py` | Boursorama | HTML BeautifulSoup | `fr` | URL |
-| `investing_news.py` | Investing.com | HTML Scraper | `en` | URL |
-| `marketwatch_news.py` | MarketWatch | HTML Scraper | `en` | URL |
-| `msn_finance_news.py` | MSN Finance | JSON API Endpoint | `en` / `fr` | URL |
+Trois fournisseurs lisent une correspondance de l'instrument, par nom de fournisseur en minuscules : ZoneBourse (`zonebourse`) et Boursorama (`boursorama`) partagent la correspondance du fournisseur de données fondamentales du même nom ; Investing.com a besoin d'une correspondance nommée `investing_com` et ne renvoie rien sans elle. Les quatre autres construisent leur requête à partir du ticker.
 
-## Moteur de Déduplication d'Actualités
+## Déduplication
 
-To eliminate cross-posted articles across multiple news outlets, Fonrex enforces a two-tier deduplication algorithm:
+1. **URL** : mise en minuscules, suppression des paramètres `utm_*`, du fragment et de la barre oblique finale ; le premier article reçu est conservé.
+2. **Titre** : `difflib.SequenceMatcher` sur les titres normalisés (minuscules, sans ponctuation) ; à partir de `NEWS_DEDUP_SIMILARITY` (0,85), l'article le plus récent est conservé.
 
-1. **Exact URL Deduplication**: Database unique constraint `ON CONFLICT (url) DO UPDATE` in table `news_articles`.
-2. **Title Similarity Matching**: Before inserting new articles into the database feed, Fonrex compares article titles using Python's `difflib.SequenceMatcher`. Titles with a similarity ratio exceeding `NEWS_DEDUP_SIMILARITY` (default `0.85`) are merged under the earliest publication timestamp.
+Avec `language`, les articles dont la langue est connue et différente sont supprimés avant la déduplication. Les articles sont triés du plus récent au plus ancien et tronqués à `limit` ; chaque fournisseur est sollicité pour deux fois ce nombre.
+
+## Stockage
+
+Les articles des instruments présents dans le catalogue sont insérés ou mis à jour dans `news_articles` (`ON CONFLICT (url) DO UPDATE`) ; `GET /news/feed` et `GET /news/stats` lisent cette table. Les anciens articles ne sont pas purgés automatiquement.
+
+Un fournisseur en échec renvoie une liste vide sans bloquer les autres.

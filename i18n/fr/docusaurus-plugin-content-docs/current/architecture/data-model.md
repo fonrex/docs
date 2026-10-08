@@ -1,37 +1,41 @@
 ---
 id: "data-model"
-title: "Modèle de données & Référence du schéma"
+title: "Modèle de données & référence du schéma"
 sidebar_label: "Modèle de données"
-description: "Diagrammes entité-relation détaillés, schémas de base de données et définitions d'hypertables TimescaleDB"
+description: "Instruments, cotations et correspondances fournisseurs, prix par cotation sur TimescaleDB, tables de fondamentaux et de surveillance"
 ---
 
+# Modèle de données & référence du schéma
 
-# Modèle de données & Référence du schéma
+L'identité d'un instrument a trois niveaux :
 
-Fonrex utilise un schéma de représentation des actifs à 3 niveaux (`assets` ➔ `asset_listings` ➔ `asset_mappings`) pour gérer proprement les instruments, les cotations multi-places et les identifiants spécifiques des providers.
+- `assets` : l'instrument, un par ISIN ;
+- `asset_listings` : où il est coté (ticker, place, devise) ;
+- `asset_mappings` : l'identifiant de l'instrument ou d'une cotation chez un fournisseur donné (symbole Yahoo, URL de page…).
 
-## Diagramme Entité-Relation
+Un même ISIN est coté sous plusieurs tickers et devises ; un même ticker peut désigner des instruments différents sur des marchés différents ; et les fournisseurs n'acceptent pas les mêmes identifiants. `models.py` fait référence pour chaque colonne.
 
 ```mermaid
 erDiagram
-    ASSETS ||--o{ ASSET_LISTINGS : "has listings"
-    ASSETS ||--o{ ASSET_MAPPINGS : "has mappings"
-    ASSET_LISTINGS ||--o{ ASSET_MAPPINGS : "has provider mappings"
-    ASSETS ||--o{ PRICES_EOD : "has daily bars"
-    ASSETS ||--o{ PRICES_INTRADAY : "has intraday ticks"
-    ASSETS ||--o| FUNDAMENTALS_HIGHLIGHTS : "has highlights"
-    ASSETS ||--o{ FINANCIAL_STATEMENTS : "has statements"
-    ASSETS ||--o{ NEWS_ARTICLES : "has news"
+    ASSETS ||--o{ ASSET_LISTINGS : "is quoted as"
+    ASSETS ||--o{ ASSET_MAPPINGS : "global mappings"
+    ASSET_LISTINGS |o--o{ ASSET_MAPPINGS : "listing mappings"
+    ASSET_LISTINGS ||--o{ PRICES_EOD : "price series"
+    ASSETS ||--o{ PRICES_INTRADAY : "1-minute candles"
+    ASSETS ||--o| FUNDAMENTALS_HIGHLIGHTS : "highlights"
+    ASSETS ||--o{ FINANCIAL_STATEMENTS : "statements"
+    ASSETS ||--o{ EARNINGS_HISTORY : "EPS history"
+    ASSETS ||--o| ANALYST_RATINGS : "ratings"
+    ASSETS |o--o{ NEWS_ARTICLES : "news"
 
     ASSETS {
         int id PK
-        string isin UK "NOT NULL index"
+        string isin "unique when not null"
         string name
         string sector
         string industry
         string quote_type
     }
-
     ASSET_LISTINGS {
         int id PK
         int asset_id FK
@@ -39,66 +43,78 @@ erDiagram
         string exchange
         string currency
         bool is_primary
+        bool is_active
     }
-
     ASSET_MAPPINGS {
         int id PK
-        int asset_listing_id FK
+        int asset_id FK
+        int asset_listing_id FK "nullable"
         string provider_name
         string provider_ticker
         string provider_url
+        string source
     }
-
     PRICES_EOD {
-        timestamp time PK
-        int asset_id FK
+        int asset_listing_id PK
+        string resolution PK "1D 1W 1M"
+        timestamptz time PK "session date, midnight UTC"
+        int asset_id
         float open
         float high
         float low
         float close
-        bigint volume
-    }
-
-    PRICES_INTRADAY {
-        timestamp timestamp PK
-        int asset_id FK
-        float open
-        float high
-        float low
-        float close
+        float adj_close
         bigint volume
     }
 ```
 
-## Tables Clés de la Base de Données
+## Identité
 
-### 1. `assets`
-Represents the canonical financial instrument (e.g., Apple Inc. or Airbus SE).
-- **`id`** (Integer, PK, Autoincrement)
-- **`isin`** (String(12), Partial Unique Index `uq_assets_isin_not_null` WHERE `isin IS NOT NULL`)
-- **`name`** (String(255))
-- **`sector`** / **`industry`** (String(100))
-- **`quote_type`** (Enum: `EQUITY`, `ETF`, `MUTUALFUND`, `INDEX`)
+| Table | Règle |
+|---|---|
+| `assets` | Une ligne par ISIN : index unique partiel `uq_assets_isin_not_null` (`WHERE isin IS NOT NULL`) |
+| `asset_listings` | Unique sur `(asset_id, ticker, exchange, currency)` (`uq_asset_listing_identity`) ; `is_primary` marque la cotation par défaut |
+| `asset_mappings` | Unique sur `(asset_listing_id, provider_name)`. Une correspondance sans cotation s'applique à toutes les cotations de l'instrument. `source` indique d'où vient l'identifiant : `csv_import`, `manual`, `isin_search`, `ticker_check`, `symbol_not_found` |
 
-### 2. `asset_listings`
-Represents exchange-specific trading listings.
-- Unique Constraint: `uq_asset_listing_identity` on `(asset_id, ticker, exchange, currency)`.
-- Flags: `is_primary` (Boolean), `is_active` (Boolean).
+La correspondance Yahoo Finance d'une cotation contient son **symbole vérifié** (trouvé à partir de l'ISIN et contrôlé par rapport à la devise de la cotation) ou, avec `source = 'manual'`, un symbole que vous avez saisi à la main.
 
-### 3. `asset_mappings`
-Maps external provider tickers or custom page URLs.
-- Unique Constraint: `(asset_listing_id, provider_name)`.
+## Prix
 
-### 4. `prices_eod` (PostgreSQL Table)
-Daily historical OHLCV price series.
-- Unique Index: `ix_prices_eod_asset_resolution_time` on `(asset_id, resolution, time)`.
+| Table | Description |
+|---|---|
+| `prices_eod` | Hypertable TimescaleDB. Clé `(asset_listing_id, resolution, time)` : une série par cotation et par résolution. `time` est la date de la séance à minuit UTC. Les chunks de plus de 14 jours sont compressés (segmentés par cotation et résolution) |
+| `prices_weekly`, `prices_monthly` | Agrégats continus des barres journalières, par cotation, rafraîchis chaque jour ; utilisés lorsqu'aucune ligne `1W`/`1M` n'est enregistrée pour la cotation |
+| `prices_intraday` | Hypertable des bougies d'une minute issues du flux temps réel, par instrument, chunks d'un jour, purgée après 30 jours |
+| `realtime_subscriptions` | Tickers diffusés, restaurés au démarrage |
+| `ingest_log` | Une ligne par ingestion : statut, source, lignes, plage, durée, erreur |
 
-### 5. `prices_intraday` (TimescaleDB Hypertable)
-High-frequency 1-minute candle storage.
-- Partitioned daily by time interval (`INTERVAL '1 day'`).
-- Automated retention policy: Purges chunks older than 30 days.
+## Fondamentaux
 
-### 6. `provider_health_log` (TimescaleDB Hypertable)
-Outlier checks and health metrics per provider.
-- Composite Primary Key: `(id, checked_at)`.
-- Automated retention policy: 30 days.
+| Table | Description |
+|---|---|
+| `fundamentals_highlights` | Dernier instantané d'un instrument (valorisation, rentabilité, dividende, positions vendeuses, solvabilité). `dividend_yield` est un ratio |
+| `financial_statements` | Une ligne par type d'état (compte de résultat, bilan, flux de trésorerie), période fiscale et fréquence. Un exercice correspond à trois lignes ; les calculs les regroupent avec `financials/fiscal_years.py` |
+| `earnings_history`, `earnings_trend` | BPA réel contre estimé ; estimations des analystes pour `0q`, `+1q`, `0y`, `+1y` |
+| `analyst_ratings` | Consensus, objectif de cours, nombre de recommandations |
+| `esg_scores` | Scores E/S/G et 15 indicateurs de controverse |
+| `outstanding_shares_history` | Historique du nombre d'actions |
+| `etf_details`, `etf_holdings` | Lues pour les ETF mais pas écrites par l'application aujourd'hui |
+| `fundamentals` | Table historique, plus écrite |
+
+Ces tables sont écrites par l'enrichissement approfondi à partir de Yahoo Finance (`/fundamental/deep`, `import_assets.py --enrich-only`).
+
+## Actualités, macro et utilisation
+
+| Table | Description |
+|---|---|
+| `news_articles` | Unique sur `url` ; index pour le flux et les statistiques. Les anciens articles ne sont pas purgés automatiquement |
+| `macro_rates_cache` | Séries lues sur FRED, unique sur `(series_id, observation_date)` |
+| `usage_logs` | Une ligne par requête API, écrite par lots en arrière-plan ; l'IP n'est pas conservée sauf si `USAGE_LOG_IP` le demande ; purgée après `USAGE_LOG_RETENTION_DAYS` |
+
+## Surveillance
+
+| Table | Description |
+|---|---|
+| `provider_health_log` | Hypertable, une ligne par valeur vérifiée (`check_type` `canary`, `realtime` ou `consensus`), rétention de 30 jours |
+| `provider_health_daily` | Agrégat quotidien par fournisseur, unique sur `(provider_name, date)` |
+| `provider_alerts` | Alertes `canary_failed` et `high_outlier_rate`, actives ou résolues |

@@ -2,106 +2,105 @@
 id: "fundamentals"
 title: "Fundamental Financials API Reference"
 sidebar_label: "Fundamentals"
-description: "Endpoints for multi-provider fundamental metrics, financial statements, and valuation ratios"
+description: "Multi-provider fundamentals in the EODHD layout and stored deep fundamentals"
 ---
 
 # Fundamental Financials API Reference
 
-The Fundamentals API aggregates financial metrics, key statistics, balance sheets, income statements, cash flows, and analyst consensus across 14+ fundamental providers.
+Two routes serve fundamentals:
+
+- `GET /fundamental` builds one document from Yahoo Finance, the figures stored in the database and the scraped providers, with the source of every figure.
+- `GET /fundamental/deep` returns what the deep enrichment stored: highlights, financial statements, earnings history and analyst ratings.
+
+Ratios are ratios: a 0.32 % dividend yield is `0.0032`.
 
 ---
 
 ## <span className="api-method get">GET</span> `/fundamental`
 
-Aggregate key financial statistics (P/E ratio, Dividend Yield, Market Cap, Enterprise Value, Beta, ESG scores) across providers.
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `ticker` | string | — | Ticker (e.g. `AIR.PA`). `ticker` or `isin` is required |
+| `isin` | string | — | ISIN of the instrument |
+| `exchange` | string | — | Exchange, to choose a listing |
+| `currency` | string | — | Currency, to choose a listing |
+| `provider` | string | all | One provider name, or several separated by commas, instead of all of them |
+| `fmt` | string | `eodhd` | `eodhd` (rendered document) or `raw` (the answer of each provider) |
+| `nocache` | boolean | `false` | Ignore the cached answer |
 
-### Parameters
-
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `ticker` | `string` | ❌ | — | Ticker symbol (e.g. `TSLA`) |
-| `isin` | `string` | ❌ | — | ISIN code (e.g. `US88160R1014`) |
-| `exchange` | `string` | ❌ | — | Financial exchange code |
-| `currency` | `string` | ❌ | — | Currency filter |
-| `provider` | `string` | ❌ | — | Specific provider override (e.g. `ZoneBourse`, `Gurufocus`, `YahooFinance`) |
-
-### Response Example
-
-```json
-{
-  "asset_profile": {
-    "isin": "US88160R1014",
-    "name": "Tesla, Inc.",
-    "ticker": "TSLA",
-    "sector": "Consumer Cyclical"
-  },
-  "metrics": {
-    "market_cap": 750230000000,
-    "pe_ratio": 62.4,
-    "forward_pe": 48.1,
-    "dividend_yield": 0.0,
-    "beta": 2.34,
-    "price_to_sales": 7.82,
-    "roe": 0.194
-  },
-  "providers_used": ["ZoneBourse", "Gurufocus", "YahooFinance"]
-}
-```
-
-### Examples
-
-#### cURL
 ```bash
-curl -s "http://localhost:5000/fundamental?ticker=TSLA"
+curl -s -H "X-API-KEY: $FONREX_API_KEY" "http://localhost:5000/fundamental?ticker=AIR.PA"
 ```
 
-#### Python
-```python
-import requests
+### The rendered document (`fmt=eodhd`)
 
-resp = requests.get("http://localhost:5000/fundamental", params={"ticker": "TSLA"})
-data = resp.json()
-print("Market Cap:", data["metrics"]["market_cap"])
-```
+| Section | Content |
+|---|---|
+| `General` | Name, ISIN, exchange, currency, country, sector and industry, description, address, website |
+| `Highlights` | Market capitalisation, EBITDA, P/E, EPS, dividend yield, margins, returns, revenue… |
+| `Valuation` | Trailing and forward P/E, price/sales, price/book, enterprise value ratios |
+| `SharesStats` | Shares outstanding and float, insider and institution ownership, short interest |
+| `Technicals` | Beta, 52-week high and low, moving averages |
+| `SplitsDividends` | Dividend rate and yield, payout ratio, dates, last split |
+| `AnalystRatings` | Consensus, target price, number of buy/hold/sell ratings |
+| `Holders`, `InsiderTransactions`, `ESGScores` | Holders, SEC Form 4 transactions (US shares), ESG scores |
+| `Earnings`, `Financials` | Stored earnings history and financial statements |
+| `Providers` | What each provider returned |
+| `Sources` | The source of each figure, e.g. `{"Highlights": {"PERatio": "YahooFinance", "PEGRatio": "database (2026-10-01)"}}` |
+| `ETF_Data` | Only for an ETF |
+
+Each figure is taken, in this order, from:
+
+1. the Yahoo Finance answer of this request;
+2. the figures stored by the deep enrichment, reported as `database (date of the fetch)`;
+3. for the trailing P/E, the earnings per share and the dividend yield only, the scraped providers publishing the same quantity (Google Finance, Barron's, MarketWatch, WSJ, Investing.com).
+
+Estimates for the current year (Boursorama, ZoneBourse) and quarterly figures (Google Finance) are other quantities: they are never used as a fallback but remain available with `fmt=raw`.
+
+### Which instrument is asked
+
+For a listing of your catalogue, Yahoo Finance is asked with the **symbol verified for the listing** (found from the ISIN and checked against the currency of the listing), never with the bare ticker, which may be another instrument on Yahoo. Without a verified symbol, Yahoo is not asked and its entry says why. Scraped providers are searched by mapping, ISIN or ticker; a provider that answers about another ISIN is reported as an error.
+
+Every value goes through the [validation layer](../monitoring/validation-layer.md) before it is used.
+
+The complete answer is cached one hour; `nocache=true` bypasses it.
 
 ---
 
 ## <span className="api-method get">GET</span> `/fundamental/deep`
 
-Retrieve deep structured financial data including daily snapshots, financial statements, EPS earnings history, and analyst consensus ratings.
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `ticker` / `isin` | string | — | The instrument (one of the two is required) |
+| `refresh` | boolean | `false` | Fetch again from Yahoo Finance instead of using the cached answer |
+| `sections` | string | `all` | `all`, or a comma-separated list among `highlights`, `statements`, `earnings`, `ratings` |
 
-### Parameters
+```bash
+curl -s -H "X-API-KEY: $FONREX_API_KEY" \
+  "http://localhost:5000/fundamental/deep?ticker=AIR.PA&sections=highlights,ratings"
+```
 
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `ticker` | `string` | ✅ | — | Ticker symbol (e.g. `AIR.PA`) |
-
-### Response Example
+Answer layout:
 
 ```json
 {
-  "highlights": {
-    "pe_ratio": 28.5,
-    "enterprise_value": 110500000000,
-    "roe": 0.162,
-    "roa": 0.054
+  "asset_profile": { "isin": "NL0000235190", "ticker": "AIR.PA", "name": "Airbus SE", "exchange": "XPAR", "currency": "EUR" },
+  "highlights": { "pe_ratio": 28.5, "dividend_yield": 0.0125, "roe": 0.162, "...": "..." },
+  "statements": {
+    "income":   { "annual": [ { "period_end": "2025-12-31", "...": "..." } ], "quarterly": [] },
+    "balance":  { "annual": [], "quarterly": [] },
+    "cashflow": { "annual": [], "quarterly": [] }
   },
-  "financial_statements": [
-    {
-      "statement_type": "income",
-      "period_type": "annual",
-      "period_end": "2025-12-31",
-      "revenue": 65400000000,
-      "net_income": 4200000000
-    }
-  ],
-  "analyst_ratings": {
-    "consensus": "Buy",
-    "target_mean": 165.0,
-    "strong_buy": 12,
-    "buy": 8,
-    "hold": 4,
-    "sell": 1
-  }
+  "earnings_history": [ { "...": "..." } ],
+  "analyst_ratings": { "...": "..." },
+  "meta": { "fetched_at": "2026-10-08T16:40:00+00:00", "source": "yfinance", "cache_hit": false, "symbol": "AIR.PA" }
 }
 ```
+
+The figures are fetched from Yahoo Finance with the verified symbol (`meta.symbol`) and stored. Without a verified symbol nothing is fetched: the answer is what the database already holds, `meta.source` is `database` and `meta.note` gives the reason. Complete answers are cached 24 hours; a request receives only the sections it asked for.
+
+---
+
+## Legacy routes
+
+`GET /stocks` (market overview) and `GET /stocks/{ticker}/financials` remain from earlier versions. They ask Yahoo Finance with the ticker as typed; prefer `/fundamental`.

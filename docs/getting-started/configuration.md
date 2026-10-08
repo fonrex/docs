@@ -2,87 +2,116 @@
 id: "configuration"
 title: "System Configuration"
 sidebar_label: "Configuration"
-description: "Complete reference of Fonrex environment variables and runtime settings"
+description: "Reference of the Fonrex settings read from .env"
 ---
 
 # System Configuration
 
-Fonrex is configured using environment variables specified in `.env`. Below is the complete table of supported variables categorized by application subsystem.
+Fonrex reads its settings from environment variables. Copy `.env.example` to `.env` and edit it: Docker Compose loads `.env` into the API container, and `make run` loads it for a local run.
 
-## Database & Cache
+Keep one `KEY=value` per line and put comments on their own lines — a comment written after an empty value is read as the value.
 
-| Variable | Default Value | Required | Description |
-|---|---|---|---|
-| `DATABASE_URL` | `postgresql://fonrex:fonrex_password@localhost:5432/fonrex` | ✅ | Primary PostgreSQL/TimescaleDB connection string |
-| `ASYNC_DATABASE_URL` | Auto-derived from `DATABASE_URL` | ❌ | AsyncPG connection string for asynchronous workers |
-| `POSTGRES_DB` | `fonrex` | ✅ | PostgreSQL database name |
-| `POSTGRES_USER` | `fonrex` | ✅ | PostgreSQL username |
-| `POSTGRES_PASSWORD` | `fonrex_password` | ✅ | PostgreSQL password |
-| `REDIS_URL` | `redis://localhost:6379/0` | ✅ | Redis instance URL |
-| `CACHE_TTL` | `300` | ❌ | Default API cache TTL in seconds (5 minutes) |
+## Authentication
 
-## Specialized Data Providers
+| Variable | Default | Description |
+|---|---|---|
+| `FONREX_API_KEY` | *(empty)* | Full-access API key. Generate one with `echo "frx_live_$(openssl rand -hex 24)"` |
+| `FONREX_API_KEYS` | *(empty)* | Additional full-access keys, comma-separated |
+| `FONREX_READ_ONLY_API_KEYS` | *(empty)* | Read-only keys, comma-separated: they read data but cannot clear the cache, clean the database, trigger ingestion or change subscriptions |
+| `FONREX_AUTH_REQUIRED` | `true` | `false` opens every route, **only** when no key is configured. Use it only for an instance reachable from no network |
 
-| Variable | Default Value | Required | Description |
-|---|---|---|---|
-| `OPENFIGI_API_KEY` | `""` | ❌ | Optional OpenFIGI API key for higher rate limits |
-| `SEC_EDGAR_EMAIL` | `contact@fonrex.io` | ✅ | Contact email sent in HTTP User-Agent header to SEC EDGAR |
+Clients send a key as `Authorization: Bearer <key>` or `X-API-KEY: <key>`. See [First API call](first-api-call.md).
 
-## Historical Ingestion
+## Database and cache
 
-| Variable | Default Value | Required | Description |
-|---|---|---|---|
-| `INGEST_CONCURRENCY` | `5` | ❌ | Number of parallel worker threads during bulk ingestion |
-| `INGEST_YF_DELAY` | `0.5` | ❌ | Delay in seconds between consecutive Yahoo Finance requests |
-| `INGEST_TV_DELAY` | `2.0` | ❌ | Delay in seconds between TradingView historical requests |
-| `INGEST_BATCH_SIZE` | `1000` | ❌ | Batch size for SQL `INSERT ... ON CONFLICT` statements |
+| Variable | Default | Description |
+|---|---|---|
+| `DATABASE_URL` | `postgresql://fonrex:fonrex_password@localhost:5432/fonrex` | Address for a local run. With Docker Compose it is replaced by the `db` service address, built from `POSTGRES_PASSWORD` |
+| `ASYNC_DATABASE_URL` | *(empty)* | asyncpg address; derived from `DATABASE_URL` when empty (Docker Compose empties it) |
+| `POSTGRES_DB` / `POSTGRES_USER` | `fonrex` | Kept for local tools; `docker-compose.yml` uses fixed values (user `fonrex`, database `fonrex` created by `postgres-init.sh`) |
+| `POSTGRES_PASSWORD` | `fonrex_password` | Change it before the first start (letters, digits, `-`, `_`) |
+| `REDIS_URL` | `redis://localhost:6379/0` | Replaced by the `redis` service address with Docker Compose |
+| `CACHE_TTL` | `300` | Default Redis lifetime in seconds (each cached category has its own lifetime, listed by `GET /cache/stats`) |
+| `WEB_CONCURRENCY` | `1` | Gunicorn workers (Docker Compose). Keep `1`: the realtime worker and the daily canary live in the API process |
 
-## Realtime Streaming
+## Historical ingestion
 
-| Variable | Default Value | Required | Description |
-|---|---|---|---|
-| `TV_MAX_CONNECTIONS` | `10` | ❌ | Maximum simultaneous TradingView WebSocket connections |
-| `TV_RECONNECT_DELAY` | `5` | ❌ | Initial reconnect delay in seconds (exponential backoff) |
-| `REALTIME_QUOTE_TTL` | `60` | ❌ | Redis TTL for realtime quote snapshots in seconds |
-| `REALTIME_AUTO_SUBSCRIBE` | `true` | ❌ | Automatically start WebSocket stream when requesting `/quote/{ticker}` |
+| Variable | Default | Description |
+|---|---|---|
+| `INGEST_CONCURRENCY` | `5` | Parallel ingestions of a bulk ingestion whose caller gives no `concurrency` |
+| `INGEST_YF_DELAY` | `0.5` | Pause in seconds before falling back to TradingView |
+| `INGEST_TV_DELAY` | `2.0` | Read but not used by the current code |
+| `INGEST_BATCH_SIZE` | `1000` | Rows per database upsert |
 
-## Technical Indicators
+## Real-time streaming
 
-| Variable | Default Value | Required | Description |
-|---|---|---|---|
-| `TECHNICAL_CACHE_ENABLED` | `true` | ❌ | Enable Redis caching for technical indicator calculations |
-| `TECHNICAL_DEFAULT_LIMIT` | `500` | ❌ | Default number of candles retrieved for indicator math |
-| `TECHNICAL_MAX_BATCH_TICKERS` | `20` | ❌ | Maximum tickers per `/technical/batch` request |
-| `TECHNICAL_MAX_BATCH_INDICATORS` | `10` | ❌ | Maximum indicators per `/technical/batch` request |
+| Variable | Default | Description |
+|---|---|---|
+| `TV_MAX_CONNECTIONS` | `10` | Simultaneous TradingView WebSocket connections |
+| `TV_RECONNECT_DELAY` | `5` | First reconnection delay in seconds, doubled up to 60 |
+| `REALTIME_QUOTE_TTL` | `60` | Lifetime of a quote snapshot in Redis, in seconds |
 
-## News Aggregator
+## Technical indicators
 
-| Variable | Default Value | Required | Description |
-|---|---|---|---|
-| `NEWS_CACHE_TTL` | `1800` | ❌ | Redis TTL for news feed results in seconds (30 min) |
-| `NEWS_DEFAULT_LIMIT` | `20` | ❌ | Default article limit per news query |
-| `NEWS_MAX_LIMIT` | `100` | ❌ | Maximum allowed articles per request |
-| `NEWS_PROVIDERS_TIMEOUT` | `10` | ❌ | Global timeout for provider scraping requests in seconds |
-| `NEWS_DEDUP_SIMILARITY` | `0.85` | ❌ | SequenceMatcher similarity threshold for title deduplication |
+| Variable | Default | Description |
+|---|---|---|
+| `TECHNICAL_CACHE_ENABLED` | `true` | Cache indicator results in Redis |
+| `TECHNICAL_DEFAULT_LIMIT` | `500` | Bars loaded when a request gives no limit (10 to 5000) |
+| `TECHNICAL_MAX_BATCH_TICKERS` | `20` | Tickers accepted by `POST /technical/batch` |
+| `TECHNICAL_MAX_BATCH_INDICATORS` | `10` | Indicators accepted by `POST /technical/batch` |
 
-## Valuation (DCF)
+## News
 
-| Variable | Default Value | Required | Description |
-|---|---|---|---|
-| `DCF_CACHE_TTL` | `21600` | ❌ | Redis TTL for DCF valuations in seconds (6 hours) |
-| `DCF_DEFAULT_PROJECTION_YEARS` | `5` | ❌ | Default cash flow projection window in years |
-| `DCF_RISK_FREE_RATE` | `0.04` | ❌ | Default risk-free rate (e.g. 4.0% US 10Y Treasury) |
-| `DCF_EQUITY_RISK_PREMIUM` | `0.055` | ❌ | Default equity risk premium (5.5%) |
-| `DCF_TERMINAL_GROWTH_RATE` | `0.025` | ❌ | Default terminal growth rate (2.5%) |
+| Variable | Default | Description |
+|---|---|---|
+| `NEWS_CACHE_TTL` | `1800` | Lifetime of a news answer in Redis, in seconds |
+| `NEWS_DEFAULT_LIMIT` | `20` | Articles returned for a ticker when the request gives no limit |
+| `NEWS_MAX_LIMIT` | `100` | Largest limit a request may ask for |
+| `NEWS_DEDUP_SIMILARITY` | `0.85` | Title similarity above which two articles are one |
 
-## Provider Monitoring & Health
+## Valuation (DCF) and macro rates
 
-| Variable | Default Value | Required | Description |
-|---|---|---|---|
-| `VALIDATION_OUTLIER_THRESHOLD` | `0.50` | ❌ | Consensus deviation threshold (50%) to flag outliers |
-| `VALIDATION_MIN_PROVIDERS` | `2` | ❌ | Minimum agreeing providers required for consensus check |
-| `CANARY_RUN_HOUR` | `6` | ❌ | Daily UTC hour to trigger Canary health suite (0-23) |
-| `CANARY_PROVIDER_SEMAPHORE` | `3` | ❌ | Concurrency limit for canary checks |
-| `ALERT_CANARY_CRITICAL` | `3` | ❌ | Consecutive failed canary checks before critical alert |
-| `ALERT_SUCCESS_RATE_CRITICAL` | `0.70` | ❌ | Provider success rate threshold for critical alert |
-| `ALERT_SUCCESS_RATE_WARNING` | `0.85` | ❌ | Provider success rate threshold for warning alert |
+| Variable | Default | Description |
+|---|---|---|
+| `DCF_CACHE_TTL` | `21600` | Lifetime of a DCF answer in Redis (6 h) |
+| `DCF_DEFAULT_PROJECTION_YEARS` | `5` | Projection years (3 to 10) |
+| `DCF_RISK_FREE_RATE` | `0.04` | Risk-free rate used when FRED gives none |
+| `DCF_EQUITY_RISK_PREMIUM` | `0.055` | Equity risk premium, as a ratio |
+| `DCF_TERMINAL_GROWTH_RATE` | `0.025` | Terminal growth rate, as a ratio |
+| `FRED_API_KEY` | *(empty)* | Free key from fred.stlouisfed.org; without it the stored rate or `DCF_RISK_FREE_RATE` is used |
+| `MACRO_RATES_CACHE_TTL` | `21600` | Lifetime of the macro rates in Redis (6 h) |
+
+## Provider monitoring
+
+| Variable | Default | Description |
+|---|---|---|
+| `VALIDATION_OUTLIER_THRESHOLD` | `0.50` | Deviation from the median above which a value is an outlier |
+| `VALIDATION_MIN_PROVIDERS` | `2` | Providers needed for a consensus check |
+| `CANARY_RUN_HOUR` | `6` | UTC hour of the daily canary run |
+| `CANARY_PROVIDER_SEMAPHORE` | `3` | Providers checked in parallel by the canary |
+| `CANARY_PRICE_RANGE_TTL_SECONDS` | `21600` | Validity of a dynamic price range (6 h) |
+| `CANARY_PRICE_RANGE_NEGATIVE_TTL_SECONDS` | `300` | Retry delay after a range could not be computed |
+| `ALERT_CANARY_CRITICAL` | `3` | Canary failures that raise a critical alert |
+| `ALERT_SUCCESS_RATE_CRITICAL` | `0.70` | Success rate under which an alert is critical |
+| `ALERT_SUCCESS_RATE_WARNING` | `0.85` | Success rate under which an alert is a warning |
+
+## Providers and outbound requests
+
+| Variable | Default | Description |
+|---|---|---|
+| `SEC_EDGAR_EMAIL` | `contact@fonrex.io` | Contact address sent to SEC EDGAR (required by the SEC policy): put your own |
+| `OPENFIGI_API_KEY` | *(empty)* | Optional OpenFIGI key (higher rate limit) |
+| `BARRONS_TOKEN`, `MARKETWATCH_TOKEN`, `WSJ_TOKEN` | *(empty)* | Optional tokens of these websites |
+| `FONREX_PROVIDER_MAX_CONCURRENCY` | `4` | Requests one provider may run at the same time (1 to 64) |
+| `FONREX_PROXY_URL` | *(empty)* | Optional outbound HTTP proxy for the scraped websites (not for yfinance or TradingView) |
+| `FONREX_PROXY_PROVIDERS` | *(empty)* | Providers that use the proxy, comma-separated; empty means all |
+| `LOGO_TOKEN` | *(empty)* | Token for logo downloads from img.logo.dev |
+
+## Usage log and start-up
+
+| Variable | Default | Description |
+|---|---|---|
+| `USAGE_LOG_IP` | `none` | Part of the caller's IP kept in `usage_logs`: `none`, `truncated` (network only) or `full` |
+| `USAGE_LOG_RETENTION_DAYS` | `90` | Days of usage log kept; `0` keeps everything |
+| `SEED_ON_FIRST_RUN` | `false` | Import `data/etf.csv` at the first start when the database is empty |
+| `OPENBB_ALLOWED_ORIGIN` | `https://pro.openbb.co` | Origins allowed by CORS, comma-separated |

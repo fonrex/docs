@@ -1,93 +1,61 @@
 ---
 id: "financial-analyst"
-title: "Parcours Analyste Financier"
-sidebar_label: "Analyste Financier"
-description: "Guide d'intégration pour analystes financiers : modèles DCF, extraction des fondamentaux, connecteur Google Sheets et OpenBB Workspace"
+title: "Parcours Analyste financier"
+sidebar_label: "Analyste financier"
+description: "Données fondamentales avec leurs sources, valorisations DCF, Google Sheets et OpenBB Workspace sur votre propre instance"
 ---
 
-# Parcours Analyste Financier
+# Parcours Analyste financier
 
-Ce parcours fournit un guide technique d'intégration pour les **Analystes Financiers et Spécialistes de la Valorisation**. Il couvre l'extraction des états financiers fondamentaux, les modèles de valorisation DCF (Discounted Cash Flow) et l'intégration avec Google Sheets et OpenBB Workspace.
+Ce parcours couvre le volet données fondamentales et valorisation de Fonrex, ainsi que les deux interfaces sans code : Google Sheets et OpenBB Workspace. Toutes lisent **votre propre instance**.
 
-| Domaine d'application | Mode d'intégration | Format de sortie |
-|---|---|---|
-| **Connecteur Google Sheets** | Apps Script / `IMPORTDATA` | CSV / Cellules de calcul |
-| **OpenBB Workspace** | Router REST (`/openbb`) | Tuiles métriques, tables AgGrid, graphiques Plotly |
-| **Moteur de valorisation DCF** | Backend FastAPI | Intrinseque Free Cash Flow, EPS & DDM |
-
----
-
-## 1. Accès aux endpoints de l'instance
-
-Vérifiez que votre instance Fonrex est en cours d'exécution :
-
-```http
-GET /health
-```
-
-URL locale par défaut : `http://localhost:5000`
-
----
-
-## 2. Intégration Google Sheets
-
-Connectez vos modèles financiers aux endpoints Fonrex via des formules standards ou des scripts Apps Script :
-
-### Utilisation directe des formules
-
-```excel
-=IMPORTDATA("http://localhost:5000/api/v1/fundamentals/ratios?symbol=AAPL&format=csv")
-```
-
-### Fonctions Apps Script personnalisées
-
-| Signature de fonction | Description |
+| Besoin | Où |
 |---|---|
-| `=FONREX_PE("AIR.PA")` | Price-to-Earnings Ratio |
-| `=FONREX_DIVIDEND_YIELD("AIR.PA")` | Rendement du dividende (format décimal) |
-| `=FONREX_INTRINSIC_VALUE("AAPL")` | Valeur intrinsèque DCF par action |
+| Ratios avec leur source | `GET /fundamental` (format EODHD, section `Sources`) |
+| États financiers, résultats, recommandations | `GET /fundamental/deep` |
+| Valeur intrinsèque | `GET /dcf/{ticker}` (FCF), `/compare` (trois modèles), `/sensitivity` ; `POST /dcf/{ticker}` avec vos hypothèses |
+| Feuille de calcul | Modèle Google Sheets |
+| Tableaux de bord | Widgets OpenBB Workspace |
 
-> **Note** : Les formules personnalisées sont mises en cache 30 minutes par Google. Pour un rafraîchissement à la demande, utilisez les scripts du menu. Consultez le [Guide du Connecteur Google Sheets](/docs/guides/google-sheets-connector).
+## 1. Une instance et une clé
 
----
+Installez l'instance ([Installation](../getting-started/installation.md)) et créez une **clé en lecture seule** pour les outils qui la conservent hors de votre machine :
 
-## 3. Configuration OpenBB Terminal Workspace
-
-Fonrex intègre un router `/openbb` dédié à OpenBB Terminal (Cloud et Desktop) :
-
-1. Ouvrez OpenBB Workspace.
-2. Ajoutez Fonrex comme source de données personnalisée (`http://localhost:5000/openbb`).
-3. Chargez le tableau de bord préconfiguré Fonrex.
-
-> **Note** : Pour l'authentification et les déclarations de widgets, consultez le [Guide d'intégration OpenBB Workspace](/docs/guides/openbb-workspace).
-
----
-
-## 4. Moteur de valorisation DCF
-
-Interrogez les modèles de valorisation pour calculer la valeur intrinsèque d'une entreprise :
-
-```http
-GET /api/v1/valuation/dcf?symbol=AAPL&wacc=0.085&growth_rate=0.05
+```
+FONREX_READ_ONLY_API_KEYS=frx_live_<random value>
 ```
 
-Schéma de réponse JSON :
+## 2. Données fondamentales
 
-```json
-{
-  "symbol": "AAPL",
-  "intrinsic_value_per_share": 198.50,
-  "current_price": 185.20,
-  "upside_downside_pct": 7.18,
-  "wacc_used": 0.085,
-  "terminal_growth_rate": 0.05
-}
+```bash
+curl -s -H "X-API-KEY: $KEY" "http://localhost:5000/fundamental?ticker=AIR.PA"
+curl -s -H "X-API-KEY: $KEY" "http://localhost:5000/fundamental/deep?ticker=AIR.PA"
 ```
 
----
+`/fundamental` prend chaque chiffre chez Yahoo Finance (interrogé avec le symbole vérifié de la cotation), puis dans les chiffres stockés, puis sur les sites web scrapés, et vous indique d'où vient chacun. Les ratios sont des ratios (`0.0125` pour 1,25 %). Voir [Données fondamentales](../api-reference/fundamentals.md).
 
-## Prochaines étapes
+## 3. Valorisation
 
-- Consulter la [Référence API Fundamentals & Ratios](/docs/api-reference/fundamentals)
-- Consulter la [Référence API Moteur DCF](/docs/api-reference/valuation-dcf)
-- Consulter la [Référence API Intégration OpenBB](/docs/api-reference/openbb)
+Le DCF lit les données fondamentales détaillées stockées pour l'instrument : appelez d'abord `/fundamental/deep`.
+
+```bash
+curl -s -H "X-API-KEY: $KEY" "http://localhost:5000/dcf/AIR.PA"
+curl -s -H "X-API-KEY: $KEY" "http://localhost:5000/dcf/AIR.PA/sensitivity?model=fcf"
+curl -s -X POST -H "X-API-KEY: $KEY" -H "Content-Type: application/json" \
+  -d '{"models": ["fcf", "eps", "ddm"], "projection_years": 10, "terminal_growth_rate": 0.02}' \
+  http://localhost:5000/dcf/AIR.PA
+```
+
+`GET /dcf` calcule le modèle FCF ; `/compare` et un `POST` qui demande plusieurs modèles pondèrent FCF, EPS et DDM 50/30/20. WACC issu du CAPM avec le taux à 10 ans de FRED. Voir [Valorisation et DCF](../api-reference/valuation-dcf.md).
+
+## 4. Google Sheets
+
+Le modèle rafraîchit les données fondamentales, le DCF et les indicateurs d'une liste de suivi, et propose `=FONREX_PE()`, `=FONREX_DIVIDEND_YIELD()`, `=FONREX_INTRINSIC_VALUE()` et `=FONREX_RSI()`. Les serveurs de Google joignent votre instance via un tunnel. Voir le [guide Google Sheets](../guides/google-sheets-connector.md).
+
+## 5. OpenBB Workspace
+
+Ajoutez l'URL de votre instance comme source de données, avec votre clé dans l'en-tête `X-API-KEY` : 19 widgets et deux tableaux de bord (EU Markets, Screener & Macro). Voir le [guide OpenBB](../guides/openbb-workspace.md).
+
+:::info
+Fonrex affiche des données financières brutes et des résultats analytiques. Il ne constitue pas un conseil en investissement.
+:::

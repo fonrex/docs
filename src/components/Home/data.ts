@@ -132,7 +132,7 @@ export function getExploreAreas(): ExploreArea[] {
       title: translate({ id: 'homepage.explore.providers.title', message: 'Data providers' }),
       description: translate({
         id: 'homepage.explore.providers.description',
-        message: 'Multi-provider fallbacks (SEC EDGAR, Yahoo Finance, FMP…) and custom adapters.',
+        message: 'Yahoo Finance, 13 scraped websites, SEC EDGAR and JustETF — validated, with their source.',
       }),
       links: [
         { label: translate({ id: 'homepage.explore.providers.link.overview', message: 'Providers overview' }), to: '/docs/providers/overview' },
@@ -168,16 +168,21 @@ export function getQuickStartSteps(): DocLink[] {
 /** Snippets mirror docs/getting-started/first-api-call.md — keep them in sync. */
 export const CODE_SAMPLES = {
   curl: `# End-of-day OHLCV history for Airbus SE
-curl -s "http://localhost:5000/eod/AIR.PA?period=1mo"`,
-  python: `import requests
+curl -s -H "X-API-KEY: $FONREX_API_KEY" \\
+  "http://localhost:5000/eod/AIR.PA?period=1mo"`,
+  python: `import os
+import requests
 
 resp = requests.get(
-    "http://localhost:5000/technical/AAPL",
+    "http://localhost:5000/technical/AIR.PA",
     params={"indicator": "rsi", "period": 14},
+    headers={"X-API-KEY": os.environ["FONREX_API_KEY"]},
 )
-latest = resp.json()["values"][-1]
-print(f"AAPL RSI(14): {latest['value']:.2f}")`,
-  websocket: `const ws = new WebSocket("ws://localhost:5000/ws/realtime/TSLA");
+latest = resp.json()["series"][0]["values"][-1]
+print(f"AIR.PA RSI(14) on {latest['t']}: {latest['v']}")`,
+  websocket: `const ws = new WebSocket(
+  \`ws://localhost:5000/ws/realtime/AIR.PA?token=\${FONREX_API_KEY}\`
+);
 
 ws.onmessage = (event) => {
   const message = JSON.parse(event.data);
@@ -208,7 +213,7 @@ export function getPathways(): Pathway[] {
       Icon: IconCode,
       title: translate({ id: 'homepage.pathways.developer.title', message: 'App developer' }),
       time: '10 min',
-      description: translate({ id: 'homepage.pathways.developer.description', message: 'REST, WebSockets, fallbacks.' }),
+      description: translate({ id: 'homepage.pathways.developer.description', message: 'REST, WebSockets, authentication.' }),
       to: '/docs/pathways/app-developer',
     },
     {
@@ -233,6 +238,15 @@ export const LLMS_FILES = [
 export function getReleaseNotes(): ReleaseNote[] {
   return [
     {
+      version: 'main',
+      date: '2026-10',
+      title: translate({ id: 'homepage.news.oct2026.title', message: 'Secure defaults & per-listing prices' }),
+      summary: translate({
+        id: 'homepage.news.oct2026.summary',
+        message: 'API key required by default, read-only keys, prices stored per listing, verified Yahoo symbols.',
+      }),
+    },
+    {
       version: 'v1.6.0',
       date: '2026-09',
       title: translate({ id: 'homepage.news.v160.title', message: 'OpenBB Workspace integration' }),
@@ -248,15 +262,6 @@ export function getReleaseNotes(): ReleaseNote[] {
       summary: translate({
         id: 'homepage.news.v200.summary',
         message: 'Validation layer, Canary monitor and 7 /health endpoints.',
-      }),
-    },
-    {
-      version: 'v2.0.0',
-      date: '2026-08',
-      title: translate({ id: 'homepage.news.v200dcf.title', message: 'DCF valuation engine' }),
-      summary: translate({
-        id: 'homepage.news.v200dcf.summary',
-        message: 'FCF, EPS and DDM models with dynamic WACC and sensitivity matrices.',
       }),
     },
   ];

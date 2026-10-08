@@ -1,93 +1,61 @@
 ---
 id: "financial-analyst"
-title: "金融分析师使用路径"
+title: "金融分析师路径"
 sidebar_label: "金融分析师"
-description: "金融分析师技术指南：DCF 估值模型、基本面报表提取、Google Sheets 连接器与 OpenBB Workspace"
+description: "在您自己的实例上使用带来源的基本面数据、DCF 估值、Google Sheets 和 OpenBB Workspace"
 ---
 
-# 金融分析师使用路径
+# 金融分析师路径
 
-本路径为**金融分析师与估值专家**提供技术集成指南。涵盖基本面财务报表提取、折现现金流 (DCF) 估值模型，以及 Google Sheets 与 OpenBB Workspace 自动化集成。
+本路径涵盖 Fonrex 的基本面与估值部分，以及两个无代码前端：Google Sheets 和 OpenBB Workspace。它们都读取**您自己的实例**。
 
-| 功能领域 | 集成方式 | 输出格式 |
-|---|---|---|
-| **Google Sheets 连接器** | Apps Script / `IMPORTDATA` | CSV / 单元格计算 |
-| **OpenBB Workspace** | REST 路由 (`/openbb`) | 指标卡片、AgGrid 表格、Plotly 图表 |
-| **DCF 估值引擎** | FastAPI 后端 | 自由现金流、EPS 与 DDM 内在价值 |
-
----
-
-## 1. 访问实例端点
-
-确保 Fonrex 实例正在运行：
-
-```http
-GET /health
-```
-
-默认本地地址：`http://localhost:5000`
-
----
-
-## 2. Google Sheets 集成
-
-直接使用标准公式或自定义 Apps Script 函数将电子表格模型连接至 Fonrex 端点：
-
-### 直接公式调用
-
-```excel
-=IMPORTDATA("http://localhost:5000/api/v1/fundamentals/ratios?symbol=AAPL&format=csv")
-```
-
-### 自定义 Apps Script 函数
-
-| 函数签名 | 说明 |
+| 需求 | 位置 |
 |---|---|
-| `=FONREX_PE("AIR.PA")` | 市盈率 (P/E Ratio) |
-| `=FONREX_DIVIDEND_YIELD("AIR.PA")` | 股息率 (小数格式) |
-| `=FONREX_INTRINSIC_VALUE("AAPL")` | 每股 DCF 内在价值 |
+| 带来源的比率 | `GET /fundamental`（EODHD 布局，`Sources` 部分） |
+| 财务报表、盈利、评级 | `GET /fundamental/deep` |
+| 内在价值 | `GET /dcf/{ticker}`（FCF）、`/compare`（三种模型）、`/sensitivity`；使用您自己的假设调用 `POST /dcf/{ticker}` |
+| 电子表格 | Google Sheets 模板 |
+| 仪表板 | OpenBB Workspace 小组件 |
 
-> **注意**：自定义单元格公式在 Google 端缓存 30 分钟。手动刷新请使用菜单脚本。参考 [Google Sheets 连接器指南](/docs/guides/google-sheets-connector)。
+## 1. 一个实例和一个密钥
 
----
+安装实例（[安装](../getting-started/installation.md)），并为那些会把密钥保存在您机器之外的工具创建一个**只读密钥**：
 
-## 3. OpenBB Terminal Workspace 配置
-
-Fonrex 提供专为 OpenBB Terminal (Cloud 与 Desktop) 设计的 `/openbb` 端点：
-
-1. 打开 OpenBB Workspace。
-2. 添加 Fonrex 作为自定义后端数据源 (`http://localhost:5000/openbb`)。
-3. 加载默认 Fonrex 工作区仪表板布局。
-
-> **注意**：参考 [OpenBB Workspace 指南](/docs/guides/openbb-workspace)。
-
----
-
-## 4. DCF 估值引擎
-
-查询估值模型以计算企业内在价值：
-
-```http
-GET /api/v1/valuation/dcf?symbol=AAPL&wacc=0.085&growth_rate=0.05
+```
+FONREX_READ_ONLY_API_KEYS=frx_live_<random value>
 ```
 
-响应 JSON 格式：
+## 2. 基本面数据
 
-```json
-{
-  "symbol": "AAPL",
-  "intrinsic_value_per_share": 198.50,
-  "current_price": 185.20,
-  "upside_downside_pct": 7.18,
-  "wacc_used": 0.085,
-  "terminal_growth_rate": 0.05
-}
+```bash
+curl -s -H "X-API-KEY: $KEY" "http://localhost:5000/fundamental?ticker=AIR.PA"
+curl -s -H "X-API-KEY: $KEY" "http://localhost:5000/fundamental/deep?ticker=AIR.PA"
 ```
 
----
+`/fundamental` 依次从 Yahoo Finance（使用为该上市品种验证过的代码查询）、已存储的数字和抓取的网站中获取每个数字，并告诉您每个数字的来源。比率以比率表示（1.25 % 写作 `0.0125`）。请参阅[基本面数据](../api-reference/fundamentals.md)。
 
-## 后续步骤
+## 3. 估值
 
-- 参考 [基本面与财务比率 API 参考](/docs/api-reference/fundamentals)
-- 参考 [DCF 估值引擎 API 参考](/docs/api-reference/valuation-dcf)
-- 参考 [OpenBB 集成 API 参考](/docs/api-reference/openbb)
+DCF 读取为该金融工具存储的深度基本面数据：请先调用 `/fundamental/deep`。
+
+```bash
+curl -s -H "X-API-KEY: $KEY" "http://localhost:5000/dcf/AIR.PA"
+curl -s -H "X-API-KEY: $KEY" "http://localhost:5000/dcf/AIR.PA/sensitivity?model=fcf"
+curl -s -X POST -H "X-API-KEY: $KEY" -H "Content-Type: application/json" \
+  -d '{"models": ["fcf", "eps", "ddm"], "projection_years": 10, "terminal_growth_rate": 0.02}' \
+  http://localhost:5000/dcf/AIR.PA
+```
+
+`GET /dcf` 计算 FCF 模型；`/compare` 以及指定多个模型的 `POST` 请求会将 FCF、EPS 和 DDM 按 50/30/20 加权。WACC 基于 CAPM 并使用 FRED 10 年期利率。请参阅[估值与 DCF](../api-reference/valuation-dcf.md)。
+
+## 4. Google Sheets
+
+该模板为关注列表刷新基本面数据、DCF 和指标，并提供 `=FONREX_PE()`、`=FONREX_DIVIDEND_YIELD()`、`=FONREX_INTRINSIC_VALUE()` 和 `=FONREX_RSI()`。Google 的服务器通过隧道访问您的实例。请参阅 [Google Sheets 指南](../guides/google-sheets-connector.md)。
+
+## 5. OpenBB Workspace
+
+将您实例的 URL 添加为数据源，并在 `X-API-KEY` 请求头中填入您的密钥：可获得 19 个小组件和两个仪表板（EU Markets、Screener & Macro）。请参阅 [OpenBB 指南](../guides/openbb-workspace.md)。
+
+:::info
+Fonrex 显示的是原始财务数据和分析输出结果，不构成投资建议。
+:::

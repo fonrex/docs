@@ -2,33 +2,60 @@
 id: "validation-layer"
 title: "Validation Layer Architecture"
 sidebar_label: "Validation Layer"
-description: "Real-time consensus validation, numerical range boundaries, and outlier rejection algorithms"
+description: "Range and consensus checks applied to every provider value before it reaches an answer"
 ---
 
 # Validation Layer Architecture
 
-The `ValidationLayer` (`monitoring/validation_layer.py`) provides real-time data sanity checking on provider responses before metrics are exposed via the API.
+Thirteen of the fundamentals providers read web pages. When a page changes, a provider may keep answering — with a wrong number (`0.8` instead of `24.0` for a P/E). The `ValidationLayer` (`monitoring/validation_layer.py`) catches such values on every `/fundamental` request, after the providers answered and before the document is built. A rejected value becomes `None`, and the document takes the figure from another source.
 
-## Range Checks (`FIELD_RANGES`)
+## 1. Unit normalisation
 
-Every incoming numerical metric is validated against absolute domain boundaries:
+Ranges are ratios: a 3.45 % dividend yield is `0.0345`. Scraped providers often return displayed percentages (`3.45`). `monitoring/units.py` declares, per provider, the fields returned as percentages (`PROVIDER_PERCENT_FIELDS`); they are converted before any check. The answer of the provider keeps its own unit; the logs hold the converted ratio.
 
-| Field Name | Minimum Allowed | Maximum Allowed | Unit / Description |
-|---|---|---|---|
-| `pe_ratio` | `-500.0` | `2000.0` | Price to Earnings ratio |
-| `dividend_yield` | `0.0` | `0.40` | Dividend yield (0% to 40%) |
-| `beta` | `-5.0` | `10.0` | Market Beta |
-| `roe` | `-5.0` | `5.0` | Return on Equity (-500% to +500%) |
-| `roa` | `-5.0` | `5.0` | Return on Assets |
-| `market_cap` | `1,000,000` | `10,000,000,000,000` | Market Capitalization in local currency |
+## 2. Range checks
 
-Values falling outside these bounds are discarded and replaced with `None`.
+| Field | Min | Max |
+|---|---|---|
+| `pe_ratio` | 0.5 | 1000 |
+| `pe_forward` | 0.5 | 500 |
+| `pb_ratio` | 0 | 100 |
+| `ps_ratio` | 0 | 200 |
+| `peg_ratio` | −10 | 50 |
+| `ev_ebitda` | 0 | 500 |
+| `price`, `target_price`, `week_52_high`, `week_52_low` | 0.001 | 1,000,000 |
+| `dividend_yield` | 0 | 0.50 |
+| `dividend_rate` | 0 | 1000 |
+| `payout_ratio` | 0 | 10 |
+| `roe` | −5 | 10 |
+| `roa` | −2 | 2 |
+| `net_margin`, `operating_margin` | −5 | 1 |
+| `gross_margin` | −1 | 1 |
+| `quarterly_revenue_growth_yoy` | −0.99 | 10 |
+| `quarterly_earnings_growth_yoy` | −0.99 | 20 |
+| `eps`, `eps_trailing`, `eps_forward` | −1000 | 10,000 |
+| `beta` | −3 | 5 |
+| `short_percent_float` | 0 | 1 |
 
-## Inter-Provider Consensus Check
+A value outside its range is `out_of_range` and set to `None`.
 
-When 2 or more providers supply a numerical value for the same field:
+## 3. Consensus check
 
-1. The median value across all agreeing providers is computed: `M = median(V_1, V_2, ..., V_k)`.
-2. For each provider value `V_i`, the absolute percentage deviation is calculated:
-   `deviation = |V_i - M| / M`
-3. If `deviation > VALIDATION_OUTLIER_THRESHOLD` (default `0.50` or 50%), `V_i` is flagged as an **outlier**, logged in `provider_health_log`, and set to `None`.
+When at least `VALIDATION_MIN_PROVIDERS` (2) providers give a value in range for the same field:
+
+1. the median `M` of those values is computed;
+2. each value `V` deviates by `|V − M| / M`;
+3. above `VALIDATION_OUTLIER_THRESHOLD` (0.50), the value is an `outlier` and set to `None`.
+
+## 4. Logging
+
+Every checked value is written to the `provider_health_log` hypertable (30-day retention) with its status: `ok`, `out_of_range`, `outlier` or null. `GET /health/stats` summarises the last 7 days.
+
+The validation layer never raises: an internal error is logged and the answer goes on unvalidated rather than failing.
+
+## Settings
+
+```env
+VALIDATION_OUTLIER_THRESHOLD=0.50
+VALIDATION_MIN_PROVIDERS=2
+```

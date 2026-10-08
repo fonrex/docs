@@ -1,83 +1,97 @@
 ---
 id: "specialized"
 title: "Specialized Providers API Reference"
-sidebar_label: "Specialized Providers"
-description: "Endpoints for SEC EDGAR insider trades, JustETF metadata, and index constituent lists"
+sidebar_label: "Specialized"
+description: "SEC insider transactions, UCITS ETF details from JustETF and index constituents"
 ---
 
 # Specialized Providers API Reference
 
-The Specialized Providers API exposes targeted endpoints for SEC EDGAR insider transactions, JustETF details, and equity index constituents.
+Three routes query one specialised source each. Every route accepts `refresh=true` to bypass the cache.
 
 ---
 
 ## <span className="api-method get">GET</span> `/insider-transactions/{ticker}`
 
-Fetch Form 4 insider transactions filed with the US Securities and Exchange Commission (SEC EDGAR). Cached for 12 hours.
+Form 4 insider transactions filed with the US SEC (EDGAR). Cached 12 hours.
 
-### Parameters
-
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `ticker` | `string` | ✅ | — | US Equity Ticker (e.g. `AAPL`, `TSLA`) |
-
-### Response Example
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `ticker` | string | — | A share that files with the SEC (e.g. `AAPL`) |
+| `limit` | integer | `20` | Transactions returned |
+| `refresh` | boolean | `false` | Ask EDGAR again |
 
 ```json
 {
   "ticker": "AAPL",
-  "source": "SEC_EDGAR",
-  "count": 1,
+  "cik": "0000320193",
+  "company_name": "Apple Inc.",
   "transactions": [
     {
-      "filing_date": "2026-08-01",
-      "reporting_owner": "COOK TIMOTHY D",
-      "officer_title": "Chief Executive Officer",
-      "transaction_type": "P - Purchase",
+      "filing_date": "2026-10-02",
+      "insider_name": "COOK TIMOTHY D",
+      "insider_title": "Chief Executive Officer",
+      "transaction_date": "2026-10-01",
+      "transaction_type": "Sell",
+      "transaction_code": "S",
       "shares": 50000,
-      "price_per_share": 220.50,
-      "total_value": 11025000
+      "price_per_share": 226.1,
+      "total_value": 11305000.0,
+      "shares_owned_after": 3280000,
+      "sec_filing_url": "https://www.sec.gov/Archives/edgar/data/..."
     }
-  ]
+  ],
+  "total_count": 1,
+  "source": "SEC EDGAR"
 }
 ```
+
+`transaction_type` is the reading of the Form 4 code (`P` Buy, `S` Sell, `A` Award, `M` Option Exercise, `G` Gift, `F` Tax Withholding…). Set `SEC_EDGAR_EMAIL` to your own address: the SEC requires a contact in the User-Agent of automated clients. Values are illustrative.
 
 ---
 
 ## <span className="api-method get">GET</span> `/etf/{isin}/details`
 
-Scrape ETF metadata, expense ratio (TER), Assets Under Management (AUM), and top 10 holdings from JustETF.
-
-### Parameters
-
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `isin` | `string` | ✅ | — | European ETF ISIN (e.g. `IE00B4L5Y983`) |
-
-### Response Example
+UCITS ETF data from JustETF. Cached 24 hours. An ISIN known as something other than an ETF is refused.
 
 ```json
 {
   "isin": "IE00B4L5Y983",
-  "name": "iShares Core MSCI World UCITS ETF",
-  "ter_pct": 0.20,
-  "aum_eur": 65000000000,
-  "replication": "Physical",
-  "top_holdings": [
-    { "name": "Apple Inc.", "weight_pct": 4.85 },
-    { "name": "Microsoft Corp.", "weight_pct": 4.20 }
-  ]
+  "name": "iShares Core MSCI World UCITS ETF USD (Acc)",
+  "ticker": "EUNL",
+  "net_expense_ratio": "0.0020",
+  "total_net_assets": "...",
+  "domicile": "Ireland",
+  "replication_method": "...",
+  "distribution_policy": "Accumulating",
+  "index_tracked": "MSCI World",
+  "inception_date": "2009-09-25",
+  "nb_holdings": 1400,
+  "performance": { "...": "..." },
+  "top_holdings": [ { "...": "..." } ],
+  "allocation": { "...": "..." },
+  "provider_url": "https://www.justetf.com/..."
 }
 ```
+
+The answer is not written to the `etf_details` and `etf_holdings` tables.
 
 ---
 
 ## <span className="api-method get">GET</span> `/index/{index_name}/constituents`
 
-Fetch current constituent stocks for major financial market indices (`sp500`, `cac40`, `nasdaq100`, `dax`).
+Members of an index, read from Wikipedia. Cached 7 days.
 
-### Parameters
+`index_name` is `SP500`, `CAC40`, `NASDAQ100` or `DAX` (case-insensitive). Another name answers `400`.
 
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `index_name` | `string` | ✅ | — | Index name (`sp500`, `cac40`, `nasdaq100`, `dax`) |
+```json
+{
+  "index_name": "CAC40",
+  "constituents": [
+    { "ticker": "AIR.PA", "isin": "NL0000235190", "name": "Airbus", "sector": "Industrie", "sub_sector": null, "weight": null, "country": null, "cik": null }
+  ],
+  "total_count": 40,
+  "source_url": "https://fr.wikipedia.org/wiki/CAC_40",
+  "source": "Wikipedia"
+}
+```

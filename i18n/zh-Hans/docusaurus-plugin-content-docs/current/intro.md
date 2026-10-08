@@ -1,55 +1,70 @@
 ---
 id: "intro"
 title: "Fonrex 简介"
-sidebar_label: "Introduction"
-description: "Fonrex 开源自托管金融数据基础设施 API 概述"
+sidebar_label: "简介"
+description: "Fonrex 概述：开源、自托管的金融数据 API"
 ---
-
 
 # Fonrex 简介
 
-Fonrex 是一个开源、自托管的 FastAPI 基础设施，用于市场数据、基本面财务、技术指标、新闻聚合、DCF 估值以及实时提供商健康监控。Fonrex 基于 Python 3.12、PostgreSQL/TimescaleDB 和 Redis 构建，填补了机构级金融数据源与自托管开发者工作流之间的空白。
+Fonrex 是一个开源、**自托管**的金融数据 API。只需一个 Docker Compose 栈（FastAPI、PostgreSQL/TimescaleDB 和 Redis），即可采集并提供日终价格、实时报价、基本面数据、技术指标、新闻和 DCF 估值，同时监控所采集数据的质量。
 
-Fonrex 基于六边形架构原则设计，为量化分析师、算法交易者和金融应用程序提供强大的 API。它将分散的数据提供商统一为标准的 REST 和 WebSocket 接口，同时确保持续的提供商验证和回退逻辑。
+Fonrex 不是托管服务：不存在 Fonrex 云端 API。每个客户端（您的脚本、Google Sheets、OpenBB Workspace、Zipline）都与**您自己的实例**通信。数据由您的实例从公开来源抓取或获取，相关责任由您自行承担。
 
-Fonrex 在 **AGPL-3.0** 开源许可证下分发，让您完全控制金融数据流水线，无需遭受 API 速率限制锁死或昂贵的按请求计费模式。
+Fonrex 以 **AGPL-3.0** 许可证分发。
 
-## Fonrex 与商业市场数据提供商对比
+## 您将获得什么
 
-| 特性 | Fonrex Pro | FMP Premium / Commercial APIs |
+| 领域 | Fonrex 提供的功能 |
+|---|---|
+| **价格** | 按上市品种（listing）保存的日终历史数据（Yahoo Finance，TradingView 作为回退）、日/周/月 K 线、通过 WebSocket 推送的实时报价 |
+| **基本面** | 一份采用 EODHD 布局的文档，由 Yahoo Finance、已存储的深度基本面数据和 13 个抓取网站构建而成，并标注每个数字的来源 |
+| **技术指标** | 使用 pandas-ta 在服务端计算的 18 个指标、多指标请求和筛选器 |
+| **估值** | 包含三种模型（FCF、EPS、DDM）的 DCF、动态 WACC、模型对比和敏感性矩阵 |
+| **新闻** | 7 个新闻数据提供方，按 URL 和标题相似度去重 |
+| **数据质量** | 每次请求都进行范围检查和共识检查，每日针对已知资产运行 canary 检测，并提供告警 |
+| **集成** | OpenBB Workspace 小组件、Google Sheets 模板、Zipline 数据包（bundle） |
+
+## Fonrex 与商业数据 API 对比
+
+| | Fonrex | 商业市场数据 API |
 |---|---|---|
-| **托管方式** | 自托管 (Docker) | Cloud SaaS |
-| **价格模式** | 免费与开源 (AGPL-3.0) | $50 – $500+ / month |
-| **数据存储** | PostgreSQL + TimescaleDB 超级表 | 厂商托管 |
-| **实时流传输** | 原生 WebSocket + Redis 发布/订阅 | 受限 / 额外收费 |
-| **多提供商回退** | 自动化 (14+ 基本面, 7+ 新源) | 单厂商依赖 |
-| **自定义指标** | 18+ 内置 + 自定义 Pandas-TA 引擎 | 有限的 API 参数 |
-| **DCF 与估值** | 自定义 WACC、FCF、EPS 和 DDM 模型 | 黑盒 / 静态指标 |
-| **数据质量检查** | 实时共识与每日金丝雀监控 | 专有 SLA |
+| **托管** | 您自己的机器（Docker） | 厂商云端 |
+| **价格** | 免费、开源（AGPL-3.0） | 按月订阅 |
+| **存储** | 您自己的 PostgreSQL + TimescaleDB | 由厂商管理 |
+| **实时** | WebSocket 推送 + Redis Pub/Sub | 通常为 REST 轮询或付费套餐 |
+| **欧洲市场** | 原生支持（Euronext、Xetra…），UCITS ETF 通过 JustETF 获取 | 通常需要更高级的套餐 |
+| **数据来源** | 每个数字有多个数据提供方，并报告来源 | 单一厂商 |
+| **速率限制** | 取决于您所查询的公开来源 | 厂商配额 |
 
-## 快速开始（4 条命令）
-
-仅需 4 条简单命令即可部署包含历史存储、Redis 缓存和实时 API Endpoint 的完整 Fonrex 实例：
+## 快速开始
 
 ```bash
 git clone https://github.com/fonrex/fonrex.git
 cd fonrex
 cp .env.example .env
+# The API rejects every request until a key is configured:
+export FONREX_API_KEY="frx_live_$(openssl rand -hex 24)"
+sed -i.bak "s/^FONREX_API_KEY=.*/FONREX_API_KEY=$FONREX_API_KEY/" .env && rm .env.bak
+mkdir -p logs
 docker compose up -d
 ```
 
-验证您的本地实例是否已正常运行：
+`/health` 无需密钥即可响应：
 
 ```bash
 curl http://localhost:5000/health
 ```
 
-Output:
 ```json
 {
   "status": "healthy",
-  "database": "connected",
-  "redis": "connected",
-  "alembic_version": "011_provider_monitoring"
+  "service": "FonRex API",
+  "timestamp": "2026-10-08T16:34:42.235390",
+  "yfinance_available": true,
+  "providers": { "loaded": 14, "unavailable": [] },
+  "cache": { "enabled": true, "status": "connected", "ttl_seconds": { "eod": 86400, "...": "..." } }
 }
 ```
+
+其他所有路由都需要密钥，请参阅[安装](getting-started/installation.md)和[第一次 API 调用](getting-started/first-api-call.md)。

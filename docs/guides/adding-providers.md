@@ -1,83 +1,71 @@
 ---
 id: "adding-providers"
-title: "Guide: Adding a Custom Financial Provider"
-sidebar_label: "Adding a Custom Provider"
-description: "Step-by-step tutorial for creating, registering, and testing a custom financial data provider"
+title: "Guide: Adding a Fundamentals Provider"
+sidebar_label: "Adding Providers"
+description: "Every step a new fundamentals provider needs: code, registration, units, canary, tests and coverage floor"
 ---
 
-# Guide: Adding a Custom Financial Provider
+# Guide: Adding a Fundamentals Provider
 
-This guide walks you through implementing a new asynchronous financial provider in Fonrex.
+A provider of `/fundamental` is a class of `financials/providers/` that turns a website or an API into a `FinancialMetrics` object. The repository enforces each step below with a test: a provider that misses one fails `make ci`. The rules come from `AGENTS.md`.
 
-## 1. Create Provider File
+## 1. Write the provider
 
-Create a new file under `financials/providers/myprovider_provider.py`:
+Create `financials/providers/MySite_provider.py`, a subclass of `BaseFinancialProvider` implementing `get_financials(ticker)`. The [reference page](../providers/adding-custom-provider.md) has a complete skeleton.
 
-```python
-import logging
-from financials.providers.base import BaseFinancialProvider
+- **One HTTP layer.** Never create an HTTP client: use `self._get()`, `self._get_json()`, `self._post_json()` or `async with self._session()` (cookies shared between a search and a page). Retries, pauses, the per-provider concurrency limit and the proxy live there. *(`tests/test_provider_http_policy.py`)*
+- **Numbers are read in one place.** Turn a displayed text into a number with `parse_number` (a cell) or `find_number` (a sentence) of `financials/numbers.py`: signs, thousands separators, scales (`k`, `M`, `Md`, `B`) and currencies are handled there. No `float()` on a scraped text. *(`tests/test_numbers.py`)*
+- **Return the ISIN when the page shows it.** The runner rejects an answer about another ISIN — a site searched by ticker may return a homonym.
 
-logger = logging.getLogger(__name__)
+The runner gives your provider, in this order: its `provider_url` mapping, its `provider_ticker` mapping, the ISIN (for providers searched by ISIN), or the ticker.
 
-class MyProviderProvider(BaseFinancialProvider):
-    name = "MyProvider"
-    timeout = 8.0  # Network timeout in seconds
+## 2. Register it
 
-    async def fetch(self, ticker: str = None, isin: str = None, **kwargs) -> dict:
-        """
-        Fetch fundamental metrics for a given ticker or ISIN.
-        Return a normalized dictionary of financial indicators.
-        """
-        search_term = ticker or isin
-        if not search_term:
-            return {}
-
-        url = f"https://api.example.com/data/{search_term}"
-        try:
-            response_json = await self._get_json(url)
-            return self._parse(response_json)
-        except Exception as exc:
-            logger.warning("[%s] Failed to fetch data for %s: %s", self.name, search_term, exc)
-            return {}
-
-    def _parse(self, data: dict) -> dict:
-        return {
-          "pe_ratio": data.get("pe"),
-          "dividend_yield": data.get("div_yield"),
-          "market_cap": data.get("mcap")
-        }
-```
-
-## 2. Register Provider in `main.py`
-
-Open `main.py` and register your new provider in the `configure_application_state` function:
+Add a line to `PROVIDER_SPECS` in `main.py`:
 
 ```python
-provider_specs = (
-    ("ZoneBourse", "financials.providers.ZoneBourse_provider", "ZoneBourseProvider"),
-    ("MyProvider", "financials.providers.myprovider_provider", "MyProviderProvider"),  # Added
+PROVIDER_SPECS = (
     ...
+    ("MySite", "financials.providers.MySite_provider", "MySiteProvider"),
 )
 ```
 
-## 3. Register Canary Health Test
+A provider that cannot be imported is listed in `providers.unavailable` of `GET /health` instead of disappearing silently. *(`tests/test_docs_consistency.py`)*
 
-Add a synthetic test ticker to `monitoring/canary_catalog.py` to ensure your new provider is automatically checked every morning at 06:00 UTC by `CanaryMonitor`.
+## 3. Declare its units
 
-## 4. Add Unit Tests
+Monitoring ranges are ratios (a 3.45 % yield is `0.0345`). If your provider returns displayed percentages (`3.45`), declare those fields in `PROVIDER_PERCENT_FIELDS` of `monitoring/units.py`; a provider returning ratios is declared with an empty set. *(`tests/test_provider_units.py`)*
 
-Create a unit test in `tests/test_myprovider.py` mocking the HTTP client call:
+## 4. Add it to the canary
+
+Add the provider to `MONITORED_PROVIDERS` and `_PROVIDER_IMPORTS` in `monitoring/canary_catalog.py`, so that the daily canary checks it against the canary assets. An EU-only provider is tested on EU tickers only.
+
+## 5. Test it without network
+
+Tests never reach a real website. Save a reduced copy of a real page in `tests/fixtures/providers/` and serve it with the `fake_network` fixture of `tests/conftest.py`:
 
 ```python
-import pytest
-from financials.providers.myprovider_provider import MyProviderProvider
+async def test_my_site_reads_the_displayed_figures(fake_network):
+    page = (FIXTURES / "mysite_airbus.html").read_text(encoding="utf-8")
+    fake_network.get("mysite.example/search", httpx.Response(200, json={"url": "/airbus"}))
+    fake_network.get("mysite.example/airbus", httpx.Response(200, text=page))
 
-@pytest.mark.asyncio
-async def test_myprovider_fetch(mocker):
-    provider = MyProviderProvider()
-    mocker.patch.object(provider, "_get_json", return_value={"pe": 15.4, "div_yield": 0.03})
-    
-    result = await provider.fetch(ticker="AAPL")
-    assert result["pe_ratio"] == 15.4
-    assert result["dividend_yield"] == 0.03
+    metrics = await MySiteProvider().get_financials("AIR.PA")
+
+    assert metrics.pe_ratio == pytest.approx(24.1)
+    assert fake_network.calls("mysite.example") == 2
+```
+
+A request without a canned response fails the test.
+
+## 6. Give it a coverage floor
+
+Every module of `financials/providers/` has a coverage floor in `scripts/check_coverage_distribution.py`. Add yours; floors only go up. *(`tests/test_coverage_gate.py`)*
+
+## 7. Update the documents
+
+The provider count of `README.md` is checked against the code, and `ARCHITECTURE.md` lists the providers. Then run the whole gate:
+
+```bash
+make ci
 ```

@@ -2,88 +2,116 @@
 id: "configuration"
 title: "Configuration système"
 sidebar_label: "Configuration"
-description: "Référence complète des variables d'environnement et paramètres de Fonrex"
+description: "Référence des paramètres de Fonrex lus dans .env"
 ---
-
 
 # Configuration système
 
-Fonrex se configure à l'aide des variables d'environnement définies dans `.env`. Ci-dessous se trouve le tableau complet des variables prises en charge par sous-système.
+Fonrex lit ses paramètres dans des variables d'environnement. Copiez `.env.example` vers `.env` et modifiez-le : Docker Compose charge `.env` dans le conteneur de l'API, et `make run` le charge pour une exécution locale.
 
-## Base de Données & Cache
+Gardez un seul `KEY=value` par ligne et placez les commentaires sur leur propre ligne : un commentaire écrit après une valeur vide est lu comme la valeur.
 
-| Variable | Valeur par Défaut | Requis | Description |
-|---|---|---|---|
-| `DATABASE_URL` | `postgresql://fonrex:fonrex_password@localhost:5432/fonrex` | ✅ | Chaîne de connexion principale PostgreSQL/TimescaleDB |
-| `ASYNC_DATABASE_URL` | Auto-derived from `DATABASE_URL` | ❌ | Chaîne de connexion AsyncPG pour les workers asynchrones |
-| `POSTGRES_DB` | `fonrex` | ✅ | Nom de la base de données PostgreSQL |
-| `POSTGRES_USER` | `fonrex` | ✅ | Nom d'utilisateur PostgreSQL |
-| `POSTGRES_PASSWORD` | `fonrex_password` | ✅ | Mot de passe PostgreSQL |
-| `REDIS_URL` | `redis://localhost:6379/0` | ✅ | URL de l'instance Redis |
-| `CACHE_TTL` | `300` | ❌ | Défaut API cache TTL in seconds (5 minutes) |
+## Authentification
 
-## Providers de Données Spécialisés
+| Variable | Défaut | Description |
+|---|---|---|
+| `FONREX_API_KEY` | *(vide)* | Clé à accès complet. Générez-en une avec `echo "frx_live_$(openssl rand -hex 24)"` |
+| `FONREX_API_KEYS` | *(vide)* | Clés à accès complet supplémentaires, séparées par des virgules |
+| `FONREX_READ_ONLY_API_KEYS` | *(vide)* | Clés en lecture seule, séparées par des virgules : elles lisent les données mais ne peuvent ni vider le cache, ni nettoyer la base de données, ni déclencher une ingestion, ni modifier les abonnements |
+| `FONREX_AUTH_REQUIRED` | `true` | `false` ouvre toutes les routes, **uniquement** quand aucune clé n'est configurée. Ne l'utilisez que pour une instance inaccessible depuis tout réseau |
 
-| Variable | Valeur par Défaut | Requis | Description |
-|---|---|---|---|
-| `OPENFIGI_API_KEY` | `""` | ❌ | Clé API OpenFIGI optionnelle pour des limites de requêtes supérieures |
-| `SEC_EDGAR_EMAIL` | `contact@fonrex.io` | ✅ | E-mail de contact envoyé dans l'en-tête HTTP User-Agent vers la SEC EDGAR |
+Les clients envoient une clé sous la forme `Authorization: Bearer <key>` ou `X-API-KEY: <key>`. Voir [Premier appel d'API](first-api-call.md).
 
-## Ingestion Historique
+## Base de données et cache
 
-| Variable | Valeur par Défaut | Requis | Description |
-|---|---|---|---|
-| `INGEST_CONCURRENCY` | `5` | ❌ | Nombre de threads workers parallèles pendant l'ingestion en masse |
-| `INGEST_YF_DELAY` | `0.5` | ❌ | Délai en secondes entre deux requêtes consécutives vers Yahoo Finance |
-| `INGEST_TV_DELAY` | `2.0` | ❌ | Délai en secondes entre les requêtes historiques TradingView |
-| `INGEST_BATCH_SIZE` | `1000` | ❌ | Taille de lot pour les instructions SQL `INSERT ... ON CONFLICT` |
+| Variable | Défaut | Description |
+|---|---|---|
+| `DATABASE_URL` | `postgresql://fonrex:fonrex_password@localhost:5432/fonrex` | Adresse pour une exécution locale. Avec Docker Compose, elle est remplacée par l'adresse du service `db`, construite à partir de `POSTGRES_PASSWORD` |
+| `ASYNC_DATABASE_URL` | *(vide)* | Adresse asyncpg ; déduite de `DATABASE_URL` si elle est vide (Docker Compose la vide) |
+| `POSTGRES_DB` / `POSTGRES_USER` | `fonrex` | Conservées pour les outils locaux ; `docker-compose.yml` utilise des valeurs fixes (utilisateur `fonrex`, base `fonrex` créée par `postgres-init.sh`) |
+| `POSTGRES_PASSWORD` | `fonrex_password` | Changez-le avant le premier démarrage (lettres, chiffres, `-`, `_`) |
+| `REDIS_URL` | `redis://localhost:6379/0` | Remplacée par l'adresse du service `redis` avec Docker Compose |
+| `CACHE_TTL` | `300` | Durée de vie Redis par défaut, en secondes (chaque catégorie mise en cache a sa propre durée de vie, listée par `GET /cache/stats`) |
+| `WEB_CONCURRENCY` | `1` | Workers Gunicorn (Docker Compose). Gardez `1` : le worker temps réel et le canary quotidien vivent dans le processus de l'API |
 
-## Streaming Temps Réel
+## Ingestion historique
 
-| Variable | Valeur par Défaut | Requis | Description |
-|---|---|---|---|
-| `TV_MAX_CONNECTIONS` | `10` | ❌ | Nombre maximum de connexions WebSocket simultanées vers TradingView |
-| `TV_RECONNECT_DELAY` | `5` | ❌ | Délai initial de reconnexion en secondes (backoff exponentiel) |
-| `REALTIME_QUOTE_TTL` | `60` | ❌ | TTL Redis pour les snapshots de cotation en temps réel (secondes) |
-| `REALTIME_AUTO_SUBSCRIBE` | `true` | ❌ | Démarrer automatiquement le stream WebSocket lors de la requête `/quote/{ticker}` |
+| Variable | Défaut | Description |
+|---|---|---|
+| `INGEST_CONCURRENCY` | `5` | Ingestions parallèles d'une ingestion en masse dont l'appelant ne fournit pas de `concurrency` |
+| `INGEST_YF_DELAY` | `0.5` | Pause en secondes avant de se rabattre sur TradingView |
+| `INGEST_TV_DELAY` | `2.0` | Lue mais non utilisée par le code actuel |
+| `INGEST_BATCH_SIZE` | `1000` | Lignes par upsert en base de données |
 
-## Indicateurs Techniques
+## Streaming temps réel
 
-| Variable | Valeur par Défaut | Requis | Description |
-|---|---|---|---|
-| `TECHNICAL_CACHE_ENABLED` | `true` | ❌ | Activer le cache Redis pour le calcul des indicateurs techniques |
-| `TECHNICAL_DEFAULT_LIMIT` | `500` | ❌ | Nombre de bougies récupérées par défaut pour les calculs d'indicateurs |
-| `TECHNICAL_MAX_BATCH_TICKERS` | `20` | ❌ | Nombre maximum de tickers par requête `/technical/batch` |
-| `TECHNICAL_MAX_BATCH_INDICATORS` | `10` | ❌ | Nombre maximum d'indicateurs par requête `/technical/batch` |
+| Variable | Défaut | Description |
+|---|---|---|
+| `TV_MAX_CONNECTIONS` | `10` | Connexions WebSocket TradingView simultanées |
+| `TV_RECONNECT_DELAY` | `5` | Premier délai de reconnexion en secondes, doublé jusqu'à 60 |
+| `REALTIME_QUOTE_TTL` | `60` | Durée de vie d'un instantané de cours dans Redis, en secondes |
 
-## Agrégateur d'Actualités
+## Indicateurs techniques
 
-| Variable | Valeur par Défaut | Requis | Description |
-|---|---|---|---|
-| `NEWS_CACHE_TTL` | `1800` | ❌ | TTL Redis pour les résultats du flux d'actualités en secondes (30 min) |
-| `NEWS_DEFAULT_LIMIT` | `20` | ❌ | Limite d'articles par défaut par requête d'actualités |
-| `NEWS_MAX_LIMIT` | `100` | ❌ | Nombre maximum d'articles autorisés par requête |
-| `NEWS_PROVIDERS_TIMEOUT` | `10` | ❌ | Timeout global des requêtes de scraping providers en secondes |
-| `NEWS_DEDUP_SIMILARITY` | `0.85` | ❌ | Seuil de similarité SequenceMatcher pour la déduplication des titres |
+| Variable | Défaut | Description |
+|---|---|---|
+| `TECHNICAL_CACHE_ENABLED` | `true` | Met en cache les résultats des indicateurs dans Redis |
+| `TECHNICAL_DEFAULT_LIMIT` | `500` | Barres chargées quand une requête ne donne pas de limite (10 à 5000) |
+| `TECHNICAL_MAX_BATCH_TICKERS` | `20` | Tickers acceptés par `POST /technical/batch` |
+| `TECHNICAL_MAX_BATCH_INDICATORS` | `10` | Indicateurs acceptés par `POST /technical/batch` |
 
-## Valorisation (DCF)
+## Actualités
 
-| Variable | Valeur par Défaut | Requis | Description |
-|---|---|---|---|
-| `DCF_CACHE_TTL` | `21600` | ❌ | TTL Redis pour les valorisations DCF en secondes (6 heures) |
-| `DCF_DEFAULT_PROJECTION_YEARS` | `5` | ❌ | Défaut cash flow projection window in years |
-| `DCF_RISK_FREE_RATE` | `0.04` | ❌ | Défaut risk-free rate (e.g. 4.0% US 10Y Treasury) |
-| `DCF_EQUITY_RISK_PREMIUM` | `0.055` | ❌ | Défaut equity risk premium (5.5%) |
-| `DCF_TERMINAL_GROWTH_RATE` | `0.025` | ❌ | Défaut terminal growth rate (2.5%) |
+| Variable | Défaut | Description |
+|---|---|---|
+| `NEWS_CACHE_TTL` | `1800` | Durée de vie d'une réponse d'actualités dans Redis, en secondes |
+| `NEWS_DEFAULT_LIMIT` | `20` | Articles renvoyés pour un ticker quand la requête ne donne pas de limite |
+| `NEWS_MAX_LIMIT` | `100` | Limite la plus élevée qu'une requête peut demander |
+| `NEWS_DEDUP_SIMILARITY` | `0.85` | Similarité de titre au-delà de laquelle deux articles n'en font qu'un |
 
-## Monitoring de Providers & Health
+## Valorisation (DCF) et taux macroéconomiques
 
-| Variable | Valeur par Défaut | Requis | Description |
-|---|---|---|---|
-| `VALIDATION_OUTLIER_THRESHOLD` | `0.50` | ❌ | Seuil de déviation de consensus (50%) pour marquer les outliers |
-| `VALIDATION_MIN_PROVIDERS` | `2` | ❌ | Nombre minimum de providers en accord requis pour le consensus |
-| `CANARY_RUN_HOUR` | `6` | ❌ | Heure quotidienne UTC pour déclencher la suite Canary (0-23) |
-| `CANARY_PROVIDER_SEMAPHORE` | `3` | ❌ | Limite de concurrence pour les contrôles canary |
-| `ALERT_CANARY_CRITICAL` | `3` | ❌ | Échecs consécutifs des contrôles canary avant alerte critique |
-| `ALERT_SUCCESS_RATE_CRITICAL` | `0.70` | ❌ | Seuil du taux de succès provider pour alerte critique |
-| `ALERT_SUCCESS_RATE_WARNING` | `0.85` | ❌ | Seuil du taux de succès provider pour alerte d'avertissement |
+| Variable | Défaut | Description |
+|---|---|---|
+| `DCF_CACHE_TTL` | `21600` | Durée de vie d'une réponse DCF dans Redis (6 h) |
+| `DCF_DEFAULT_PROJECTION_YEARS` | `5` | Années de projection (3 à 10) |
+| `DCF_RISK_FREE_RATE` | `0.04` | Taux sans risque utilisé quand FRED n'en fournit pas |
+| `DCF_EQUITY_RISK_PREMIUM` | `0.055` | Prime de risque actions, sous forme de ratio |
+| `DCF_TERMINAL_GROWTH_RATE` | `0.025` | Taux de croissance terminal, sous forme de ratio |
+| `FRED_API_KEY` | *(vide)* | Clé gratuite de fred.stlouisfed.org ; sans elle, le taux stocké ou `DCF_RISK_FREE_RATE` est utilisé |
+| `MACRO_RATES_CACHE_TTL` | `21600` | Durée de vie des taux macroéconomiques dans Redis (6 h) |
+
+## Surveillance des fournisseurs
+
+| Variable | Défaut | Description |
+|---|---|---|
+| `VALIDATION_OUTLIER_THRESHOLD` | `0.50` | Écart à la médiane au-delà duquel une valeur est aberrante |
+| `VALIDATION_MIN_PROVIDERS` | `2` | Fournisseurs nécessaires pour une vérification par consensus |
+| `CANARY_RUN_HOUR` | `6` | Heure UTC de l'exécution quotidienne du canary |
+| `CANARY_PROVIDER_SEMAPHORE` | `3` | Fournisseurs vérifiés en parallèle par le canary |
+| `CANARY_PRICE_RANGE_TTL_SECONDS` | `21600` | Validité d'une plage de prix dynamique (6 h) |
+| `CANARY_PRICE_RANGE_NEGATIVE_TTL_SECONDS` | `300` | Délai avant nouvel essai quand une plage n'a pas pu être calculée |
+| `ALERT_CANARY_CRITICAL` | `3` | Échecs du canary qui déclenchent une alerte critique |
+| `ALERT_SUCCESS_RATE_CRITICAL` | `0.70` | Taux de succès en dessous duquel une alerte est critique |
+| `ALERT_SUCCESS_RATE_WARNING` | `0.85` | Taux de succès en dessous duquel une alerte est un avertissement |
+
+## Fournisseurs et requêtes sortantes
+
+| Variable | Défaut | Description |
+|---|---|---|
+| `SEC_EDGAR_EMAIL` | `contact@fonrex.io` | Adresse de contact envoyée à SEC EDGAR (exigée par la politique de la SEC) : mettez la vôtre |
+| `OPENFIGI_API_KEY` | *(vide)* | Clé OpenFIGI facultative (limite de débit plus élevée) |
+| `BARRONS_TOKEN`, `MARKETWATCH_TOKEN`, `WSJ_TOKEN` | *(vide)* | Jetons facultatifs de ces sites web |
+| `FONREX_PROVIDER_MAX_CONCURRENCY` | `4` | Requêtes qu'un fournisseur peut exécuter en même temps (1 à 64) |
+| `FONREX_PROXY_URL` | *(vide)* | Proxy HTTP sortant facultatif pour les sites web scrapés (pas pour yfinance ni TradingView) |
+| `FONREX_PROXY_PROVIDERS` | *(vide)* | Fournisseurs qui utilisent le proxy, séparés par des virgules ; vide signifie tous |
+| `LOGO_TOKEN` | *(vide)* | Jeton pour le téléchargement des logos depuis img.logo.dev |
+
+## Journal d'utilisation et démarrage
+
+| Variable | Défaut | Description |
+|---|---|---|
+| `USAGE_LOG_IP` | `none` | Part de l'IP de l'appelant conservée dans `usage_logs` : `none`, `truncated` (réseau uniquement) ou `full` |
+| `USAGE_LOG_RETENTION_DAYS` | `90` | Jours de journal d'utilisation conservés ; `0` conserve tout |
+| `SEED_ON_FIRST_RUN` | `false` | Importe `data/etf.csv` au premier démarrage quand la base de données est vide |
+| `OPENBB_ALLOWED_ORIGIN` | `https://pro.openbb.co` | Origines autorisées par CORS, séparées par des virgules |

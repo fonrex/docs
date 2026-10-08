@@ -2,92 +2,60 @@
 id: "financial-analyst"
 title: "Financial Analyst Pathway"
 sidebar_label: "Financial Analyst"
-description: "Onboarding guide for financial analysts: DCF valuation models, fundamental statement extraction, Google Sheets connector, and OpenBB Workspace"
+description: "Fundamentals with their sources, DCF valuations, Google Sheets and OpenBB Workspace on your own instance"
 ---
 
 # Financial Analyst Pathway
 
-This pathway provides a technical onboarding guide for **Financial Analysts and Valuation Specialists**. It covers fundamental financial statement extractions, Discounted Cash Flow (DCF) valuation models, and automated integrations with Google Sheets and OpenBB Workspace.
+This pathway covers the fundamentals and valuation side of Fonrex, and the two no-code front-ends: Google Sheets and OpenBB Workspace. All of them read **your own instance**.
 
-| Feature Area | Integration Type | Output Format |
-|---|---|---|
-| **Google Sheets Connector** | Apps Script / `IMPORTDATA` | CSV / Cell values |
-| **OpenBB Workspace** | REST Router (`/openbb`) | Metric tiles, AgGrid tables, Plotly charts |
-| **DCF Valuation Engine** | FastAPI Backend | Free Cash Flow, EPS & DDM Intrinsic values |
-
----
-
-## 1. Accessing Instance Endpoints
-
-Ensure your Fonrex instance is active or accessible via host configuration:
-
-```http
-GET /health
-```
-
-Default local base URL: `http://localhost:5000`
-
----
-
-## 2. Google Sheets Integration
-
-Connect spreadsheet models directly to Fonrex endpoints using standard formulas or custom Apps Script wrappers:
-
-### Direct Formula Usage
-
-```excel
-=IMPORTDATA("http://localhost:5000/api/v1/fundamentals/ratios?symbol=AAPL&format=csv")
-```
-
-### Custom Apps Script Functions
-
-| Function Signature | Return Description |
+| Need | Where |
 |---|---|
-| `=FONREX_PE("AIR.PA")` | Price-to-Earnings Ratio |
-| `=FONREX_DIVIDEND_YIELD("AIR.PA")` | Dividend Yield (decimal format) |
-| `=FONREX_INTRINSIC_VALUE("AAPL")` | DCF Intrinsic Value per share |
+| Ratios with their source | `GET /fundamental` (EODHD layout, `Sources` section) |
+| Statements, earnings, ratings | `GET /fundamental/deep` |
+| Intrinsic value | `GET /dcf/{ticker}` (FCF), `/compare` (three models), `/sensitivity`; `POST /dcf/{ticker}` with your assumptions |
+| Spreadsheet | Google Sheets template |
+| Dashboards | OpenBB Workspace widgets |
 
-> **Note**: Custom cell formulas are cached by Google for 30 minutes. For real-time updates, use menu-driven refresh scripts. Refer to the [Google Sheets Connector Guide](/docs/guides/google-sheets-connector).
+## 1. An instance and a key
 
----
+Install the instance ([Installation](../getting-started/installation.md)) and create a **read-only key** for the tools that keep it outside your machine:
 
-## 3. OpenBB Terminal Workspace Configuration
-
-Fonrex exposes specialized `/openbb` endpoints designed for OpenBB Terminal (Cloud and Desktop):
-
-1. Open OpenBB Workspace.
-2. Add Fonrex as a custom backend data source (`http://localhost:5000/openbb`).
-3. Load the default Fonrex workspace dashboard layout.
-
-> **Note**: For custom authentication setup and widget manifests, refer to the [OpenBB Workspace Guide](/docs/guides/openbb-workspace).
-
----
-
-## 4. Automated DCF Valuation Engine
-
-Query intrinsic share value calculations derived from WACC, terminal growth rates, and Free Cash Flow models:
-
-```http
-GET /api/v1/valuation/dcf?symbol=AAPL&wacc=0.085&growth_rate=0.05
+```
+FONREX_READ_ONLY_API_KEYS=frx_live_<random value>
 ```
 
-Response payload schema:
+## 2. Fundamentals
 
-```json
-{
-  "symbol": "AAPL",
-  "intrinsic_value_per_share": 198.50,
-  "current_price": 185.20,
-  "upside_downside_pct": 7.18,
-  "wacc_used": 0.085,
-  "terminal_growth_rate": 0.05
-}
+```bash
+curl -s -H "X-API-KEY: $KEY" "http://localhost:5000/fundamental?ticker=AIR.PA"
+curl -s -H "X-API-KEY: $KEY" "http://localhost:5000/fundamental/deep?ticker=AIR.PA"
 ```
 
----
+`/fundamental` takes each figure from Yahoo Finance (asked with the symbol verified for the listing), then from the stored figures, then from the scraped websites, and tells you where each one comes from. Ratios are ratios (`0.0125` for 1.25 %). See [Fundamentals](../api-reference/fundamentals.md).
 
-## Next Steps
+## 3. Valuation
 
-- Review the [Fundamentals & Financial Ratios API Reference](/docs/api-reference/fundamentals)
-- Review the [DCF Valuation Engine API Reference](/docs/api-reference/valuation-dcf)
-- Review the [OpenBB Integration API Reference](/docs/api-reference/openbb)
+The DCF reads the deep fundamentals stored for the instrument: call `/fundamental/deep` first.
+
+```bash
+curl -s -H "X-API-KEY: $KEY" "http://localhost:5000/dcf/AIR.PA"
+curl -s -H "X-API-KEY: $KEY" "http://localhost:5000/dcf/AIR.PA/sensitivity?model=fcf"
+curl -s -X POST -H "X-API-KEY: $KEY" -H "Content-Type: application/json" \
+  -d '{"models": ["fcf", "eps", "ddm"], "projection_years": 10, "terminal_growth_rate": 0.02}' \
+  http://localhost:5000/dcf/AIR.PA
+```
+
+`GET /dcf` computes the FCF model; `/compare` and a `POST` naming several models weigh FCF, EPS and DDM 50/30/20. WACC from CAPM with the FRED 10-year rate. See [Valuation & DCF](../api-reference/valuation-dcf.md).
+
+## 4. Google Sheets
+
+The template refreshes fundamentals, DCF and indicators for a watchlist, and offers `=FONREX_PE()`, `=FONREX_DIVIDEND_YIELD()`, `=FONREX_INTRINSIC_VALUE()` and `=FONREX_RSI()`. Google's servers reach your instance through a tunnel. See the [Google Sheets guide](../guides/google-sheets-connector.md).
+
+## 5. OpenBB Workspace
+
+Add your instance URL as a data source, with your key in the `X-API-KEY` header: 19 widgets and two dashboards (EU Markets, Screener & Macro). See the [OpenBB guide](../guides/openbb-workspace.md).
+
+:::info
+Fonrex displays raw financial data and analytical outputs. It does not constitute investment advice.
+:::

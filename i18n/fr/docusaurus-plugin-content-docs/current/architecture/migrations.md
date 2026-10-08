@@ -1,41 +1,54 @@
 ---
 id: "migrations"
-title: "Migrations de schéma (Alembic)"
-sidebar_label: "Migrations de schéma"
-description: "Gestion des migrations de schéma et des politiques d'hypertables TimescaleDB avec Alembic"
+title: "Migrations du schéma (Alembic)"
+sidebar_label: "Migrations du schéma"
+description: "La chaîne de migrations Alembic, son exécution et l'ajout d'une migration"
 ---
 
+# Migrations du schéma (Alembic)
 
-# Migrations de schéma (Alembic)
+Alembic est maître du schéma, y compris les hypertables TimescaleDB, la compression et les agrégats continus. La chaîne est linéaire, avec une seule tête.
 
-Fonrex utilise **Alembic** pour gérer l'évolution des schémas de base de données. Les migrations s'exécutent dans un environnement isolé avant le démarrage de l'API.
+## Historique des migrations
 
-## Historique des Migrations
-
-| Revision ID | Description | Key Changes |
+| Révision | Fichier | Modifications |
 |---|---|---|
-| `001_initial` | Initial schema | `assets`, `prices_eod`, `fundamentals` |
-| `008_realtime` | Realtime streaming | `prices_intraday` hypertable, `realtime_subscriptions` |
-| `009_isin_listings` | Asset & listing refactor | `asset_listings`, `asset_mappings`, partial ISIN unique index |
-| `010_news_articles` | News aggregation | `news_articles` table with `url` unique constraint |
-| `011_provider_monitoring` | Provider health suite | `provider_health_log` hypertable, `provider_health_daily`, `provider_alerts` |
+| 001 | `001_initial_schema.py` | Schéma initial : `assets` (index unique sur l'ISIN), `asset_listings`, `asset_mappings`, `prices_eod`, `fundamentals`, `usage_logs`, et les anciennes tables `stock_data`, `data_requests`, `cache_status` |
+| 002 | `002_refonte_fundamentals.py` | `fundamentals_highlights`, `financial_statements`, `earnings_history`, `analyst_ratings`, `etf_details`, `etf_holdings` |
+| 003 | `003_index_constituents.py` | Table `index_constituents` (non utilisée par le code) |
+| 004 | `004_fix_assets_columns.py` | Colonnes de profil de `assets` |
+| 005 | `005_premium_fields.py` | Colonnes de positions vendeuses, TTM et croissance ; colonnes GICS ; `earnings_trend`, `esg_scores`, `outstanding_shares_history` |
+| 006 | `006_prices_eod_resolution.py` | `resolution`, `adjusted`, `source` sur `prices_eod` ; `ingest_log` |
+| 007 | `007_realtime_tables.py` | Hypertable `prices_intraday` (rétention de 30 jours), `realtime_subscriptions` |
+| 008 | `008_drop_legacy_tables.py` | **Destructive** : supprime les anciennes tables de prix |
+| 009 | `009_fix_assets_isin_unique.py` | Fusionne les doublons d'ISIN, index unique sur l'ISIN et contrainte d'identité des cotations |
+| 010 | `010_news_articles.py` | `news_articles` (`url` unique) |
+| 011 | `011_provider_health.py` | Hypertable `provider_health_log`, `provider_health_daily`, `provider_alerts` |
+| 012 | `012_alembic_schema_authority.py` | Alembic prend en charge les hypertables, la compression et les agrégats hebdomadaires/mensuels |
+| 013 | `013_solvency_ratios.py` | Ratios de solvabilité et coût de la dette ; `macro_rates_cache` |
+| 014 | `014_prices_per_listing.py` | `prices_eod` reconstruite par cotation : clé `(asset_listing_id, resolution, time)`, lignes redatées à leur séance ; compression et agrégats par cotation |
+| 015 | `015_dividend_yield_as_ratio.py` | Rendements du dividende enregistrés convertis de pourcentages en ratios |
 
-## Flux d'Exécution des Migrations
+## Exécution des migrations
 
-1. At container startup, `entrypoint.sh` executes `alembic upgrade head`.
-2. `main.py` checks current schema status via `database/migrations.py`.
-3. If the stored revision in `alembic_version` does not match `head`, `main.py` marks `app.state.db_available = False` to prevent queries against incomplete schemas.
+1. Le conteneur de l'API exécute `alembic upgrade head` dans `entrypoint.sh` avant de démarrer l'application. Le service `fonrex-migrate` (profil `migrate`) fait la même chose seul.
+2. `main.py` compare la révision enregistrée dans `alembic_version` avec la tête. Une base en retard sur le code est marquée indisponible et les routes qui en ont besoin répondent `503` : l'application ne modifie jamais le schéma elle-même.
 
-## Créer une Nouvelle Migration
+La migration 014 supprime d'abord les jobs TimescaleDB des tables de prix (en attendant la fin de celui qui tourne) et verrouille `prices_eod` : sinon, un job de compression ou de rafraîchissement exécuté en même temps provoquerait un interblocage. La migration recrée ensuite les jobs.
 
-To add a new table or column, generate a migration script inside the running container:
+## Ajouter une migration
 
 ```bash
-docker compose exec fonrex-api alembic revision -m "add_column_to_table"
+alembic revision -m "describe_the_change"
 ```
 
-Edit the generated file in `alembic/versions/` and apply it:
+Renommez le nouveau fichier de `alembic/versions/` et placez ses identifiants après la dernière migration (`revision = "016"`, `down_revision = "015"`, fichier `016_describe_the_change.py`), puis :
 
 ```bash
-docker compose exec fonrex-api alembic upgrade head
+alembic upgrade head
+make migration-check     # one head only
 ```
+
+- Ajoutez la migration au tableau des migrations de `ARCHITECTURE.md` (`tests/test_docs_consistency.py`).
+- Une migration qui déplace ou réécrit des données s'accompagne d'un test dans `tests/test_timescale_integration.py`, exécuté sur un vrai TimescaleDB (`make test-db`).
+- Écrivez aussi `downgrade()` : les tests d'intégration redescendent puis remontent.

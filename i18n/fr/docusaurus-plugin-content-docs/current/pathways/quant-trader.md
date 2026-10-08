@@ -2,113 +2,64 @@
 id: "quant-trader"
 title: "Parcours Quant & Algo-Trader"
 sidebar_label: "Quant & Algo-Trader"
-description: "Guide technique d'intégration pour analystes quantitatifs : ingestion de séries temporelles, indicateurs Pandas-TA et backtesting Zipline"
+description: "D'une instance vide aux backtests : ingérer les prix par cotation, calculer les indicateurs côté serveur, alimenter Zipline"
 ---
 
 # Parcours Quant & Algo-Trader
 
-Ce parcours fournit un guide technique d'intégration pour les **Analystes Quantitatifs et Traders Algorithmiques**. Il couvre la configuration de l'infrastructure locale, l'ingestion des séries temporelles OHLCV dans TimescaleDB, le calcul des indicateurs techniques côté serveur via Pandas-TA et l'intégration avec le moteur de backtesting Zipline en Python.
+Ce parcours vous mène d'une instance vide à un backtest : prix quotidiens stockés par cotation dans TimescaleDB, indicateurs calculés par l'API, et un bundle Zipline qui lit votre base de données.
 
-| Composant | Technologie | Spécification |
-|---|---|---|
-| **Ingestion de données** | Hypertables TimescaleDB | Stockage partitionné des séries temporelles OHLCV |
-| **Indicateurs techniques** | Moteur Pandas-TA | 18+ indicateurs calculés côté serveur (SMA, EMA, RSI, MACD, Bollinger) |
-| **Moteur de backtest** | Adaptateur Zipline | Client DataBundle Python natif |
+| Étape | Ce que vous utilisez |
+|---|---|
+| Prix | `POST /historical/ingest`, `scripts/ingest_all.py`, `GET /eod` |
+| Indicateurs | `GET /technical/{ticker}` et `/multi`, 18 indicateurs (pandas-ta) |
+| Screening | `GET /technical/screen` |
+| Backtesting | `zipline_bundle` (zipline-reloaded) ou pandas |
 
----
-
-## 1. Déploiement de l'infrastructure locale
-
-Lancez le serveur d'application Fonrex ainsi que les conteneurs TimescaleDB et Redis à l'aide de Docker Compose :
+## 1. Démarrer une instance
 
 ```bash
-git clone https://github.com/fonrex/fonrex.git
-cd fonrex
+git clone https://github.com/fonrex/fonrex.git && cd fonrex
 cp .env.example .env
-docker compose up -d
+export FONREX_API_KEY="frx_live_$(openssl rand -hex 24)"
+sed -i.bak "s/^FONREX_API_KEY=.*/FONREX_API_KEY=$FONREX_API_KEY/" .env && rm .env.bak
+mkdir -p logs && docker compose up -d
+AUTH="X-API-KEY: $FONREX_API_KEY"
 ```
 
-Vérifiez le statut du serveur :
+## 2. Importer des instruments et ingérer les prix
 
-```http
-GET /health
+```bash
+docker compose exec fonrex-api python import_assets.py --file data/stocks.csv
+curl -s -X POST -H "$AUTH" "http://localhost:5000/historical/ingest?ticker=AIR.PA"
 ```
 
-Réponse JSON attendue :
+L'ingestion récupère dix ans de barres quotidiennes depuis Yahoo Finance avec le symbole vérifié de la cotation (TradingView en solution de repli), ajustées des splits et des dividendes et datées par séance. Pour tout le catalogue : `docker compose exec fonrex-api python scripts/ingest_all.py`. Détails : [Ingérer des données historiques](../guides/ingest-historical-data.md).
 
-```json
-{
-  "status": "healthy",
-  "database": "connected",
-  "redis": "connected",
-  "alembic_version": "011_provider_monitoring"
-}
+## 3. Calculer des indicateurs
+
+```bash
+curl -s -H "$AUTH" "http://localhost:5000/technical/AIR.PA?indicator=rsi&period=14"
+curl -s -H "$AUTH" "http://localhost:5000/technical/AIR.PA/multi?indicators=sma_50,sma_200,macd,bbands_20"
+curl -s -H "$AUTH" "http://localhost:5000/technical/screen?indicator=rsi&operator=lt&value=30"
 ```
 
----
+Les indicateurs sont calculés sur les prix stockés avec pandas-ta et mis en cache dans Redis. Voir la [référence des indicateurs techniques](../api-reference/technical-indicators.md).
 
-## 2. Ingestion des données historiques
+## 4. Backtester
 
-Importez les données de cours historiques (OHLCV) dans les hypertables TimescaleDB via l'endpoint d'ingestion :
+Avec Zipline, enregistrez le bundle et ingérez-le depuis votre base de données :
 
-```http
-POST /api/v1/historical/ingest
-Content-Type: application/json
-
-{
-  "symbol": "AAPL",
-  "interval": "1d",
-  "provider": "yfinance",
-  "start_date": "2023-01-01"
-}
+```bash
+pip install zipline-reloaded
+export DATABASE_URL="postgresql://fonrex:<POSTGRES_PASSWORD>@localhost:5432/fonrex"
+python -m zipline_bundle ingest --start 2020-01-01 --end 2025-12-31 --tickers AIR.PA,BNP.PA --calendar XPAR
 ```
 
-> **Note** : Pour automatiser l'ingestion par lots sur plusieurs symboles, consultez le [Guide d'ingestion des données historiques](/docs/guides/ingest-historical-data).
+Ou chargez les prix dans pandas via `GET /eod/{ticker}`. Voir [Backtesting avec Zipline](../guides/backtesting-zipline.md).
 
----
+## Étapes suivantes
 
-## 3. Calcul des indicateurs techniques côté serveur
-
-Interrogez le moteur Pandas-TA pour calculer des indicateurs directement sur les données stockées :
-
-```http
-GET /api/v1/indicators/sma?symbol=AAPL&period=20&interval=1d
-```
-
-Format de réponse :
-
-```json
-{
-  "symbol": "AAPL",
-  "indicator": "SMA",
-  "period": 20,
-  "data": [
-    { "timestamp": "2024-01-15T00:00:00Z", "value": 185.42 },
-    { "timestamp": "2024-01-16T00:00:00Z", "value": 186.10 }
-  ]
-}
-```
-
----
-
-## 4. Connexion à Zipline pour le Backtesting
-
-Utilisez l'adaptateur client Python Fonrex dans votre stratégie Zipline :
-
-```python
-from fonrex_client import FonrexDataIngestor
-import zipline
-
-ingestor = FonrexDataIngestor(base_url="http://localhost:5000")
-ingestor.register_bundle(name="fonrex-us-equities", symbols=["AAPL", "MSFT", "NVDA"])
-
-print("Bundle Zipline enregistré avec succès.")
-```
-
----
-
-## Prochaines étapes
-
-- Consulter la [Référence API Indicators](/docs/api-reference/technical-indicators)
-- Consulter la [Référence API Historical](/docs/api-reference/historical)
-- Consulter le [Guide Backtesting Zipline](/docs/guides/backtesting-zipline)
+- [API des prix historiques](../api-reference/historical.md)
+- [Streaming temps réel](../api-reference/realtime.md) pour les ticks d'une minute
+- [Modèle de données](../architecture/data-model.md)

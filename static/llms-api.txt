@@ -1,10 +1,8 @@
 # Fonrex Documentation - API Content Dump
 
-> Complete concatenated documentation for LLMs
+> Concatenated English documentation for LLMs
 
 ---
-
-
 
 <!-- FILE: /docs/api-reference/assets.md -->
 
@@ -12,110 +10,131 @@
 id: "assets"
 title: "Asset & Listing API Reference"
 sidebar_label: "Assets & Listings"
-description: "Documentation for asset identity resolution, listings, and EOD history endpoints"
+description: "Instruments, listings and end-of-day prices of the Fonrex catalogue"
 ---
 
 # Asset & Listing API Reference
 
-The Asset API manages financial instrument identities, exchange listings, and multi-format EOD history retrieval.
+Fonrex separates an **instrument** (one ISIN, a row of `assets`) from its **listings** (one row of `asset_listings` per ticker, exchange and currency). The same ETF quoted in EUR and in USD is one instrument with two listings, and each listing has its own price series.
+
+All routes on this page require an API key (`X-API-KEY` or `Authorization: Bearer`).
 
 ---
 
 ## <span className="api-method get">GET</span> `/assets/by-isin/{isin}`
 
-Retrieve a canonical asset instrument and all its active exchange listings by ISIN code.
+The instrument of an ISIN, with its preferred listing and all its listings.
 
-### Parameters
-
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `isin` | `string` | ✅ | — | 12-character ISIN code (e.g. `NL0000235190`) |
-
-### Response Example
+```bash
+curl -s -H "X-API-KEY: $FONREX_API_KEY" "http://localhost:5000/assets/by-isin/NL0000235190"
+```
 
 ```json
 {
-  "id": 42,
-  "isin": "NL0000235190",
+  "asset_id": 1,
   "name": "Airbus SE",
+  "ticker": "AIR.PA",
+  "exchange": "XPAR",
+  "currency": "EUR",
   "sector": "Industrials",
   "industry": "Aerospace & Defense",
   "quote_type": "EQUITY",
+  "isin": "NL0000235190",
+  "listing_id": 1,
   "listings": [
     {
-      "id": 101,
-      "ticker": "AIR.PA",
-      "exchange": "XPAR",
-      "currency": "EUR",
-      "is_primary": true
+      "id": 1, "asset_id": 1, "ticker": "AIR.PA", "exchange": "XPAR", "currency": "EUR",
+      "isin": "NL0000235190", "name": "Airbus SE", "source": "csv_import",
+      "is_primary": true, "is_active": true
     },
     {
-      "id": 102,
-      "ticker": "AIR.DE",
-      "exchange": "XETR",
-      "currency": "EUR",
-      "is_primary": false
+      "id": 2, "asset_id": 1, "ticker": "AIR.DE", "exchange": "XETR", "currency": "EUR",
+      "isin": "NL0000235190", "name": "Airbus SE", "source": "csv_import",
+      "is_primary": false, "is_active": true
     }
   ]
 }
 ```
 
-### Examples
-
-#### cURL
-```bash
-curl -s "http://localhost:5000/assets/by-isin/NL0000235190"
-```
-
-#### Python
-```python
-import requests
-
-resp = requests.get("http://localhost:5000/assets/by-isin/NL0000235190")
-data = resp.json()
-print(f"Asset Name: {data['name']}, Listings Count: {len(data['listings'])}")
-```
+The answer also holds `display_name`, `official_symbol`, `logo_path`, `ir_website` and `long_business_summary` when they are known. An unknown ISIN answers `404`.
 
 ---
 
 ## <span className="api-method get">GET</span> `/listings`
 
-Search exchange listings by ticker, ISIN, exchange, or currency.
+Active listings matching the filters. At least one filter is required (`400` otherwise).
 
-### Parameters
+| Parameter | Type | Description |
+|---|---|---|
+| `ticker` | string | Ticker of the listing (e.g. `AIR.PA`) |
+| `isin` | string | ISIN of the instrument |
+| `exchange` | string | Exchange code as stored in the catalogue |
+| `currency` | string | Currency of the listing (e.g. `EUR`) |
 
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `ticker` | `string` | ❌ | — | Ticker symbol (e.g. `AAPL`) |
-| `isin` | `string` | ❌ | — | ISIN code |
-| `exchange` | `string` | ❌ | — | Exchange code (e.g. `XPAR`, `NASDAQ`) |
-| `currency` | `string` | ❌ | — | 3-letter currency code (e.g. `EUR`, `USD`) |
-| `limit` | `integer` | ❌ | `50` | Maximum results to return |
+```json
+{
+  "count": 2,
+  "listings": [
+    { "id": 1, "asset_id": 1, "ticker": "AIR.PA", "exchange": "XPAR", "currency": "EUR", "isin": "NL0000235190", "name": "Airbus SE", "source": "csv_import", "is_primary": true, "is_active": true }
+  ]
+}
+```
 
 ---
 
 ## <span className="api-method get">GET</span> `/eod/{ticker}`
 
-Retrieve End-of-Day (EOD) historical prices in JSON or CSV format. Auto-triggers historical ingestion if local data is missing.
+End-of-day prices of a listing, in JSON or CSV. When nothing is stored for the request, the listing is ingested first (Yahoo Finance with the symbol verified for the listing, TradingView as a fallback).
 
-### Parameters
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `ticker` | string | — | Ticker (at most 10 characters: letters, digits, `.` and `-`) |
+| `period` | string | — | `1d`, `5d`, `1mo`, `3mo`, `6mo`, `1y`, `2y`, `5y`, `10y`, `ytd`, `max`, `daily`, `weekly`, `monthly`. Required unless `from` and `to` are given |
+| `from`, `to` | date | — | Window `YYYY-MM-DD`, given together |
+| `fmt` | string | `json` | `json` or `csv` |
+| `order` | string | `a` | `a` (oldest first) or `d` (newest first) |
+| `currency` | string | — | Currency of the listing, when several listings share the ticker |
+| `exchange` | string | — | Exchange of the listing, when several listings share the ticker |
 
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `ticker` | `string` | ✅ | — | Ticker symbol (e.g. `AIR.PA`, `AAPL`) |
-| `period` | `string` | ✅ | — | Historical period window (e.g. `1d`, `5d`, `1mo`, `1y`, `max`) |
-| `resolution` | `string` | ❌ | `d` | Candle resolution (`d`, `w`, `m`) |
-| `format` | `string` | ❌ | `json` | Output format (`json`, `csv`) |
-| `limit` | `integer` | ❌ | `100` | Number of historical bars to return |
-| `order` | `string` | ❌ | `asc` | Sort order by date (`asc`, `desc`) |
+`weekly` returns weekly bars and `monthly` monthly bars; every other period returns daily bars. Without `currency` or `exchange`, the primary listing is used.
 
-### Status Codes
+```bash
+curl -s -H "X-API-KEY: $FONREX_API_KEY" "http://localhost:5000/eod/AIR.PA?period=5d"
+```
 
-| Code | Description |
-|---|---|
-| 200 | Success |
-| 404 | Asset/Listing not found |
-| 422 | Invalid parameter input |
+```json
+{
+  "ticker": "AIR.PA",
+  "period": "5d",
+  "format": "json",
+  "count": 3,
+  "retrieved_at": "2026-10-08T16:34:42.404598+00:00",
+  "data_source": "database",
+  "data": [
+    { "Date": "2026-10-06", "Open": 153.44, "High": 155.44, "Low": 151.44, "Close": 154.44, "Adj Close": 154.44, "Volume": 1399000 },
+    { "Date": "2026-10-07", "Open": 154.46, "High": 156.46, "Low": 152.46, "Close": 155.46, "Adj Close": 155.46, "Volume": 1400000 }
+  ]
+}
+```
+
+`Date` is the date of the trading session. `data_source` is `database` when the prices were already stored, otherwise the source of the ingestion (`yfinance` or `tradingview`). Answers are cached 24 hours in Redis.
+
+With `fmt=csv`:
+
+```
+Date,Open,High,Low,Close,Adj Close,Volume
+2026-10-06,153.44,155.44,151.44,154.44,154.44,1399000
+2026-10-07,154.46,156.46,152.46,155.46,155.46,1400000
+```
+
+### Errors
+
+| Code | Body | When |
+|---|---|---|
+| `400` | `{"error": "Invalid request", "message": "..."}` | Invalid ticker, period, format, order or dates |
+| `404` | `{"error": "No data found", "message": "...", "reason": "..."}` | Nothing stored and nothing could be ingested. `reason` explains why, e.g. no Yahoo symbol quoted in the currency of the listing |
+
+See [Ingesting historical data](../guides/ingest-historical-data.md) for the way the source symbol of a listing is chosen.
 
 
 
@@ -125,109 +144,108 @@ Retrieve End-of-Day (EOD) historical prices in JSON or CSV format. Auto-triggers
 id: "fundamentals"
 title: "Fundamental Financials API Reference"
 sidebar_label: "Fundamentals"
-description: "Endpoints for multi-provider fundamental metrics, financial statements, and valuation ratios"
+description: "Multi-provider fundamentals in the EODHD layout and stored deep fundamentals"
 ---
 
 # Fundamental Financials API Reference
 
-The Fundamentals API aggregates financial metrics, key statistics, balance sheets, income statements, cash flows, and analyst consensus across 14+ fundamental providers.
+Two routes serve fundamentals:
+
+- `GET /fundamental` builds one document from Yahoo Finance, the figures stored in the database and the scraped providers, with the source of every figure.
+- `GET /fundamental/deep` returns what the deep enrichment stored: highlights, financial statements, earnings history and analyst ratings.
+
+Ratios are ratios: a 0.32 % dividend yield is `0.0032`.
 
 ---
 
 ## <span className="api-method get">GET</span> `/fundamental`
 
-Aggregate key financial statistics (P/E ratio, Dividend Yield, Market Cap, Enterprise Value, Beta, ESG scores) across providers.
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `ticker` | string | — | Ticker (e.g. `AIR.PA`). `ticker` or `isin` is required |
+| `isin` | string | — | ISIN of the instrument |
+| `exchange` | string | — | Exchange, to choose a listing |
+| `currency` | string | — | Currency, to choose a listing |
+| `provider` | string | all | One provider name, or several separated by commas, instead of all of them |
+| `fmt` | string | `eodhd` | `eodhd` (rendered document) or `raw` (the answer of each provider) |
+| `nocache` | boolean | `false` | Ignore the cached answer |
 
-### Parameters
-
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `ticker` | `string` | ❌ | — | Ticker symbol (e.g. `TSLA`) |
-| `isin` | `string` | ❌ | — | ISIN code (e.g. `US88160R1014`) |
-| `exchange` | `string` | ❌ | — | Financial exchange code |
-| `currency` | `string` | ❌ | — | Currency filter |
-| `provider` | `string` | ❌ | — | Specific provider override (e.g. `ZoneBourse`, `Gurufocus`, `YahooFinance`) |
-
-### Response Example
-
-```json
-{
-  "asset_profile": {
-    "isin": "US88160R1014",
-    "name": "Tesla, Inc.",
-    "ticker": "TSLA",
-    "sector": "Consumer Cyclical"
-  },
-  "metrics": {
-    "market_cap": 750230000000,
-    "pe_ratio": 62.4,
-    "forward_pe": 48.1,
-    "dividend_yield": 0.0,
-    "beta": 2.34,
-    "price_to_sales": 7.82,
-    "roe": 0.194
-  },
-  "providers_used": ["ZoneBourse", "Gurufocus", "YahooFinance"]
-}
-```
-
-### Examples
-
-#### cURL
 ```bash
-curl -s "http://localhost:5000/fundamental?ticker=TSLA"
+curl -s -H "X-API-KEY: $FONREX_API_KEY" "http://localhost:5000/fundamental?ticker=AIR.PA"
 ```
 
-#### Python
-```python
-import requests
+### The rendered document (`fmt=eodhd`)
 
-resp = requests.get("http://localhost:5000/fundamental", params={"ticker": "TSLA"})
-data = resp.json()
-print("Market Cap:", data["metrics"]["market_cap"])
-```
+| Section | Content |
+|---|---|
+| `General` | Name, ISIN, exchange, currency, country, sector and industry, description, address, website |
+| `Highlights` | Market capitalisation, EBITDA, P/E, EPS, dividend yield, margins, returns, revenue… |
+| `Valuation` | Trailing and forward P/E, price/sales, price/book, enterprise value ratios |
+| `SharesStats` | Shares outstanding and float, insider and institution ownership, short interest |
+| `Technicals` | Beta, 52-week high and low, moving averages |
+| `SplitsDividends` | Dividend rate and yield, payout ratio, dates, last split |
+| `AnalystRatings` | Consensus, target price, number of buy/hold/sell ratings |
+| `Holders`, `InsiderTransactions`, `ESGScores` | Holders, SEC Form 4 transactions (US shares), ESG scores |
+| `Earnings`, `Financials` | Stored earnings history and financial statements |
+| `Providers` | What each provider returned |
+| `Sources` | The source of each figure, e.g. `{"Highlights": {"PERatio": "YahooFinance", "PEGRatio": "database (2026-10-01)"}}` |
+| `ETF_Data` | Only for an ETF |
+
+Each figure is taken, in this order, from:
+
+1. the Yahoo Finance answer of this request;
+2. the figures stored by the deep enrichment, reported as `database (date of the fetch)`;
+3. for the trailing P/E, the earnings per share and the dividend yield only, the scraped providers publishing the same quantity (Google Finance, Barron's, MarketWatch, WSJ, Investing.com).
+
+Estimates for the current year (Boursorama, ZoneBourse) and quarterly figures (Google Finance) are other quantities: they are never used as a fallback but remain available with `fmt=raw`.
+
+### Which instrument is asked
+
+For a listing of your catalogue, Yahoo Finance is asked with the **symbol verified for the listing** (found from the ISIN and checked against the currency of the listing), never with the bare ticker, which may be another instrument on Yahoo. Without a verified symbol, Yahoo is not asked and its entry says why. Scraped providers are searched by mapping, ISIN or ticker; a provider that answers about another ISIN is reported as an error.
+
+Every value goes through the [validation layer](../monitoring/validation-layer.md) before it is used.
+
+The complete answer is cached one hour; `nocache=true` bypasses it.
 
 ---
 
 ## <span className="api-method get">GET</span> `/fundamental/deep`
 
-Retrieve deep structured financial data including daily snapshots, financial statements, EPS earnings history, and analyst consensus ratings.
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `ticker` / `isin` | string | — | The instrument (one of the two is required) |
+| `refresh` | boolean | `false` | Fetch again from Yahoo Finance instead of using the cached answer |
+| `sections` | string | `all` | `all`, or a comma-separated list among `highlights`, `statements`, `earnings`, `ratings` |
 
-### Parameters
+```bash
+curl -s -H "X-API-KEY: $FONREX_API_KEY" \
+  "http://localhost:5000/fundamental/deep?ticker=AIR.PA&sections=highlights,ratings"
+```
 
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `ticker` | `string` | ✅ | — | Ticker symbol (e.g. `AIR.PA`) |
-
-### Response Example
+Answer layout:
 
 ```json
 {
-  "highlights": {
-    "pe_ratio": 28.5,
-    "enterprise_value": 110500000000,
-    "roe": 0.162,
-    "roa": 0.054
+  "asset_profile": { "isin": "NL0000235190", "ticker": "AIR.PA", "name": "Airbus SE", "exchange": "XPAR", "currency": "EUR" },
+  "highlights": { "pe_ratio": 28.5, "dividend_yield": 0.0125, "roe": 0.162, "...": "..." },
+  "statements": {
+    "income":   { "annual": [ { "period_end": "2025-12-31", "...": "..." } ], "quarterly": [] },
+    "balance":  { "annual": [], "quarterly": [] },
+    "cashflow": { "annual": [], "quarterly": [] }
   },
-  "financial_statements": [
-    {
-      "statement_type": "income",
-      "period_type": "annual",
-      "period_end": "2025-12-31",
-      "revenue": 65400000000,
-      "net_income": 4200000000
-    }
-  ],
-  "analyst_ratings": {
-    "consensus": "Buy",
-    "target_mean": 165.0,
-    "strong_buy": 12,
-    "buy": 8,
-    "hold": 4,
-    "sell": 1
-  }
+  "earnings_history": [ { "...": "..." } ],
+  "analyst_ratings": { "...": "..." },
+  "meta": { "fetched_at": "2026-10-08T16:40:00+00:00", "source": "yfinance", "cache_hit": false, "symbol": "AIR.PA" }
 }
 ```
+
+The figures are fetched from Yahoo Finance with the verified symbol (`meta.symbol`) and stored. Without a verified symbol nothing is fetched: the answer is what the database already holds, `meta.source` is `database` and `meta.note` gives the reason. Complete answers are cached 24 hours; a request receives only the sections it asked for.
+
+---
+
+## Legacy routes
+
+`GET /stocks` (market overview) and `GET /stocks/{ticker}/financials` remain from earlier versions. They ask Yahoo Finance with the ticker as typed; prefer `/fundamental`.
 
 
 
@@ -236,292 +254,115 @@ Retrieve deep structured financial data including daily snapshots, financial sta
 ---
 id: "historical"
 title: "Historical Ingestion API Reference"
-sidebar_label: "Historical Ingestion"
-description: "Endpoints for backfilling historical OHLCV data, bulk ingestion, and historical query routes"
+sidebar_label: "Historical Prices"
+description: "Ingest end-of-day prices into TimescaleDB and read them back"
 ---
 
 # Historical Ingestion API Reference
 
-The Historical API provides methods to ingest, backfill, and query historical daily OHLCV bar data into TimescaleDB storage.
+Prices are stored per **listing**, resolution (`1D`, `1W`, `1M`) and trading session in the `prices_eod` hypertable. The ingestion routes change data: they need a **full-access** key (a read-only key gets `403`).
 
 ---
 
 ## <span className="api-method post">POST</span> `/historical/ingest`
 
-Trigger a single-asset historical ingestion or backfill.
+Ingest the history of one listing. The parameters are **query parameters**.
 
-### Request Body
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `ticker` | string | — | Ticker to ingest (required) |
+| `resolution` | string | `1D` | `1D`, `1W` or `1M` |
+| `source` | string | `auto` | `auto` (Yahoo Finance, then TradingView), `yfinance` or `tradingview` |
+| `force_refresh` | boolean | `false` | Fetch the whole range again, replace the stored bars of that range and look the source symbol up again |
+| `from_date`, `to_date` | date | — | Window `YYYY-MM-DD`. Without them: ten years on a first ingestion, otherwise from the day after the last stored session |
+| `currency`, `exchange` | string | — | Choose the listing when several share the ticker (the primary one otherwise) |
 
-```json
-{
-  "ticker": "BNP.PA",
-  "resolution": "d",
-  "from_date": "2020-01-01",
-  "to_date": "2026-08-01",
-  "force": false
-}
+```bash
+curl -s -X POST -H "X-API-KEY: $FONREX_API_KEY" \
+  "http://localhost:5000/historical/ingest?ticker=AIR.PA"
 ```
 
-### Parameters
-
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `ticker` | `string` | ✅ | — | Ticker symbol to ingest |
-| `resolution` | `string` | ❌ | `d` | Candle resolution (`d`, `w`, `m`) |
-| `from_date` | `string` | ❌ | — | Start date (`YYYY-MM-DD`) |
-| `to_date` | `string` | ❌ | — | End date (`YYYY-MM-DD`) |
-| `force` | `boolean` | ❌ | `false` | Re-download and overwrite existing database records |
-
-### Response Example
-
 ```json
 {
+  "ticker": "AIR.PA",
+  "resolution": "1D",
   "status": "success",
-  "ticker": "BNP.PA",
-  "records_added": 1650,
-  "source": "YahooFinance",
-  "duration_ms": 1240
+  "source_used": "yfinance",
+  "provider_symbol": "AIR.PA",
+  "records_added": 2531,
+  "from_date": "2016-10-10",
+  "to_date": "2026-10-07",
+  "duration_ms": 1840,
+  "error": null,
+  "note": null
 }
 ```
+
+| Field | Meaning |
+|---|---|
+| `status` | `success`, `up_to_date` (nothing to fetch) or `failed` |
+| `source_used` | `yfinance` or `tradingview`; on a failure, the source that was asked (`auto`…) |
+| `provider_symbol` | The symbol asked to the source — the Yahoo symbol verified for the listing, or the TradingView symbol |
+| `note` | Why Yahoo was not the source, when the prices come from TradingView |
+| `error` | Why nothing could be ingested, e.g. no Yahoo symbol quoted in the currency of the listing |
 
 ---
 
 ## <span className="api-method post">POST</span> `/historical/ingest/bulk`
 
-Trigger bulk ingestion across multiple tickers with concurrency controls.
-
-### Request Body
+Ingest several tickers in parallel. JSON body:
 
 ```json
 {
-  "tickers": ["AIR.PA", "BNP.PA", "TTE.PA", "MC.PA"],
-  "resolution": "d",
-  "concurrency": 4
+  "tickers": ["AIR.PA", "BNP.PA", "MC.PA"],
+  "resolution": "1D",
+  "source": "auto",
+  "force_refresh": false,
+  "concurrency": 5
 }
 ```
 
-### Response Example
-
-```json
-{
-  "total": 4,
-  "successful": 4,
-  "failed": 0,
-  "details": [
-    { "ticker": "AIR.PA", "status": "success", "records_added": 250 },
-    { "ticker": "BNP.PA", "status": "success", "records_added": 250 }
-  ]
-}
-```
+`concurrency` is between 1 and 20. Each ticker designates its primary listing. The answer is `{"status": "completed", "results": [...]}` with one result per ticker, in the format above.
 
 ---
 
 ## <span className="api-method get">GET</span> `/ticker/{symbol}/history`
 
-Query historical OHLCV candles from the `prices_eod` table. Automatically ingests missing data if `auto_ingest=true`.
+OHLCV bars of a listing, read from the database only — this route never ingests. Bars are returned newest first.
 
-### Parameters
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `symbol` | string | — | Ticker |
+| `start_date`, `end_date` | date | — | Window `YYYY-MM-DD` |
+| `interval` | string | `1D` | `1D`, `1W`, `1M` (or `daily`, `weekly`, `monthly`) |
+| `currency`, `exchange` | string | — | Choose the listing |
 
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `symbol` | `string` | ✅ | — | Instrument symbol |
-| `resolution` | `string` | ❌ | `d` | Resolution (`d`, `w`, `m`) |
-| `limit` | `integer` | ❌ | `500` | Number of historical bars |
-| `auto_ingest` | `boolean` | ❌ | `true` | Automatically backfill missing bars from yfinance |
-
-### Examples
-
-#### cURL
 ```bash
-curl -s "http://localhost:5000/ticker/AAPL/history?limit=10"
+curl -s -H "X-API-KEY: $FONREX_API_KEY" \
+  "http://localhost:5000/ticker/AIR.PA/history?start_date=2026-09-28&end_date=2026-10-02"
 ```
-
-#### Python
-```python
-import requests
-
-resp = requests.get("http://localhost:5000/ticker/AAPL/history", params={"limit": 10})
-bars = resp.json()["data"]
-print("Fetched bars:", len(bars))
-```
-
-
-
-<!-- FILE: /docs/api-reference/monitoring.md -->
-
----
-id: "monitoring"
-title: "Provider Monitoring API Reference"
-sidebar_label: "Provider Monitoring"
-description: "Endpoints for provider health check statuses, canary inspection logs, and automated alerts"
----
-
-# Provider Monitoring API Reference
-
-The Provider Monitoring API exposes endpoints to query provider health, inspect daily synthetic canary check executions, view outlier alerts, and resolve system incidents.
-
----
-
-## <span className="api-method get">GET</span> `/health/providers`
-
-Retrieve current health and availability summary across all financial data providers.
-
-### Response Example
-
-```json
-{
-  "total_providers": 14,
-  "healthy_count": 13,
-  "degraded_count": 1,
-  "providers": [
-    {
-      "name": "ZoneBourse",
-      "is_healthy": true,
-      "success_rate": 0.98,
-      "avg_latency_ms": 320,
-      "last_check_at": "2026-08-11T06:00:00Z"
-    },
-    {
-      "name": "Investing",
-      "is_healthy": false,
-      "success_rate": 0.65,
-      "avg_latency_ms": 1450,
-      "last_check_at": "2026-08-11T06:00:00Z"
-    }
-  ]
-}
-```
-
----
-
-## <span className="api-method get">GET</span> `/health/providers/{name}`
-
-Detailed health statistics, historical latency metrics, and recent outlier events for a single provider.
-
----
-
-## <span className="api-method get">GET</span> `/health/alerts`
-
-Retrieve active or resolved provider quality alerts.
-
-### Parameters
-
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `severity` | `string` | ❌ | — | Filter by severity (`critical`, `warning`, `info`) |
-| `provider` | `string` | ❌ | — | Provider name |
-| `include_resolved` | `boolean` | ❌ | `false` | Include historical resolved alerts |
-
----
-
-## <span className="api-method post">POST</span> `/health/alerts/{id}/resolve`
-
-Manually mark an alert as resolved with an optional resolution note.
-
-### Request Body
-
-```json
-{
-  "resolution_note": "Upstream rate limit cleared by provider support."
-}
-```
-
----
-
-## <span className="api-method post">POST</span> `/health/canary/run`
-
-Trigger an immediate background Canary health check across all registered providers or a single target provider.
-
----
-
-## <span className="api-method get">GET</span> `/health/canary/history`
-
-Historical execution log of daily synthetic canary checks.
-
----
-
-## <span className="api-method get">GET</span> `/health/stats`
-
-Global data quality statistics over a 7-day rolling window.
-
-
-
-<!-- FILE: /docs/api-reference/news.md -->
-
----
-id: "news"
-title: "News Aggregator API Reference"
-sidebar_label: "News Aggregator"
-description: "Endpoints for multi-source financial news feeds, ticker-specific articles, and background ingestion"
----
-
-# News Aggregator API Reference
-
-The News Aggregator API collects, deduplicates, and classifies financial news articles across 7 scrapers: Yahoo Finance, Google Finance, ZoneBourse, Boursorama, Investing.com, MarketWatch, and MSN Finance.
-
----
-
-## <span className="api-method get">GET</span> `/news/{ticker}`
-
-Retrieve financial news articles mentioning a specific ticker. Results are cached in Redis for 30 minutes.
-
-### Parameters
-
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `ticker` | `string` | ✅ | — | Financial ticker (e.g. `AIR.PA`, `AAPL`) |
-| `limit` | `integer` | ❌ | `20` | Number of articles |
-| `lang` | `string` | ❌ | — | Language filter (`en`, `fr`) |
-
-### Response Example
 
 ```json
 {
   "ticker": "AIR.PA",
-  "count": 2,
-  "articles": [
-    {
-      "id": 842,
-      "title": "Airbus Delivers 65 Aircraft in July, Reaffirms Full-Year Target",
-      "summary": "Airbus reported strong commercial airplane deliveries for July...",
-      "url": "https://www.marketwatch.com/story/airbus-delivers-65-aircraft-2026",
-      "source": "MarketWatch",
-      "provider": "marketwatch_news",
-      "author": "Financial Desk",
-      "published_at": "2026-08-10T14:30:00Z",
-      "sentiment": "POSITIVE",
-      "sentiment_score": 0.78,
-      "language": "en"
-    }
+  "interval": "1D",
+  "count": 5,
+  "data": [
+    { "time": "2026-10-02T00:00:00Z", "open": 149.07, "high": 151.07, "low": 147.07, "close": 150.07, "adj_close": 150.07, "volume": 1395000 },
+    { "time": "2026-10-01T00:00:00Z", "open": 147.97, "high": 149.97, "low": 145.97, "close": 148.97, "adj_close": 148.97, "volume": 1394000 }
   ]
 }
 ```
 
----
-
-## <span className="api-method get">GET</span> `/news/feed`
-
-Retrieve global financial news feed across all assets.
-
-### Parameters
-
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `limit` | `integer` | ❌ | `20` | Maximum items to return |
-| `lang` | `string` | ❌ | — | Filter by language (`en`, `fr`) |
-| `provider` | `string` | ❌ | — | Filter by provider (e.g. `zonebourse_news`) |
+`time` is the date of the trading session, at midnight UTC. Answers are cached 24 hours and dropped when the ticker is ingested again.
 
 ---
 
-## <span className="api-method post">POST</span> `/news/{ticker}/refresh`
+## Weekly and monthly bars
 
-Trigger an asynchronous background refresh of news scrapers for a ticker without blocking the request.
+Besides the `1W` and `1M` bars you can ingest, the database maintains two continuous aggregates computed from the daily bars of each listing, `prices_weekly` and `prices_monthly`. They are refreshed daily and answer from the daily bars for the recent period.
 
----
-
-## <span className="api-method get">GET</span> `/news/stats`
-
-Retrieve global news aggregator statistics (total articles indexed, provider breakdown, language counts).
+See [Ingesting historical data](../guides/ingest-historical-data.md) for the pipeline and the choice of the source symbol.
 
 
 
@@ -530,87 +371,97 @@ Retrieve global news aggregator statistics (total articles indexed, provider bre
 ---
 id: "realtime"
 title: "Realtime & WebSocket API Reference"
-sidebar_label: "Realtime & WebSockets"
-description: "WebSocket live price streaming, REST quote snapshots, and subscription management endpoints"
+sidebar_label: "Realtime Streaming"
+description: "WebSocket price stream, quote snapshots and stream subscriptions"
 ---
 
 # Realtime & WebSocket API Reference
 
-The Realtime API streams live 1-minute market ticks over WebSockets via TradingView bridge connections and Redis Pub/Sub, and exposes high-speed quote REST snapshots.
+The realtime worker of the API streams 1-minute ticks from TradingView, stores the last tick of each ticker in Redis (`quote:{ticker}`, 60 s), publishes it on the Redis channel `price:{ticker}` and saves it in the `prices_intraday` hypertable when the instrument is in the catalogue.
+
+Streams are started by a full-access key: by `POST /realtime/subscribe`, or by connecting to the WebSocket. A **read-only key never starts a stream**; it is served what is already streamed. Subscriptions of tickers that name an instrument of the catalogue are stored in `realtime_subscriptions` and restored when the API starts; other tickers are streamed but not restored after a restart.
 
 ---
 
 ## <span className="api-method ws">WS</span> `/ws/realtime/{ticker}`
 
-Open a persistent WebSocket streaming channel for real-time tick updates on a given ticker.
-
-### Connection Protocol
-
 ```javascript
-const ws = new WebSocket("ws://localhost:5000/ws/realtime/AIR.PA");
+const ws = new WebSocket(`ws://localhost:5000/ws/realtime/AIR.PA?token=${FONREX_API_KEY}`);
 ```
 
-### Event Messages
+The key is checked during the handshake. A WebSocket client can send it as a header (`Authorization` or `X-API-KEY`) or in the query string as `token`, `api_key` or `key`. A missing or wrong key closes the connection with code `1008`.
 
-Upon connection, the server sends a initial `snapshot` message followed by real-time `tick` events:
+### Messages sent by the server
 
-#### Initial Snapshot Event
-```json
-{
-  "type": "snapshot",
-  "ticker": "AIR.PA",
-  "data": {
-    "close": 135.90,
-    "open": 134.20,
-    "high": 136.50,
-    "low": 133.80,
-    "volume": 1245000,
-    "timestamp": "2026-08-11T10:15:00Z"
-  }
-}
-```
+Every message has the form `{"type", "ticker", "data", "error", "ts"}`, except `pong`, sent as `{"type": "pong"}`.
 
-#### Live Tick Event
+| `type` | When | `data` |
+|---|---|---|
+| `not_streaming` | Read-only key on a ticker that is not streamed (sent first; `error` explains it) | — |
+| `snapshot` | Right after the connection, when a last tick is cached | The last tick |
+| `tick` | Each new tick | The tick |
+| `pong` | Answer to a `ping` from the client | — |
+
 ```json
 {
   "type": "tick",
   "ticker": "AIR.PA",
   "data": {
-    "close": 136.10,
-    "change": 0.20,
-    "change_pct": 0.147,
-    "volume": 1246500,
-    "timestamp": "2026-08-11T10:16:00Z"
-  }
+    "ticker": "AIR.PA",
+    "timestamp": "2026-10-08T09:31:00Z",
+    "open": "155.20",
+    "high": "155.48",
+    "low": "155.10",
+    "close": "155.42",
+    "volume": 18250,
+    "source": "tradingview",
+    "exchange": null,
+    "currency": null
+  },
+  "error": null,
+  "ts": "2026-10-08T09:31:02.114Z"
 }
 ```
+
+Prices are decimal numbers serialised as strings.
+
+### Messages sent by the client
+
+| Text | Effect |
+|---|---|
+| `ping` | The server answers `{"type": "pong"}` |
+| `unsubscribe` | The server closes the connection |
+
+The TradingView symbol is derived from the ticker suffix (`AIR.PA` → `EURONEXT:AIR`, `.DE` → `XETRA`); a ticker without suffix is taken for a NASDAQ line.
 
 ---
 
 ## <span className="api-method get">GET</span> `/quote/{ticker}`
 
-Retrieve the latest price quote snapshot from the Redis volatile cache. Auto-triggers realtime stream subscription if `REALTIME_AUTO_SUBSCRIBE=true`.
+The last known price of a ticker.
 
-### Parameters
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `subscribe_if_missing` | boolean | `false` | Also start the stream of the ticker in the background. Ignored for a read-only key |
 
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `ticker` | `string` | ✅ | — | Ticker symbol (e.g. `AAPL`) |
-
-### Response Example
+When the ticker is streamed, the cached tick is returned (`is_realtime: true`, `source: "tradingview"`). Otherwise Fonrex returns the delayed Yahoo Finance price of the ticker **as typed** (`is_realtime: false`, `source: "yfinance"`, `delay_seconds: 900`). Nothing found answers `404`. A tick carries no previous close: for a streamed ticker `change` and `change_pct` are `0` and `previous_close` is `null`; the delayed Yahoo answer fills them.
 
 ```json
 {
-  "ticker": "AAPL",
-  "price": 224.50,
-  "open": 222.10,
-  "high": 225.00,
-  "low": 221.80,
-  "volume": 45200000,
-  "change": 2.40,
-  "change_pct": 1.08,
-  "source": "tradingview_stream",
-  "timestamp": "2026-08-11T10:15:30Z"
+  "ticker": "AIR.PA",
+  "price": "155.42",
+  "open": "155.20",
+  "high": "155.48",
+  "low": "155.10",
+  "close": "155.42",
+  "volume": 18250,
+  "change": "0",
+  "change_pct": "0",
+  "previous_close": null,
+  "timestamp": "2026-10-08T09:31:00Z",
+  "is_realtime": true,
+  "source": "tradingview",
+  "delay_seconds": 0
 }
 ```
 
@@ -618,143 +469,60 @@ Retrieve the latest price quote snapshot from the Redis volatile cache. Auto-tri
 
 ## <span className="api-method get">GET</span> `/quotes`
 
-Batch quote snapshot retrieval for multiple tickers.
+Quotes of several tickers: `tickers` is a comma-separated list, cut to the first 20. A ticker without a quote is `null`. This route never starts a stream.
 
-### Parameters
-
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `tickers` | `string` | ✅ | — | Comma-separated list of tickers (e.g. `AAPL,MSFT,TSLA`) |
+```json
+{ "count": 2, "tickers": ["AIR.PA", "BNP.PA"], "quotes": { "AIR.PA": { "...": "..." }, "BNP.PA": null } }
+```
 
 ---
 
 ## <span className="api-method post">POST</span> `/realtime/subscribe`
 
-Explicitly subscribe a ticker to the background streaming worker `RealtimePriceWorker`.
+Start the stream of up to 50 tickers. Full-access key only.
 
-### Request Body
+```bash
+curl -s -X POST -H "X-API-KEY: $FONREX_API_KEY" -H "Content-Type: application/json" \
+  -d '{"tickers": ["AIR.PA", "BNP.PA"]}' http://localhost:5000/realtime/subscribe
+```
 
 ```json
-{
-  "ticker": "NVDA"
-}
+[
+  {
+    "ticker": "AIR.PA",
+    "tv_exchange": "EURONEXT",
+    "tv_symbol": "AIR",
+    "is_active": true,
+    "subscribed_at": "2026-10-08T09:30:00Z",
+    "last_tick_at": null,
+    "tick_count": 0,
+    "is_streaming": true
+  }
+]
 ```
 
 ---
 
 ## <span className="api-method delete">DELETE</span> `/realtime/subscribe/{ticker}`
 
-Unsubscribe a ticker from background live streaming.
+Stop the stream of a ticker. Full-access key only. Answers `{"status": "unsubscribed", "ticker": "AIR.PA"}`, or `404` when the ticker is not streamed.
 
 ---
 
 ## <span className="api-method get">GET</span> `/realtime/status`
 
-List all active market streaming worker subscriptions.
-
-### Response Example
-
 ```json
 {
-  "active_subscriptions": 3,
-  "subscriptions": [
-    {
-      "ticker": "AIR.PA",
-      "subscribed_at": "2026-08-11T08:00:00Z",
-      "last_tick_at": "2026-08-11T10:15:30Z",
-      "tick_count": 1350
-    }
-  ]
+  "streaming_count": 1,
+  "active_tickers": ["AIR.PA"],
+  "ws_connections": { "AIR.PA": 2 },
+  "total_ws_clients": 2,
+  "stale_tickers": [],
+  "worker_running": true
 }
 ```
 
-
-
-<!-- FILE: /docs/api-reference/specialized.md -->
-
----
-id: "specialized"
-title: "Specialized Providers API Reference"
-sidebar_label: "Specialized Providers"
-description: "Endpoints for SEC EDGAR insider trades, JustETF metadata, and index constituent lists"
----
-
-# Specialized Providers API Reference
-
-The Specialized Providers API exposes targeted endpoints for SEC EDGAR insider transactions, JustETF details, and equity index constituents.
-
----
-
-## <span className="api-method get">GET</span> `/insider-transactions/{ticker}`
-
-Fetch Form 4 insider transactions filed with the US Securities and Exchange Commission (SEC EDGAR). Cached for 12 hours.
-
-### Parameters
-
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `ticker` | `string` | ✅ | — | US Equity Ticker (e.g. `AAPL`, `TSLA`) |
-
-### Response Example
-
-```json
-{
-  "ticker": "AAPL",
-  "source": "SEC_EDGAR",
-  "count": 1,
-  "transactions": [
-    {
-      "filing_date": "2026-08-01",
-      "reporting_owner": "COOK TIMOTHY D",
-      "officer_title": "Chief Executive Officer",
-      "transaction_type": "P - Purchase",
-      "shares": 50000,
-      "price_per_share": 220.50,
-      "total_value": 11025000
-    }
-  ]
-}
-```
-
----
-
-## <span className="api-method get">GET</span> `/etf/{isin}/details`
-
-Scrape ETF metadata, expense ratio (TER), Assets Under Management (AUM), and top 10 holdings from JustETF.
-
-### Parameters
-
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `isin` | `string` | ✅ | — | European ETF ISIN (e.g. `IE00B4L5Y983`) |
-
-### Response Example
-
-```json
-{
-  "isin": "IE00B4L5Y983",
-  "name": "iShares Core MSCI World UCITS ETF",
-  "ter_pct": 0.20,
-  "aum_eur": 65000000000,
-  "replication": "Physical",
-  "top_holdings": [
-    { "name": "Apple Inc.", "weight_pct": 4.85 },
-    { "name": "Microsoft Corp.", "weight_pct": 4.20 }
-  ]
-}
-```
-
----
-
-## <span className="api-method get">GET</span> `/index/{index_name}/constituents`
-
-Fetch current constituent stocks for major financial market indices (`sp500`, `cac40`, `nasdaq100`, `dax`).
-
-### Parameters
-
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `index_name` | `string` | ✅ | — | Index name (`sp500`, `cac40`, `nasdaq100`, `dax`) |
+`stale_tickers` lists streamed tickers without a fresh tick in Redis.
 
 
 
@@ -764,104 +532,162 @@ Fetch current constituent stocks for major financial market indices (`sp500`, `c
 id: "technical-indicators"
 title: "Technical Indicators API Reference"
 sidebar_label: "Technical Indicators"
-description: "Compute trend, momentum, volatility, and volume technical indicators, batch calculation, and market screening"
+description: "18 server-side technical indicators, multi-indicator requests, chart data and a screener"
 ---
 
 # Technical Indicators API Reference
 
-The Technical Indicators API leverages the `pandas-ta` calculation engine to compute 18+ technical indicators, return OHLCV chart overlays, batch multi-ticker indicator calculations, and screen markets based on technical criteria.
+Fonrex computes 18 indicators with pandas-ta on the prices **stored in the database**. Ingest a listing before asking for its indicators (`GET /eod/{ticker}` or `POST /historical/ingest`). Without prices, `GET /technical/{ticker}` answers `404`; `/multi` and `/chart` answer with no bars and the reason in `errors`.
+
+| Category | Indicators (default parameters) |
+|---|---|
+| Trend | `sma` (20), `ema` (20), `wma` (20), `dema` (20), `tema` (20), `vwap` (intraday only) |
+| Momentum | `rsi` (14), `macd` (12, 26, 9), `stoch` (14, 3, 3), `cci` (20), `roc` (10), `mom` (10) |
+| Volatility | `bbands` (20, 2.0), `atr` (14), `kc` (20) |
+| Volume | `obv`, `ad`, `mfi` (14) |
+
+`GET /technical/list` returns this catalogue with the parameters, the output columns and the minimum number of bars of each indicator.
+
+Resolutions `1D` (default), `1W` and `1M` read the end-of-day prices of the listing; an intraday resolution such as `1min` reads the 1-minute candles saved by the realtime stream (`prices_intraday`). Results are cached in Redis (1 hour for daily bars, 60 seconds for 1-minute bars) when `TECHNICAL_CACHE_ENABLED=true`.
 
 ---
 
 ## <span className="api-method get">GET</span> `/technical/{ticker}`
 
-Calculate a single technical indicator for a ticker.
+One indicator.
 
-:::note Prerequisite
-Requires prior historical data ingestion via `POST /historical/ingest?ticker={ticker}`. Returns `404` (`{"detail": "No historical data found for {ticker}"}`) if no historical data exists for the given ticker.
-:::
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `indicator` | string | `rsi` | Indicator name |
+| `period` | integer | — | Sets the `length` parameter (not used by `macd` and `stoch`, which take `fast`/`slow`/`signal` or their defaults) |
+| `fast`, `slow`, `signal` | integer | — | MACD parameters |
+| `std` | number | — | Bollinger standard deviations |
+| `resolution` | string | `1D` | `1D`, `1W`, `1M`, or intraday (`1min`) |
+| `from_date`, `to_date` | date | — | Window `YYYY-MM-DD` |
+| `limit` | integer | `500` | Bars loaded (`TECHNICAL_DEFAULT_LIMIT`) |
 
-### Parameters
-
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `ticker` | `string` | ✅ | — | Financial ticker (e.g. `AIR.PA`) |
-| `indicator` | `string` | ✅ | — | Indicator code (`sma`, `ema`, `rsi`, `macd`, `bbands`, `stoch`, `atr`, `obv`, `adx`, `vwap`, etc.) |
-| `period` | `integer` | ❌ | `14` | Main lookback period |
-| `resolution` | `string` | ❌ | `d` | Candle resolution (`d`, `w`, `m`) |
-
-### Response Example
+```bash
+curl -s -H "X-API-KEY: $FONREX_API_KEY" \
+  "http://localhost:5000/technical/AIR.PA?indicator=rsi&period=14&limit=60"
+```
 
 ```json
 {
   "ticker": "AIR.PA",
   "indicator": "rsi",
-  "period": 14,
-  "count": 50,
-  "values": [
-    { "time": "2026-08-10T00:00:00Z", "value": 58.42 },
-    { "time": "2026-08-11T00:00:00Z", "value": 61.15 }
-  ]
+  "params": { "length": 14 },
+  "resolution": "1D",
+  "category": "momentum",
+  "from_date": "2026-07-16T00:00:00Z",
+  "to_date": "2026-10-07T00:00:00Z",
+  "count": 60,
+  "series": [
+    {
+      "name": "RSI_14",
+      "label": "RSI",
+      "values": [
+        { "t": "2026-07-16T00:00:00Z", "v": null },
+        { "t": "2026-10-07T00:00:00Z", "v": "74.81" }
+      ]
+    }
+  ],
+  "cached": false,
+  "calculated_at": "2026-10-08T16:34:58Z"
 }
 ```
+
+An indicator with several outputs (MACD, Bollinger Bands, Stochastic…) has one entry per output in `series`. Values are decimal strings, `null` while the indicator has too few bars.
+
+| Code | When |
+|---|---|
+| `400` | Unknown indicator, or VWAP asked on daily bars |
+| `404` | No prices stored for the ticker |
+| `422` | Not enough bars for the parameters |
 
 ---
 
 ## <span className="api-method get">GET</span> `/technical/{ticker}/multi`
 
-Compute multiple technical indicators in a single HTTP request.
+Several indicators computed on one read of the prices.
 
-### Parameters
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `indicators` | string | `sma_20,ema_50,rsi_14,macd` | Comma-separated names; a suffix sets the first parameter (`sma_50`, `bbands_20`) |
+| `resolution`, `from_date`, `to_date`, `limit` | | | As above |
+| `include_ohlcv` | boolean | `false` | Also return the bars |
 
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `ticker` | `string` | ✅ | — | Ticker symbol |
-| `indicators` | `string` | ✅ | — | Comma-separated indicator list (e.g. `rsi,sma,macd`) |
-| `period` | `integer` | ❌ | `14` | Default period applied to simple indicators |
+The answer holds one result per indicator in `indicators` (same format as above) and the failures in `errors`.
 
 ---
 
 ## <span className="api-method get">GET</span> `/technical/{ticker}/chart`
 
-Retrieve combined OHLCV candles overlaid with selected technical indicator series formatted for charting libraries (TradingView Lightweight Charts, Highcharts).
+Bars and indicator columns aligned on the same timestamps, ready for a charting library.
 
----
-
-## <span className="api-method post">POST</span> `/technical/batch`
-
-Batch calculation across multiple tickers and indicators.
-
-### Request Body
+| Parameter | Default |
+|---|---|
+| `indicators` | `sma_20,ema_50,volume` |
+| `limit` | `200` |
 
 ```json
 {
-  "tickers": ["AAPL", "MSFT", "GOOGL"],
-  "indicators": [
-    { "name": "rsi", "period": 14 },
-    { "name": "sma", "period": 50 }
-  ]
+  "ticker": "AIR.PA",
+  "resolution": "1D",
+  "timestamps": ["2026-08-27", "2026-08-28"],
+  "ohlcv": { "open": [158.14, 157.45], "high": [160.14, 159.45], "low": [156.14, 155.45], "close": [159.14, 158.45], "volume": [1359000, 1360000] },
+  "indicators": { "SMA_20": [null, null], "RSI_14": [null, 0.0] }
 }
 ```
 
 ---
 
-## <span className="api-method get">GET</span> `/technical/list`
+## <span className="api-method post">POST</span> `/technical/batch`
 
-Retrieve the catalog of supported technical indicators, default parameters, and descriptions.
+Several tickers at once. JSON body:
+
+```json
+{
+  "tickers": ["AIR.PA", "BNP.PA", "MC.PA"],
+  "indicators": ["rsi_14", "sma_50"],
+  "resolution": "1D",
+  "from_date": null,
+  "to_date": null,
+  "limit": 500,
+  "include_ohlcv": false
+}
+```
+
+At most `TECHNICAL_MAX_BATCH_TICKERS` tickers (20) and `TECHNICAL_MAX_BATCH_INDICATORS` indicators (10). The answer maps each ticker to a multi-indicator result. This route only computes: a read-only key may call it.
 
 ---
 
 ## <span className="api-method get">GET</span> `/technical/screen`
 
-Screen database assets against technical conditions (e.g., RSI under oversold threshold 30).
+Instruments of the catalogue whose last value of an indicator meets a condition.
 
-### Parameters
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `indicator` | string | `rsi` | Indicator |
+| `operator` | string | `lt` | `lt`, `gt`, `lte`, `gte` |
+| `value` | number | `30` | Threshold |
+| `resolution` | string | `1D` | Resolution |
+| `period` | integer | `14` | Indicator length |
+| `limit` | integer | `50` | Maximum matches |
 
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `indicator` | `string` | ✅ | — | Indicator to evaluate (e.g. `rsi`) |
-| `condition` | `string` | ✅ | — | Logical operator (`lt`, `gt`, `crosses_above`, `crosses_below`) |
-| `target_value` | `number` | ✅ | — | Numeric threshold (e.g. `30.0`) |
+```json
+{
+  "indicator": "rsi",
+  "params": { "length": 14 },
+  "operator": "gt",
+  "value": 50.0,
+  "resolution": "1D",
+  "matches": [ { "ticker": "AIR.PA", "name": "Airbus SE", "isin": "NL0000235190", "value": "74.81" } ],
+  "total": 1,
+  "calculated_at": "2026-10-08T16:34:59Z"
+}
+```
+
+Screener results are cached 15 minutes.
 
 
 
@@ -870,96 +696,578 @@ Screen database assets against technical conditions (e.g., RSI under oversold th
 ---
 id: "valuation-dcf"
 title: "DCF Valuation API Reference"
-sidebar_label: "Valuation (DCF)"
-description: "Intrinsic value calculations, WACC estimation, multi-model consensus, and sensitivity matrix endpoints"
+sidebar_label: "Valuation & DCF"
+description: "Intrinsic value with three DCF models, dynamic WACC, model comparison, sensitivity matrix and macro rates"
 ---
 
 # DCF Valuation API Reference
 
-The Valuation API executes Discounted Cash Flow (DCF) intrinsic value models, computes Dynamic Weighted Average Cost of Capital (WACC), builds multi-model consensus reports, and generates sensitivity matrices.
+Three models are available. When a request computes several of them, the consensus is their weighted average:
+
+| Model | Basis | Default weight |
+|---|---|---|
+| `fcf` | Average free cash flow of the last three fiscal years, projected, plus a Gordon terminal value, minus net debt | 50 % |
+| `eps` | Earnings per share growth (history and analyst trend) and a terminal P/E (the company's P/E bounded to 10–30, 15 when unknown) | 30 % |
+| `ddm` | Dividend discount (Gordon) — only for a company that pays a dividend | 20 % |
+
+The weights are shared among the models computed by the request: with `fcf` and `eps` only, the consensus weighs them 50/30, normalised. `GET /dcf/{ticker}` computes `fcf` alone, so its consensus is the FCF value.
+
+**Inputs come from the database only.** The service reads the highlights, the annual statements (grouped by fiscal year, five years), the earnings trend and the analyst ratings stored by the deep enrichment, and the last daily close of the main listing. Run `GET /fundamental/deep?ticker=...` first: a ticker that was never enriched answers `404` with the name of the missing data.
+
+**WACC.** Cost of equity by CAPM (risk-free rate + beta × equity risk premium), cost of debt from interest and debt, weights from market capitalisation and debt; the WACC is kept within 5–20 %. The risk-free rate is the US 10-year Treasury yield from FRED (see `GET /macro/rates`), otherwise `DCF_RISK_FREE_RATE`. Missing inputs use documented defaults (beta 1, tax rate 25 %, cost of debt = risk-free rate + 2 points) and add a warning.
 
 ---
 
 ## <span className="api-method get">GET</span> `/dcf/{ticker}`
 
-Compute default intrinsic value using the Free Cash Flow (FCF) DCF model. Results cached in Redis for 6 hours.
+The **FCF model alone**, with the default assumptions: `consensus_value` is the FCF value. Cached 6 hours; `force_refresh=true` computes again. Use `/compare` for the three models, or `POST` to choose them.
 
-### Parameters
+```bash
+curl -s -H "X-API-KEY: $FONREX_API_KEY" "http://localhost:5000/dcf/AIR.PA"
+```
 
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `ticker` | `string` | ✅ | — | Ticker symbol (e.g. `AAPL`) |
-
-### Response Example
+Answer layout:
 
 ```json
 {
-  "ticker": "AAPL",
-  "model": "FCF",
-  "current_price": 224.50,
-  "intrinsic_value": 248.20,
-  "margin_of_safety_pct": 10.56,
-  "recommendation": "UNDERVALUED",
-  "wacc": 0.0845,
-  "terminal_growth_rate": 0.025,
-  "projections": [
-    { "year": 1, "fcf": 115000000000, "pv": 105990000000 },
-    { "year": 2, "fcf": 124000000000, "pv": 105430000000 },
-    { "year": 3, "fcf": 133000000000, "pv": 104270000000 },
-    { "year": 4, "fcf": 142000000000, "pv": 102550000000 },
-    { "year": 5, "fcf": 151000000000, "pv": 100290000000 }
-  ],
-  "terminal_value": 2580000000000,
-  "enterprise_value": 3098430000000
+  "ticker": "AIR.PA",
+  "currency": "EUR",
+  "current_price": "155.42",
+  "shares_outstanding": "790000000",
+  "wacc": {
+    "wacc": "0.0865",
+    "cost_of_equity": "0.0912",
+    "cost_of_debt": "0.032",
+    "tax_rate": "0.25",
+    "weight_equity": "0.93",
+    "weight_debt": "0.07",
+    "beta_used": "1.1",
+    "cost_of_debt_source": "calculated",
+    "risk_free_rate_source": "fred_cached"
+  },
+  "models": {
+    "fcf": {
+      "model_name": "...",
+      "intrinsic_value_per_share": "168.20",
+      "upside_pct": "8.22",
+      "projected_values": ["..."],
+      "terminal_value": "...",
+      "present_values": ["..."],
+      "pv_terminal": "...",
+      "warnings": []
+    }
+  },
+  "solvency": { "debt_to_equity_ratio": "...", "net_debt_to_ebitda": "...", "interest_coverage_ratio": "...", "...": "..." },
+  "consensus_value": "168.20",
+  "consensus_upside_pct": "8.22",
+  "analyst_target": "175.00",
+  "computed_at": "2026-10-08T16:50:00Z"
 }
 ```
+
+The figures above are illustrative. Amounts and rates are decimal numbers serialised as **strings**. `models` is keyed by model (`fcf`, `eps`, `ddm`); `warnings` of each model says when a default or a cap was applied. `risk_free_rate_source` is `fred_cached` (FRED rate), `env_fallback` (`DCF_RISK_FREE_RATE`) or `client_override` (your `POST` assumptions).
 
 ---
 
 ## <span className="api-method post">POST</span> `/dcf/{ticker}`
 
-Run a customized DCF valuation with custom growth rates, risk-free rate, or WACC overrides (bypasses Redis cache).
+Valuation with your own assumptions; never cached. It only computes, so a read-only key may call it.
 
-### Request Body
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `models` | list | `["fcf"]` | Among `fcf`, `eps`, `ddm` |
+| `projection_years` | integer | `5` | 3 to 10 |
+| `terminal_growth_rate` | number | `0.025` | Ratio (0.025 = 2.5 %) |
+| `wacc_params` | object | — | `risk_free_rate`, `equity_risk_premium`, `beta_override`, `cost_of_debt_override`, `tax_rate_override` |
+| `fcf_growth_override`, `eps_growth_override`, `dividend_growth_override` | number | — | Force the initial growth of a model |
+| `model_weights` | object | — | Consensus weights, e.g. `{"fcf": 0.6, "eps": 0.4, "ddm": 0}` |
 
-```json
-{
-  "projection_years": 5,
-  "revenue_growth_rate": 0.08,
-  "operating_margin": 0.30,
-  "risk_free_rate": 0.042,
-  "terminal_growth_rate": 0.02
-}
+```bash
+curl -s -X POST -H "X-API-KEY: $FONREX_API_KEY" -H "Content-Type: application/json" \
+  -d '{"models": ["fcf", "eps"], "projection_years": 10, "terminal_growth_rate": 0.02,
+       "wacc_params": {"risk_free_rate": 0.035}}' \
+  http://localhost:5000/dcf/AIR.PA
 ```
+
+A terminal growth rate within half a point of the discount rate is capped (discount rate − 0.5 %) with a warning. Asking for `ddm` for a company that pays no dividend answers `404`.
 
 ---
 
 ## <span className="api-method get">GET</span> `/dcf/{ticker}/compare`
 
-Compare consensus intrinsic valuations across all three DCF models: **Free Cash Flow (FCF)**, **Earnings Per Share (EPS)**, and **Dividend Discount Model (DDM)**.
+The three models side by side, with their weighted consensus. A company without a dividend gets a DDM entry valued at zero with a warning, and the consensus is computed from FCF and EPS.
 
 ---
 
 ## <span className="api-method get">GET</span> `/dcf/{ticker}/sensitivity`
 
-Generate a 5x5 sensitivity matrix analyzing how intrinsic value changes across combinations of WACC (discount rate) and terminal growth rate.
+Intrinsic value for a grid of WACC (rows) × terminal growth (columns).
 
-### Response Example
+| Parameter | Default |
+|---|---|
+| `model` | `fcf` |
+| `wacc_min`, `wacc_max`, `wacc_step` | `0.06`, `0.16`, `0.02` |
+| `growth_min`, `growth_max`, `growth_step` | `0.01`, `0.05`, `0.01` |
+| `force_refresh` | `false` |
+
+The answer holds `ticker`, `model`, `wacc_range`, `growth_range` and `matrix`; each cell gives the intrinsic value and the upside or downside against the current price.
+
+---
+
+## <span className="api-method get">GET</span> `/macro/rates`
+
+The risk-free rate used by the valuation:
 
 ```json
 {
-  "ticker": "AAPL",
-  "sensitivity_matrix": {
-    "wacc_axis": [0.075, 0.080, 0.0845, 0.090, 0.095],
-    "growth_axis": [0.015, 0.020, 0.025, 0.030, 0.035],
-    "values": [
-      [275.40, 284.10, 294.20, 305.80, 319.40],
-      [252.10, 259.30, 267.80, 277.50, 288.70],
-      [234.80, 241.00, 248.20, 256.40, 265.80]
-    ]
+  "risk_free_rate": {
+    "series_id": "DGS10",
+    "label": "10-Year Treasury Constant Maturity Rate",
+    "value": "0.0412",
+    "unit": "percent",
+    "observation_date": "2026-10-07"
   }
+}
+```
+
+`value` is a ratio (0.0412 = 4.12 %), serialised as a string, although `unit` says `percent`. It comes from Redis (6 hours), then from the value stored in `macro_rates_cache` when it was read from FRED less than 6 hours ago, then from the FRED API (`FRED_API_KEY`), and finally from an older stored value. Without any value, `risk_free_rate` is `null` and the valuation uses `DCF_RISK_FREE_RATE`.
+
+
+
+<!-- FILE: /docs/api-reference/news.md -->
+
+---
+id: "news"
+title: "News Aggregator API Reference"
+sidebar_label: "News"
+description: "News of a ticker from 7 providers, deduplicated, and the global feed of stored articles"
+---
+
+# News Aggregator API Reference
+
+`GET /news/{ticker}` asks seven providers in parallel — Yahoo Finance, Google Finance, ZoneBourse, Boursorama, Investing.com, MarketWatch and MSN Finance — removes duplicates and stores the articles of instruments that are in the catalogue in `news_articles`. See [News providers](../providers/news-providers.md).
+
+---
+
+## <span className="api-method get">GET</span> `/news/{ticker}`
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `ticker` | string | — | Ticker (e.g. `AIR.PA`) |
+| `limit` | integer | `20` | Articles returned (at most `NEWS_MAX_LIMIT`, 100) |
+| `language` | string | — | Keep only this language (`en`, `fr`…); articles of unknown language are kept. `all` means no filter |
+| `force_refresh` | boolean | `false` | Ignore the cached answer |
+
+```bash
+curl -s -H "X-API-KEY: $FONREX_API_KEY" "http://localhost:5000/news/AIR.PA?limit=5&language=fr"
+```
+
+```json
+{
+  "ticker": "AIR.PA",
+  "isin": "NL0000235190",
+  "count": 1,
+  "providers": ["boursorama"],
+  "cached": false,
+  "articles": [
+    {
+      "title": "Airbus : livraisons en hausse en septembre",
+      "summary": "...",
+      "url": "https://www.boursorama.com/bourse/actualites/...",
+      "image_url": null,
+      "source": "Boursorama",
+      "provider": "boursorama",
+      "author": null,
+      "published_at": "2026-10-08T07:45:00Z",
+      "related_tickers": [],
+      "language": "fr"
+    }
+  ]
+}
+```
+
+Each answer is cached 30 minutes (`NEWS_CACHE_TTL`), separately for each `limit` and language. A provider that fails returns nothing without blocking the others.
+
+### Deduplication
+
+1. **URL**: lower case, `utm_*` parameters, fragment and trailing slash removed. The first article received is kept.
+2. **Title similarity**: `difflib.SequenceMatcher` on normalised titles; at or above `NEWS_DEDUP_SIMILARITY` (0.85) the most recent article is kept.
+
+Articles are then sorted newest first and cut to `limit` (each provider is asked for twice that number).
+
+---
+
+## <span className="api-method get">GET</span> `/news/feed`
+
+The latest articles stored in `news_articles`, all instruments together. Nothing is fetched from the providers.
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `limit` | integer | `50` | Articles returned |
+| `language` | string | — | Language filter (`all` = none) |
+| `tickers` | string | — | Comma-separated tickers; keeps the articles related to one of them |
+
+```json
+{ "count": 0, "from_date": null, "to_date": null, "articles": [] }
+```
+
+---
+
+## <span className="api-method post">POST</span> `/news/{ticker}/refresh`
+
+Fetch the news of a ticker again in the background and answer at once: `{"status": "queued", "ticker": "AIR.PA"}`. Full-access key only.
+
+---
+
+## <span className="api-method get">GET</span> `/news/stats`
+
+```json
+{
+  "total_articles": 0,
+  "by_provider": {},
+  "by_language": {},
+  "last_fetched_at": null,
+  "top_assets": {}
 }
 ```
 
 
 
+<!-- FILE: /docs/api-reference/monitoring.md -->
+
+---
+id: "monitoring"
+title: "Provider Monitoring & Administration API Reference"
+sidebar_label: "Monitoring & Admin"
+description: "Provider health, canary runs, alerts, validation statistics, cache and database administration"
+---
+
+# Provider Monitoring & Administration API Reference
+
+The monitoring routes report what the [validation layer](../monitoring/validation-layer.md) and the [daily canary](../monitoring/canary-monitor.md) observed about each fundamentals provider. The administration routes manage the cache and the database of your instance.
+
+Routes that change something (`POST` here) need a **full-access** key.
+
+---
+
+## <span className="api-method get">GET</span> `/health`
+
+Public (no key). Service status, providers loaded at start-up, cache status and lifetimes.
+
+```json
+{
+  "status": "healthy",
+  "service": "FonRex API",
+  "timestamp": "2026-10-08T16:34:42.235390",
+  "yfinance_available": true,
+  "providers": { "loaded": 14, "unavailable": [] },
+  "cache": { "enabled": true, "status": "connected", "ttl_seconds": { "eod": 86400, "...": "..." } }
+}
+```
+
+`providers.unavailable` names a provider that could not be imported (missing dependency): it is skipped by every request until fixed.
+
+---
+
+## <span className="api-method get">GET</span> `/health/providers`
+
+Health summary of the providers, read from Redis (written by the canary, 1 hour) or from the database.
+
+```json
+{
+  "checked_at": "2026-10-08T06:02:10Z",
+  "total_providers": 14,
+  "healthy": 13,
+  "degraded": 1,
+  "down": 0,
+  "providers": [
+    {
+      "name": "ZoneBourse",
+      "is_healthy": true,
+      "success_rate_7d": 0.98,
+      "avg_latency_ms": null,
+      "last_check": null,
+      "canary_passed": null,
+      "active_alerts": 0,
+      "status_label": "OK"
+    }
+  ]
+}
+```
+
+`status_label` is `OK` (success rate ≥ 85 %), `DEGRADED` (≥ 70 %) or `DOWN`. When the summary comes from Redis, `avg_latency_ms`, `last_check` and `canary_passed` are `null` and `active_alerts` is 0. On a new instance, before the first canary run, the list is empty.
+
+## <span className="api-method get">GET</span> `/health/providers/{provider_name}`
+
+Details of one provider over `days` days (default 7): `status`, `success_rate_7d`, `success_rate_30d`, `avg_latency_ms`, `daily_stats`, `recent_failures` and `active_alerts`.
+
+---
+
+## <span className="api-method get">GET</span> `/health/alerts`
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `severity` | string | — | `warning` or `critical` |
+| `provider_name` | string | — | One provider |
+| `include_resolved` | boolean | `false` | Include resolved alerts |
+| `limit` | integer | `50` | Maximum alerts |
+
+Alert types raised by the canary: `canary_failed` (a value outside its expected range) and `high_outlier_rate` (success rate under `ALERT_SUCCESS_RATE_WARNING` / `ALERT_SUCCESS_RATE_CRITICAL`). See [Alerts](../monitoring/alerts.md).
+
+## <span className="api-method post">POST</span> `/health/alerts/{alert_id}/resolve`
+
+Resolve an alert by hand. The note is a **query parameter**:
+
+```bash
+curl -s -X POST -H "X-API-KEY: $FONREX_API_KEY" \
+  "http://localhost:5000/health/alerts/42/resolve?resolution_note=Parser%20fixed"
+```
+
+```json
+{ "status": "resolved", "alert_id": 42, "resolved_at": "2026-10-08T10:12:00+00:00" }
+```
+
+An alert already resolved answers `{"status": "already_resolved"}`, an unknown one `404`.
+
+---
+
+## <span className="api-method post">POST</span> `/health/canary/run`
+
+Start a canary run in the background, for every provider or for `provider_name` only. Answers `{"status": "queued", "provider": "all", "message": "..."}`.
+
+## <span className="api-method get">GET</span> `/health/canary/history`
+
+Past canary checks. Parameters: `provider_name`, `ticker`, `days` (7), `limit` (100).
+
+## <span className="api-method get">GET</span> `/health/stats`
+
+Validation statistics of the last 7 days:
+
+```json
+{
+  "period": "last_7_days",
+  "total_values_validated": 0,
+  "total_valid": 0,
+  "total_outliers": 0,
+  "total_out_of_range": 0,
+  "total_nulls": 0,
+  "overall_quality_score": null,
+  "most_reliable_providers": [],
+  "least_reliable_providers": [],
+  "fields_most_often_invalid": []
+}
+```
+
+---
+
+## Cache administration
+
+| Method | Route | Description |
+|---|---|---|
+| `GET` | `/cache/stats` | Redis version and memory, lifetime of each cache category, cached tickers |
+| `POST` | `/cache/clear` | Delete the cached end-of-day answers (`eod:*` keys only) |
+| `POST` | `/cache/clear/{ticker}` | Delete the cached end-of-day answers of a ticker (`eod:{TICKER}:*`). The `period` parameter currently deletes nothing: the keys hold more segments than the pattern it builds |
+
+The other categories (fundamentals, indicators, news, DCF…) expire on their own; an ingestion drops the price-derived answers of its ticker.
+
+## Database administration
+
+| Method | Route | Description |
+|---|---|---|
+| `GET` | `/database/stats` | Stored prices and tickers, API requests of the last 24 hours |
+| `GET` | `/database/tickers` | Every ticker with prices: first and last date, number of bars |
+| `GET` | `/database/ticker/{ticker}` | The same for one ticker, with its number of API requests |
+| `POST` | `/database/cleanup` | Delete prices older than `days_to_keep` days and logs older than 30 days |
+
+`POST /database/cleanup` takes a JSON body `{"days_to_keep": 730, "dry_run": false}`. `days_to_keep` must be 30 or more (730 by default). A first ingestion fetches ten years: count before deleting with `dry_run`, which deletes nothing and returns what a real run would delete.
+
+```bash
+curl -s -X POST -H "X-API-KEY: $FONREX_API_KEY" -H "Content-Type: application/json" \
+  -d '{"days_to_keep": 3650, "dry_run": true}' http://localhost:5000/database/cleanup
+```
+
+The usage log (`usage_logs`) has its own retention, `USAGE_LOG_RETENTION_DAYS`.
+
+
+
+<!-- FILE: /docs/api-reference/specialized.md -->
+
+---
+id: "specialized"
+title: "Specialized Providers API Reference"
+sidebar_label: "Specialized"
+description: "SEC insider transactions, UCITS ETF details from JustETF and index constituents"
+---
+
+# Specialized Providers API Reference
+
+Three routes query one specialised source each. Every route accepts `refresh=true` to bypass the cache.
+
+---
+
+## <span className="api-method get">GET</span> `/insider-transactions/{ticker}`
+
+Form 4 insider transactions filed with the US SEC (EDGAR). Cached 12 hours.
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `ticker` | string | — | A share that files with the SEC (e.g. `AAPL`) |
+| `limit` | integer | `20` | Transactions returned |
+| `refresh` | boolean | `false` | Ask EDGAR again |
+
+```json
+{
+  "ticker": "AAPL",
+  "cik": "0000320193",
+  "company_name": "Apple Inc.",
+  "transactions": [
+    {
+      "filing_date": "2026-10-02",
+      "insider_name": "COOK TIMOTHY D",
+      "insider_title": "Chief Executive Officer",
+      "transaction_date": "2026-10-01",
+      "transaction_type": "Sell",
+      "transaction_code": "S",
+      "shares": 50000,
+      "price_per_share": 226.1,
+      "total_value": 11305000.0,
+      "shares_owned_after": 3280000,
+      "sec_filing_url": "https://www.sec.gov/Archives/edgar/data/..."
+    }
+  ],
+  "total_count": 1,
+  "source": "SEC EDGAR"
+}
+```
+
+`transaction_type` is the reading of the Form 4 code (`P` Buy, `S` Sell, `A` Award, `M` Option Exercise, `G` Gift, `F` Tax Withholding…). Set `SEC_EDGAR_EMAIL` to your own address: the SEC requires a contact in the User-Agent of automated clients. Values are illustrative.
+
+---
+
+## <span className="api-method get">GET</span> `/etf/{isin}/details`
+
+UCITS ETF data from JustETF. Cached 24 hours. An ISIN known as something other than an ETF is refused.
+
+```json
+{
+  "isin": "IE00B4L5Y983",
+  "name": "iShares Core MSCI World UCITS ETF USD (Acc)",
+  "ticker": "EUNL",
+  "net_expense_ratio": "0.0020",
+  "total_net_assets": "...",
+  "domicile": "Ireland",
+  "replication_method": "...",
+  "distribution_policy": "Accumulating",
+  "index_tracked": "MSCI World",
+  "inception_date": "2009-09-25",
+  "nb_holdings": 1400,
+  "performance": { "...": "..." },
+  "top_holdings": [ { "...": "..." } ],
+  "allocation": { "...": "..." },
+  "provider_url": "https://www.justetf.com/..."
+}
+```
+
+The answer is not written to the `etf_details` and `etf_holdings` tables.
+
+---
+
+## <span className="api-method get">GET</span> `/index/{index_name}/constituents`
+
+Members of an index, read from Wikipedia. Cached 7 days.
+
+`index_name` is `SP500`, `CAC40`, `NASDAQ100` or `DAX` (case-insensitive). Another name answers `400`.
+
+```json
+{
+  "index_name": "CAC40",
+  "constituents": [
+    { "ticker": "AIR.PA", "isin": "NL0000235190", "name": "Airbus", "sector": "Industrie", "sub_sector": null, "weight": null, "country": null, "cik": null }
+  ],
+  "total_count": 40,
+  "source_url": "https://fr.wikipedia.org/wiki/CAC_40",
+  "source": "Wikipedia"
+}
+```
+
+
+
+<!-- FILE: /docs/api-reference/openbb.md -->
+
+---
+id: "openbb"
+title: "OpenBB Workspace Integration API"
+sidebar_label: "OpenBB Integration"
+description: "The /openbb routes and discovery files that feed OpenBB Workspace widgets"
+---
+
+# OpenBB Workspace Integration API
+
+The `/openbb` routes serve the widgets of [OpenBB Workspace](https://openbb.co) from your own instance. Each route calls the Fonrex route it adapts and reshapes the answer into one of the three formats OpenBB expects:
+
+- **metric**: a list of tiles `[{"label": "...", "value": ..., "delta": ...}]`
+- **chart**: a Plotly figure `{"data": [...], "layout": {...}}`
+- **table**: a flat list of rows `[{...}, {...}]` for AgGrid
+
+Setup is described in the [OpenBB Workspace guide](../guides/openbb-workspace.md).
+
+## Authentication
+
+| Route | Key |
+|---|---|
+| `GET /widgets.json`, `GET /apps.json` | None — OpenBB fetches them before a key is configured |
+| `GET /openbb/...` | Required, in the `X-API-KEY` header (or `Authorization: Bearer`) |
+
+A read-only key (`FONREX_READ_ONLY_API_KEYS`) is enough for every widget. CORS accepts the origins of `OPENBB_ALLOWED_ORIGIN` (`https://pro.openbb.co` by default).
+
+## Discovery files
+
+- `GET /widgets.json` — the 19 widgets: for each one, its name, category, type, route and parameters (`integrations/openbb/widgets.json`).
+- `GET /apps.json` — two pre-assembled dashboards, **Fonrex — EU Markets** and **Fonrex — Screener & Macro** (`integrations/openbb/apps.json`).
+
+## Routes
+
+| Widget | Type | Route | Adapts |
+|---|---|---|---|
+| `fonrex_quote` | metric | `GET /openbb/quote/{ticker}` | `/quote/{ticker}` |
+| `fonrex_macro_rates` | metric | `GET /openbb/macro/rates` | `/macro/rates` |
+| `fonrex_eod` | chart | `GET /openbb/eod/{ticker}` (`period` 1y by default) | `/eod/{ticker}` |
+| `fonrex_history` | chart | `GET /openbb/ticker/{symbol}/history` | `/ticker/{symbol}/history` |
+| `fonrex_technical` | chart | `GET /openbb/technical/{ticker}` | `/technical/{ticker}` |
+| `fonrex_technical_multi` | chart | `GET /openbb/technical/{ticker}/multi` | `/technical/{ticker}/multi` |
+| `fonrex_technical_chart` | chart | `GET /openbb/technical/{ticker}/chart` | `/technical/{ticker}/chart` |
+| `fonrex_fundamentals` | table | `GET /openbb/fundamental` | `/fundamental` |
+| `fonrex_fundamentals_deep` | table | `GET /openbb/fundamental/deep` | `/fundamental/deep` |
+| `fonrex_quotes_batch` | table | `GET /openbb/quotes` | `/quotes` |
+| `fonrex_screener` | table | `GET /openbb/technical/screen` | `/technical/screen` |
+| `fonrex_news` | table | `GET /openbb/news/{ticker}` | `/news/{ticker}` |
+| `fonrex_news_feed` | table | `GET /openbb/news/feed` | `/news/feed` |
+| `fonrex_dcf` | table | `GET /openbb/dcf/{ticker}` | `/dcf/{ticker}` |
+| `fonrex_dcf_compare` | table | `GET /openbb/dcf/{ticker}/compare` | `/dcf/{ticker}/compare` |
+| `fonrex_dcf_sensitivity` | table | `GET /openbb/dcf/{ticker}/sensitivity` | `/dcf/{ticker}/sensitivity` |
+| `fonrex_insider_transactions` | table | `GET /openbb/insider-transactions/{ticker}` | `/insider-transactions/{ticker}` |
+| `fonrex_etf_details` | table | `GET /openbb/etf/{isin}/details` | `/etf/{isin}/details` |
+| `fonrex_index_constituents` | table | `GET /openbb/index/{index_name}/constituents` | `/index/{index_name}/constituents` |
+
+Each route takes the parameters of the route it adapts (see the corresponding API reference page), with a few differences: `/openbb/fundamental` has no `fmt`; `/openbb/technical/{ticker}/multi` has no `include_ohlcv` and defaults to `sma_20,ema_50,rsi_14`; `/openbb/technical/{ticker}/chart` defaults to `sma_20,rsi_14`; `/openbb/news/feed` returns 20 articles by default.
+
+`GET /openbb/quote/{ticker}` never starts a realtime stream: the quote is real time once the ticker is subscribed with `POST /realtime/subscribe`, and the delayed Yahoo Finance price otherwise.
+
+## Example
+
+```bash
+curl -s -H "X-API-KEY: $FONREX_API_KEY" "http://localhost:5000/openbb/quote/AIR.PA"
+```
+
+```json
+[
+  { "label": "AIR.PA Price", "value": 154.6, "delta": 0.13 },
+  { "label": "Change", "value": "+0.20", "delta": "+0.13%" },
+  { "label": "Previous Close", "value": 154.4, "delta": null },
+  { "label": "Day High", "value": 155.48, "delta": null },
+  { "label": "Day Low", "value": 155.1, "delta": null },
+  { "label": "Volume", "value": 18250, "delta": null }
+]
+```
+
+This example is a delayed Yahoo Finance quote. Tiles without a value (no previous close, no volume…) are left out.

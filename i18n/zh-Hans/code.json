@@ -711,7 +711,8 @@
     "message": "数据源"
   },
   "homepage.explore.providers.description": {
-    "message": "多数据源自动切换（SEC EDGAR、Yahoo Finance、FMP…）及自定义适配器。"
+    "message": "Yahoo Finance、13 个网页数据源、SEC EDGAR 和 JustETF —— 经过校验，并注明来源。",
+    "description": "Homepage"
   },
   "homepage.explore.providers.link.overview": {
     "message": "数据源概览"
@@ -762,7 +763,8 @@
     "message": "应用开发者"
   },
   "homepage.pathways.developer.description": {
-    "message": "REST、WebSocket、数据源切换。"
+    "message": "REST、WebSocket、身份验证。",
+    "description": "Homepage"
   },
   "homepage.pathways.devops.title": {
     "message": "DevOps 与基础设施管理员"
@@ -782,12 +784,6 @@
   "homepage.news.v200.summary": {
     "message": "验证层、Canary 监控和 7 个 /health 接口。"
   },
-  "homepage.news.v200dcf.title": {
-    "message": "DCF 估值引擎"
-  },
-  "homepage.news.v200dcf.summary": {
-    "message": "FCF、EPS 和 DDM 模型，支持动态 WACC 和敏感性矩阵。"
-  },
   "theme.SearchBar.noResultsText": {
     "message": "没有找到任何文档"
   },
@@ -799,5 +795,13 @@
   },
   "theme.SearchPage.searchContext.everywhere": {
     "message": "所有"
+  },
+  "homepage.news.oct2026.title": {
+    "message": "默认安全与按上市品种存储价格",
+    "description": "Homepage"
+  },
+  "homepage.news.oct2026.summary": {
+    "message": "默认需要 API 密钥、只读密钥、按上市品种存储价格、经过验证的 Yahoo 代码。",
+    "description": "Homepage"
   }
 }

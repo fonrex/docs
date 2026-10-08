@@ -2,88 +2,74 @@
 id: "devops-admin"
 title: "Parcours DevOps & Infra Admin"
 sidebar_label: "DevOps & Infra Admin"
-description: "Guide d'installation, déploiement haute disponibilité, monitoring et configuration multi-providers pour les administrateurs infrastructure"
+description: "Installer, sécuriser, mettre à jour, sauvegarder et surveiller une instance Fonrex"
 ---
 
 # Parcours DevOps & Infra Admin
 
-Ce parcours fournit un guide d'ingénierie d'infrastructure pour les **Ingénieurs DevOps, SRE et Administrateurs Système** responsables du déploiement des instances Fonrex, des hypertables TimescaleDB, du cache Redis et des sondes Canary.
+Ce parcours s'adresse à la personne qui exploite l'instance : la stack, sa sécurité, ses mises à jour et la santé de ses sources de données.
 
-| Composant d'infrastructure | Technologie | Rôle opérationnel |
+| Composant | Technologie | Remarques |
 |---|---|---|
-| **Serveur d'application** | FastAPI / Uvicorn (Python 3.12) | Router API asynchrone et gestionnaire de providers |
-| **Base séries temporelles** | PostgreSQL 16 + TimescaleDB | Schémas relationnels et hypertables OHLCV |
-| **Cache & Message Broker** | Redis 7 | Cache de réponse et broker Pub/Sub WebSockets |
-| **Monitoring synthétique** | Sondes de santé Canary | Contrôles automatisés du SLA et du consensus |
+| API | FastAPI, Gunicorn + Uvicorn (Python 3.12) | Un seul worker : le temps réel et le canary vivent dans le processus |
+| Base de données | PostgreSQL 16 + TimescaleDB (`timescaledb-ha:pg16`) | Volume `timescale_data`, `127.0.0.1:5432` |
+| Cache | Redis 7, 256 Mo, `allkeys-lru` | `127.0.0.1:6379`, sans mot de passe |
+| Surveillance | Couche de validation + canary quotidien | Routes `/health/*` |
 
----
-
-## 1. Topologie système et variables d'environnement
-
-Copiez et configurez le fichier d'environnement :
+## 1. Installer et sécuriser
 
 ```bash
 cp .env.example .env
-```
-
-Paramètres principaux dans le fichier `.env` :
-
-```env
-POSTGRES_USER=fonrex
-POSTGRES_PASSWORD=secure_password_here
-POSTGRES_DB=fonrex_db
-REDIS_URL=redis://redis:6379/0
-
-FMP_API_KEY=your_financial_modeling_prep_key
-POLYGON_API_KEY=your_polygon_io_key
-
-PROVIDER_CONSENSUS_THRESHOLD=0.95
-CANARY_CHECK_INTERVAL_SECONDS=300
-```
-
----
-
-## 2. Déploiement Docker Compose et migrations
-
-Déployez la pile de conteneurs et exécutez les migrations de base de données Alembic :
-
-```bash
-docker compose -f docker-compose.yml up -d --build
-```
-
-Vérifiez le statut des conteneurs :
-
-```bash
+# FONREX_API_KEY, FONREX_READ_ONLY_API_KEYS, POSTGRES_PASSWORD, SEC_EDGAR_EMAIL
+mkdir -p logs
+docker compose up -d
 docker compose ps
 ```
 
----
+Gardez l'API derrière un reverse proxy TLS qui transmet l'upgrade WebSocket. Voir [Déploiement Docker en production](../deployment/docker.md) et la [checklist de production](../deployment/production-checklist.md).
 
-## 3. Diagnostic des sondes Canary et santé des providers
+## 2. Mettre à jour
 
-Interrogez l'endpoint de monitoring pour suivre la disponibilité, la latence et les taux d'erreur de chaque provider :
-
-```http
-GET /api/v1/monitoring/canary
+```bash
+docker compose exec -T db pg_dump -U fonrex -d fonrex -Fc > fonrex-$(date +%F).dump
+git pull
+docker compose up -d --build        # migrations run at start
 ```
 
-Schéma de réponse :
+Pour revenir en arrière, restaurez le dump avec le code précédent. Voir [Migrations de base de données en production](../deployment/database-migrations.md).
 
-```json
-{
-  "timestamp": "2024-01-15T12:00:00Z",
-  "status": "healthy",
-  "providers": {
-    "yfinance": { "status": "up", "latency_ms": 120, "error_rate_24h": 0.00 },
-    "fmp": { "status": "up", "latency_ms": 85, "error_rate_24h": 0.01 }
-  }
-}
+## 3. Surveiller l'instance
+
+```bash
+curl -s http://localhost:5000/health                                        # no key
+curl -s -H "X-API-KEY: $KEY" http://localhost:5000/health/providers
+curl -s -H "X-API-KEY: $KEY" "http://localhost:5000/health/alerts?severity=critical"
+curl -s -H "X-API-KEY: $KEY" http://localhost:5000/realtime/status
+curl -s -H "X-API-KEY: $KEY" http://localhost:5000/database/stats
 ```
 
----
+- `/health` : `providers.unavailable` nomme un fournisseur qui n'a pas pu être chargé.
+- `/health/providers` : résultat du canary quotidien (06:00 UTC), par fournisseur.
+- Journaux : `docker compose logs -f fonrex-api`.
 
-## Prochaines étapes
+## 4. Sources de données qui refusent votre IP
 
-- Consulter la [Checklist de mise en production](/docs/deployment/production-checklist)
-- Consulter le [Guide Canary Monitor & Alertes](/docs/monitoring/canary-monitor)
-- Consulter le [Guide de gestion des migrations de base de données](/docs/deployment/database-migrations)
+Les sites web protégés par des services anti-bot peuvent refuser l'IP d'un serveur. Faites passer ces fournisseurs par un proxy :
+
+```env
+FONREX_PROXY_URL=http://user:password@proxy.example:8888
+FONREX_PROXY_PROVIDERS=Investing,Gurufocus,wallStreetJournal
+FONREX_PROVIDER_MAX_CONCURRENCY=4
+```
+
+## 5. Stockage
+
+- Prix : environ dix ans par cotation lors de la première ingestion, compressés au bout de 14 jours.
+- `POST /database/cleanup` supprime les prix plus anciens que `days_to_keep` (730 par défaut !) : lancez-le toujours d'abord avec `dry_run`.
+- Les bougies intrajournalières et les journaux de validation expirent au bout de 30 jours ; le journal d'utilisation après `USAGE_LOG_RETENTION_DAYS` ; les articles d'actualité sont conservés.
+
+## Étapes suivantes
+
+- [Topologie Docker Compose](../getting-started/docker-compose.md)
+- [Moniteur canary](../monitoring/canary-monitor.md) et [alertes](../monitoring/alerts.md)
+- [Variables d'environnement](../deployment/environment-variables.md)
