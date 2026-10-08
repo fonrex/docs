@@ -1,91 +1,88 @@
 # Fonrex Documentation
 
-> Official technical documentation for Fonrex — Open-source financial data infrastructure API.
+> Fonrex is an open-source, self-hosted financial data API (FastAPI, PostgreSQL/TimescaleDB, Redis):
+> end-of-day prices per listing, real-time quotes, fundamentals with their sources, technical indicators,
+> news, DCF valuations and provider health monitoring. Every client talks to its own instance; an API key
+> is required by default.
 
-Fonrex provides high-performance self-hosted financial data pipelines, TimescaleDB time-series storage, real-time WebSocket streaming, valuation & DCF engines, technical indicators, and multi-provider consensus monitoring.
+## Introduction
 
-## Core & Getting Started
+- [Introduction to Fonrex](https://docs.fonrex.io/docs/intro): Overview of Fonrex, the open-source self-hosted financial data API
 
-- [Introduction](/docs/intro.md): High-level introduction to Fonrex financial data infrastructure.
-- [Installation](/docs/getting-started/installation.md): Step-by-step setup guide for local and production environments.
-- [Configuration](/docs/getting-started/configuration.md): System parameters, database credentials, and environment flags.
-- [First API Call](/docs/getting-started/first-api-call.md): Making your first authenticated REST API request.
-- [Docker Compose](/docs/getting-started/docker-compose.md): Multi-container deployment with PostgreSQL, TimescaleDB, and Redis.
+## Guided Pathways
 
-## User Pathways & Guided Journeys
+- [Quant & Algo-Trader Pathway](https://docs.fonrex.io/docs/pathways/quant-trader): From an empty instance to backtests: ingest prices per listing, compute indicators server-side, feed Zipline
+- [Financial Analyst Pathway](https://docs.fonrex.io/docs/pathways/financial-analyst): Fundamentals with their sources, DCF valuations, Google Sheets and OpenBB Workspace on your own instance
+- [App Developer Pathway](https://docs.fonrex.io/docs/pathways/app-developer): Integrate a Fonrex instance in an application: authentication, REST routes, WebSocket stream, errors and caching
+- [DevOps & Infra Admin Pathway](https://docs.fonrex.io/docs/pathways/devops-admin): Install, secure, upgrade, back up and monitor a Fonrex instance
 
-- [Quant & Algo-Trader Pathway](/docs/pathways/quant-trader.md): Step-by-step guide for quantitative analysts, Pandas-TA indicators, and Zipline integration.
-- [Financial Analyst Pathway](/docs/pathways/financial-analyst.md): No-code guide for DCF valuations, Google Sheets connector, and OpenBB Workspace setup.
-- [App Developer Pathway](/docs/pathways/app-developer.md): Integration guide for REST API, WebSockets streaming, and multi-provider fallbacks.
-- [DevOps & Infra Admin Pathway](/docs/pathways/devops-admin.md): Deployment guide for Docker Compose, TimescaleDB, Redis, and Canary monitoring.
+## Getting Started
+
+- [Installation Guide](https://docs.fonrex.io/docs/getting-started/installation): Install and run a self-hosted Fonrex instance with Docker Compose
+- [System Configuration](https://docs.fonrex.io/docs/getting-started/configuration): Reference of the Fonrex settings read from .env
+- [Making Your First API Call](https://docs.fonrex.io/docs/getting-started/first-api-call): Authenticate and query prices, indicators and real-time quotes with cURL, Python and WebSocket clients
+- [Docker Compose Topology](https://docs.fonrex.io/docs/getting-started/docker-compose): Containers, ports, volumes, health checks and everyday operations of the Fonrex stack
 
 ## API Reference
 
-- [Assets & Listings](/docs/api-reference/assets.md): Tickers, ISINs, exchanges, asset metadata, and search endpoints.
-- [Fundamentals](/docs/api-reference/fundamentals.md): Income statements, balance sheets, cash flow series, and financial ratios.
-- [Historical Prices](/docs/api-reference/historical.md): OHLCV time-series queries, resampling, and intraday data endpoints.
-- [Realtime Streaming](/docs/api-reference/realtime.md): WebSocket and Server-Sent Events (SSE) live data stream specs.
-- [Technical Indicators](/docs/api-reference/technical-indicators.md): Moving averages, RSI, MACD, Bollinger Bands, and custom calculations.
-- [Valuation & DCF Engine](/docs/api-reference/valuation-dcf.md): Discounted Cash Flow, WACC estimation, and intrinsic value endpoints.
-- [News & Sentiment](/docs/api-reference/news.md): Financial news aggregation, article extraction, and sentiment scoring.
-- [Health & Monitoring](/docs/api-reference/monitoring.md): Provider consensus status, validation logs, and system health checks.
-- [Specialized Data](/docs/api-reference/specialized.md): Crypto, Foreign Exchange (FX), macroeconomics, and commodities endpoints.
+- [Asset & Listing API Reference](https://docs.fonrex.io/docs/api-reference/assets): Instruments, listings and end-of-day prices of the Fonrex catalogue
+- [Fundamental Financials API Reference](https://docs.fonrex.io/docs/api-reference/fundamentals): Multi-provider fundamentals in the EODHD layout and stored deep fundamentals
+- [Historical Ingestion API Reference](https://docs.fonrex.io/docs/api-reference/historical): Ingest end-of-day prices into TimescaleDB and read them back
+- [Realtime & WebSocket API Reference](https://docs.fonrex.io/docs/api-reference/realtime): WebSocket price stream, quote snapshots and stream subscriptions
+- [Technical Indicators API Reference](https://docs.fonrex.io/docs/api-reference/technical-indicators): 18 server-side technical indicators, multi-indicator requests, chart data and a screener
+- [DCF Valuation API Reference](https://docs.fonrex.io/docs/api-reference/valuation-dcf): Intrinsic value with three DCF models, dynamic WACC, model comparison, sensitivity matrix and macro rates
+- [News Aggregator API Reference](https://docs.fonrex.io/docs/api-reference/news): News of a ticker from 7 providers, deduplicated, and the global feed of stored articles
+- [Provider Monitoring & Administration API Reference](https://docs.fonrex.io/docs/api-reference/monitoring): Provider health, canary runs, alerts, validation statistics, cache and database administration
+- [Specialized Providers API Reference](https://docs.fonrex.io/docs/api-reference/specialized): SEC insider transactions, UCITS ETF details from JustETF and index constituents
+- [OpenBB Workspace Integration API](https://docs.fonrex.io/docs/api-reference/openbb): The /openbb routes and discovery files that feed OpenBB Workspace widgets
 
-## Guides & Tutorials
+## Guides
 
-- [Import Assets](/docs/guides/import-assets.md): Bulk asset onboarding and ticker symbol mapping workflows.
-- [Ingest Historical Data](/docs/guides/ingest-historical-data.md): Pipeline setup for historical data backfilling.
-- [Configure Realtime](/docs/guides/configure-realtime.md): Realtime websocket subscription and multiplexing guide.
-- [Backtesting with Zipline](/docs/guides/backtesting-zipline.md): Integrating Fonrex data pipelines into Zipline and Python backtesters.
-- [Adding Data Providers](/docs/guides/adding-providers.md): Implementing custom provider adapters with hexagonal architecture.
+- [Asset CSV Import Pipeline Guide](https://docs.fonrex.io/docs/guides/import-assets): Import instruments and listings from CSV files with import_assets.py
+- [Ingesting Historical Market Data](https://docs.fonrex.io/docs/guides/ingest-historical-data): How Fonrex fetches, verifies and stores end-of-day prices per listing
+- [Realtime Streaming & WebSocket Setup](https://docs.fonrex.io/docs/guides/configure-realtime): Start TradingView streams, receive ticks over WebSocket and tune the realtime worker
+- [Backtesting with Zipline](https://docs.fonrex.io/docs/guides/backtesting-zipline): Run zipline-reloaded backtests on the prices of your Fonrex database, or load them into pandas
+- [Guide: Adding a Fundamentals Provider](https://docs.fonrex.io/docs/guides/adding-providers): Every step a new fundamentals provider needs: code, registration, units, canary, tests and coverage floor
+- [Google Sheets Connector](https://docs.fonrex.io/docs/guides/google-sheets-connector): Fill a Google Sheets template with fundamentals, DCF valuations and indicators from your own Fonrex instance
+- [Connecting Fonrex to OpenBB Workspace](https://docs.fonrex.io/docs/guides/openbb-workspace): Connect your self-hosted Fonrex instance to OpenBB Workspace widgets and dashboards
 
-## Architecture & System Design
+## Architecture
 
-- [System Overview](/docs/architecture/overview.md): High-level system topology, domain boundaries, and data flows.
-- [Hexagonal Architecture](/docs/architecture/hexagonal.md): Ports & Adapters design pattern, domain isolation, and interface specs.
-- [Data Model & Schema](/docs/architecture/data-model.md): PostgreSQL relational schemas and TimescaleDB hypertables design.
-- [Database Migrations](/docs/architecture/migrations.md): Alembic migration policies, schema versioning, and zero-downtime rules.
-- [Concurrency & Locking](/docs/architecture/concurrency.md): Async IO concurrency, Redis locks, rate limiters, and job queues.
+- [Architecture Overview](https://docs.fonrex.io/docs/architecture/overview): Components, data flows and start-up of a Fonrex instance
+- [Layers & Ports](https://docs.fonrex.io/docs/architecture/hexagonal): How Fonrex separates HTTP adapters, application logic and adapters to the outside, and how far each feature follows it
+- [Data Model & Schema Reference](https://docs.fonrex.io/docs/architecture/data-model): Instruments, listings and provider mappings, per-listing prices on TimescaleDB, fundamentals and monitoring tables
+- [Schema Migrations (Alembic)](https://docs.fonrex.io/docs/architecture/migrations): The Alembic migration chain, how it runs and how to add a migration
+- [Concurrency & Async Execution](https://docs.fonrex.io/docs/architecture/concurrency): How Fonrex runs blocking calls without blocking the FastAPI event loop
 
-## Data Providers
+## Providers
 
-- [Providers Overview](/docs/providers/overview.md): Supported market data, fundamentals, and news providers list.
-- [Fundamentals Providers](/docs/providers/fundamentals-providers.md): SEC EDGAR, Yahoo Finance, FMP, and custom adapters.
-- [News Providers](/docs/providers/news-providers.md): NewsAPI, Benzinga, SEC RSS feeds, and crawler setup.
-- [Adding Custom Provider](/docs/providers/adding-custom-provider.md): Step-by-step developer guide for adding new provider modules.
+- [Providers Architecture Overview](https://docs.fonrex.io/docs/providers/overview): How Fonrex queries its providers in parallel, chooses the search term, validates the values and shares one HTTP layer
+- [Fundamental Providers List](https://docs.fonrex.io/docs/providers/fundamentals-providers): The providers queried by /fundamental and the specialised providers
+- [News Aggregator Providers](https://docs.fonrex.io/docs/providers/news-providers): The 7 news providers, their mappings and the deduplication of articles
+- [Custom Provider Implementation Reference](https://docs.fonrex.io/docs/providers/adding-custom-provider): Skeleton of a fundamentals provider and the helpers of BaseFinancialProvider
 
-## Monitoring & Reliability
+## Monitoring
 
-- [Validation Layer](/docs/monitoring/validation-layer.md): Data sanity verification, anomaly detection, and consensus rules.
-- [Canary Monitor](/docs/monitoring/canary-monitor.md): Automated synthetic API probes and provider availability tracking.
-- [Alerts & Webhooks](/docs/monitoring/alerts.md): Configuring Slack, Discord, email, and custom webhook alerts.
+- [Validation Layer Architecture](https://docs.fonrex.io/docs/monitoring/validation-layer): Range and consensus checks applied to every provider value before it reaches an answer
+- [Canary Monitor Suite](https://docs.fonrex.io/docs/monitoring/canary-monitor): Daily check of every fundamentals provider against known assets and expected ranges
+- [Provider Alerts & Resolution](https://docs.fonrex.io/docs/monitoring/alerts): The alerts raised by the canary, their severity, automatic and manual resolution
 
-## Deployment & Operations
+## Deployment
 
-- [Docker Deployment](/docs/deployment/docker.md): Production Docker setup, container hardening, and multi-stage builds.
-- [Environment Variables](/docs/deployment/environment-variables.md): Complete reference of all configurable ENV parameters.
-- [Database Migrations Deployment](/docs/deployment/database-migrations.md): Production database deployment and rollback procedures.
-- [Production Checklist](/docs/deployment/production-checklist.md): Hardening, backups, health checks, and go-live verification.
+- [Docker Production Deployment](https://docs.fonrex.io/docs/deployment/docker): Run Fonrex on a server: Compose overrides, reverse proxy with TLS and WebSocket, what to expose
+- [Environment Variables Deployment Reference](https://docs.fonrex.io/docs/deployment/environment-variables): The settings that matter when deploying Fonrex, and how .env reaches the containers
+- [Database Migrations in Production](https://docs.fonrex.io/docs/deployment/database-migrations): Upgrade an instance safely: back up, migrate, check, and restore if needed
+- [Production Deployment Checklist](https://docs.fonrex.io/docs/deployment/production-checklist): Security, configuration, monitoring and backup checks before exposing an instance
 
-## Contributing & Project Rules
+## Contributing
 
-- [Setup Guide](/docs/contributing/setup.md): Setting up developer environment, pre-commit hooks, and tools.
-- [Testing Suite](/docs/contributing/testing.md): Running unit tests, integration tests, mock providers, and coverage reports.
-- [Architecture Rules](/docs/contributing/architecture-rules.md): Mandatory architectural guidelines, layer boundaries, and code standards.
-- [Changelog](/docs/contributing/changelog.md): Detailed release history, version changes, and migration notes.
+- [Development Environment Setup](https://docs.fonrex.io/docs/contributing/setup): Run Fonrex from source with locked dependencies, a local database and the quality gate
+- [Testing Guidelines & Execution](https://docs.fonrex.io/docs/contributing/testing): The quality gate, the database tests and how to test providers without network
+- [Architecture Rules & Guidelines](https://docs.fonrex.io/docs/contributing/architecture-rules): The contribution rules of AGENTS.md and the test that holds each one
+- [Fonrex Version Changelog](https://docs.fonrex.io/docs/contributing/changelog): Project history, feature additions, schema migrations, and version updates
 
-## Complete Documentation Dump
+## Complete documentation
 
-There are two ways to access the LLM-friendly documentation:
-
-* [llms.txt](/llms.txt) is essentially a sitemap, listing all the pages in the documentation.
-
-* [llms-docs.txt](/llms-docs.txt) contains the general documentation (may exceed the context window of your LLM).
-
-* [llms-api.txt](/llms-api.txt) contains the API documentation (may exceed the context window of your LLM).
-
-* [llms-full.txt](/llms-full.txt) contains the entire documentation (may exceed the context window of your LLM).
-
-!!! info
-    In addition, you can access the Markdown source files of the documentation by appending `.md` to the URL
-    of any page.
+- [llms-full.txt](https://docs.fonrex.io/llms-full.txt): every page
+- [llms-docs.txt](https://docs.fonrex.io/llms-docs.txt): guides, architecture, operations
+- [llms-api.txt](https://docs.fonrex.io/llms-api.txt): API reference

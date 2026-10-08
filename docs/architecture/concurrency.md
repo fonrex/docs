@@ -2,46 +2,49 @@
 id: "concurrency"
 title: "Concurrency & Async Execution"
 sidebar_label: "Concurrency & Async"
-description: "How Fonrex manages synchronous blocking calls within an asynchronous FastAPI event loop"
+description: "How Fonrex runs blocking calls without blocking the FastAPI event loop"
 ---
 
 # Concurrency & Async Execution
 
-FastAPI relies on an asynchronous event loop (`asyncio`). Blocking operations—such as CPU-heavy pandas calculations, synchronous database ORM calls, or synchronous network requests (`yfinance`, `requests`)—must never be executed directly on the main event loop thread.
+FastAPI serves every request on one `asyncio` event loop. A blocking call made on that loop — a synchronous SQLAlchemy query, a pandas calculation, a `yfinance` download — stops every other request and WebSocket of the process until it returns.
 
-## The `run_sync` Helper (`concurrency.py`)
+## `run_sync()`
 
-Fonrex provides `run_sync()` in `concurrency.py` as a unified abstraction for executing blocking synchronous code safely inside worker threads:
+`concurrency.py` provides one way to run blocking code from asynchronous code:
 
 ```python
 from concurrency import run_sync
 
-# Offloads a synchronous blocking function to the default ThreadPoolExecutor
-result = await run_sync(sync_blocking_function, arg1, arg2, kwarg=value)
+result = await run_sync(database.get_asset_context, ticker=ticker)
 ```
 
-## Internal Architecture
+`run_sync` runs the function in a worker thread (`asyncio.to_thread`), propagates the context variables and accepts keyword arguments. `tests/test_async_boundary.py` checks that `main.py`, the routers, the use cases and the feature packages reach blocking code only through it.
 
 ```
-FastAPI Event Loop (Async)
-       │
-       ├─► Async HTTP Router Endpoint (async def)
-       │         │
-       │         ├─► Calls run_sync(DatabaseService.get_asset, ticker)
-       │         │         │
-       │         │         ▼
-       │         │   ThreadPoolExecutor Worker Thread
-       │         │   (Runs synchronous SQLAlchemy ORM query)
-       │         │         │
-       │         │   ◄─────┘
-       │         │
-       │   ◄─────┘ Event Loop remains unblocked for other requests!
-       │
-       └─► Processes other concurrent HTTP / WS connections
+event loop ──► async route ──► await run_sync(blocking_call) ──► worker thread
+     │                                                               │
+     └── keeps serving other requests and WebSockets ◄───────────────┘
 ```
 
-## Guidelines for Developers
+## What is asynchronous already
 
-1. **Async Routers**: Define router functions with `async def`.
-2. **Synchronous Services**: If a service method interacts with `DatabaseService` or `yfinance`, invoke it via `await run_sync(service.method, ...)` from the router.
-3. **Async Services**: Services that utilize `redis.asyncio` or `httpx.AsyncClient` (`NewsService`, `CanaryMonitor`) can be awaited directly without `run_sync`.
+- History queries, news, monitoring and the realtime worker use the asynchronous SQLAlchemy engine (asyncpg), derived from `DATABASE_URL`.
+- Providers use `httpx.AsyncClient` through `BaseFinancialProvider`; the providers of one request run in parallel (`asyncio.gather`), each with its own limit of simultaneous requests.
+- Caches use the asynchronous Redis client, except `CacheService` (synchronous, called through `run_sync`).
+
+## Background work
+
+| Work | How it runs |
+|---|---|
+| Realtime streams | TradingView clients in a thread pool, at most `TV_MAX_CONNECTIONS` at once; ticks handed back to the event loop |
+| Daily canary | APScheduler `AsyncIOScheduler`, `CANARY_RUN_HOUR` UTC |
+| Usage log | Queued by the middleware, written in batches by a background task; a response never waits for it |
+| News refresh, canary run on demand | FastAPI background tasks |
+
+## Guidelines for contributors
+
+1. Write routes with `async def`.
+2. Call a synchronous service with `await run_sync(service.method, ...)`; never call it directly from a coroutine.
+3. Await asynchronous services (Redis asyncio, `httpx`, asyncpg) directly.
+4. Keep one Gunicorn worker: the streams, the WebSocket clients and the canary live in the process memory.

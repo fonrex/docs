@@ -1,74 +1,94 @@
 ---
 id: "news"
 title: "News Aggregator API Reference"
-sidebar_label: "News Aggregator"
-description: "Endpoints for multi-source financial news feeds, ticker-specific articles, and background ingestion"
+sidebar_label: "News"
+description: "News of a ticker from 7 providers, deduplicated, and the global feed of stored articles"
 ---
 
 # News Aggregator API Reference
 
-The News Aggregator API collects, deduplicates, and classifies financial news articles across 7 scrapers: Yahoo Finance, Google Finance, ZoneBourse, Boursorama, Investing.com, MarketWatch, and MSN Finance.
+`GET /news/{ticker}` asks seven providers in parallel — Yahoo Finance, Google Finance, ZoneBourse, Boursorama, Investing.com, MarketWatch and MSN Finance — removes duplicates and stores the articles of instruments that are in the catalogue in `news_articles`. See [News providers](../providers/news-providers.md).
 
 ---
 
 ## <span className="api-method get">GET</span> `/news/{ticker}`
 
-Retrieve financial news articles mentioning a specific ticker. Results are cached in Redis for 30 minutes.
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `ticker` | string | — | Ticker (e.g. `AIR.PA`) |
+| `limit` | integer | `20` | Articles returned (at most `NEWS_MAX_LIMIT`, 100) |
+| `language` | string | — | Keep only this language (`en`, `fr`…); articles of unknown language are kept. `all` means no filter |
+| `force_refresh` | boolean | `false` | Ignore the cached answer |
 
-### Parameters
-
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `ticker` | `string` | ✅ | — | Financial ticker (e.g. `AIR.PA`, `AAPL`) |
-| `limit` | `integer` | ❌ | `20` | Number of articles |
-| `lang` | `string` | ❌ | — | Language filter (`en`, `fr`) |
-
-### Response Example
+```bash
+curl -s -H "X-API-KEY: $FONREX_API_KEY" "http://localhost:5000/news/AIR.PA?limit=5&language=fr"
+```
 
 ```json
 {
   "ticker": "AIR.PA",
-  "count": 2,
+  "isin": "NL0000235190",
+  "count": 1,
+  "providers": ["boursorama"],
+  "cached": false,
   "articles": [
     {
-      "id": 842,
-      "title": "Airbus Delivers 65 Aircraft in July, Reaffirms Full-Year Target",
-      "summary": "Airbus reported strong commercial airplane deliveries for July...",
-      "url": "https://www.marketwatch.com/story/airbus-delivers-65-aircraft-2026",
-      "source": "MarketWatch",
-      "provider": "marketwatch_news",
-      "author": "Financial Desk",
-      "published_at": "2026-08-10T14:30:00Z",
-      "sentiment": "POSITIVE",
-      "sentiment_score": 0.78,
-      "language": "en"
+      "title": "Airbus : livraisons en hausse en septembre",
+      "summary": "...",
+      "url": "https://www.boursorama.com/bourse/actualites/...",
+      "image_url": null,
+      "source": "Boursorama",
+      "provider": "boursorama",
+      "author": null,
+      "published_at": "2026-10-08T07:45:00Z",
+      "related_tickers": [],
+      "language": "fr"
     }
   ]
 }
 ```
 
+Each answer is cached 30 minutes (`NEWS_CACHE_TTL`), separately for each `limit` and language. A provider that fails returns nothing without blocking the others.
+
+### Deduplication
+
+1. **URL**: lower case, `utm_*` parameters, fragment and trailing slash removed. The first article received is kept.
+2. **Title similarity**: `difflib.SequenceMatcher` on normalised titles; at or above `NEWS_DEDUP_SIMILARITY` (0.85) the most recent article is kept.
+
+Articles are then sorted newest first and cut to `limit` (each provider is asked for twice that number).
+
 ---
 
 ## <span className="api-method get">GET</span> `/news/feed`
 
-Retrieve global financial news feed across all assets.
+The latest articles stored in `news_articles`, all instruments together. Nothing is fetched from the providers.
 
-### Parameters
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `limit` | integer | `50` | Articles returned |
+| `language` | string | — | Language filter (`all` = none) |
+| `tickers` | string | — | Comma-separated tickers; keeps the articles related to one of them |
 
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `limit` | `integer` | ❌ | `20` | Maximum items to return |
-| `lang` | `string` | ❌ | — | Filter by language (`en`, `fr`) |
-| `provider` | `string` | ❌ | — | Filter by provider (e.g. `zonebourse_news`) |
+```json
+{ "count": 0, "from_date": null, "to_date": null, "articles": [] }
+```
 
 ---
 
 ## <span className="api-method post">POST</span> `/news/{ticker}/refresh`
 
-Trigger an asynchronous background refresh of news scrapers for a ticker without blocking the request.
+Fetch the news of a ticker again in the background and answer at once: `{"status": "queued", "ticker": "AIR.PA"}`. Full-access key only.
 
 ---
 
 ## <span className="api-method get">GET</span> `/news/stats`
 
-Retrieve global news aggregator statistics (total articles indexed, provider breakdown, language counts).
+```json
+{
+  "total_articles": 0,
+  "by_provider": {},
+  "by_language": {},
+  "last_fetched_at": null,
+  "top_assets": {}
+}
+```

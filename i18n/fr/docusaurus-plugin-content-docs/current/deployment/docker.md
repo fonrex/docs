@@ -1,61 +1,62 @@
 ---
 id: "docker"
-title: "Déploiement en Production Docker"
+title: "Déploiement Docker en production"
 sidebar_label: "Déploiement Docker"
-description: "Conteneurisation en production, configuration de reverse proxy et patterns de déploiement Docker Compose"
+description: "Exécuter Fonrex sur un serveur : surcharges Compose, reverse proxy avec TLS et WebSocket, ce qu'il faut exposer"
 ---
 
+# Déploiement Docker en production
 
-# Déploiement en Production Docker
+Fonrex est une application auto-hébergée pour votre propre usage. Sur un serveur, exécutez le même `docker-compose.yml` qu'en local et placez un reverse proxy avec TLS devant l'API.
 
-Ce guide présente les meilleures pratiques pour déployer Fonrex en environnement de production avec Docker, NGINX et le chiffrement TLS/SSL.
+## Ce qui est exposé
 
-## Surcharges `docker-compose.yml` en Production
+| Service | Publié sur | Accessible depuis |
+|---|---|---|
+| `fonrex-api` | `0.0.0.0:5000` | Le reverse proxy uniquement : liez-le à `127.0.0.1` sur un serveur (surcharge ci-dessous) |
+| `db` | `127.0.0.1:5432` | L'hôte uniquement |
+| `redis` | `127.0.0.1:6379` | L'hôte uniquement (Redis n'a pas de mot de passe) |
 
-Create a `docker-compose.prod.yml` file to tune resource limits and restart policies:
+Toutes les routes de l'API sauf `/health`, la documentation, les fichiers de découverte OpenBB et `/static` exigent une clé. Donnez aux clients extérieurs à la machine (tableaux de bord, Google Sheets) une clé **en lecture seule**.
+
+## Surcharge Compose
+
+Créez `docker-compose.prod.yml` :
 
 ```yaml
-version: '3.8'
-
 services:
   fonrex-api:
-    restart: always
+    ports: !override
+      - "127.0.0.1:5000:5000"
     deploy:
       resources:
         limits:
-          cpus: '2.0'
-          memory: 4096M
-        reservations:
-          cpus: '0.5'
-          memory: 1024M
+          memory: 4g
 
-  fonrex-db:
-    restart: always
+  db:
     deploy:
       resources:
         limits:
-          memory: 4096M
-
-  fonrex-redis:
-    restart: always
-    command: redis-server --save 60 1 --loglevel notice --maxmemory 512mb --maxmemory-policy allkeys-lru
+          memory: 4g
 ```
-
-## Lancer la Pile de Production
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 ```
 
-## Exemple de Reverse Proxy NGINX
+`!override` remplace la liste des ports au lieu d'y ajouter ; il nécessite Docker Compose 2.24 ou plus récent.
+
+Gardez `WEB_CONCURRENCY=1` : les flux temps réel, les clients WebSocket et le canari quotidien vivent dans le processus de l'API, et chaque worker supplémentaire les dupliquerait.
+
+## Reverse proxy (NGINX)
 
 ```nginx
 server {
     listen 443 ssl http2;
-    server_name api.fonrex.io;
+    server_name fonrex.example.com;
 
-    ssl_certificate /etc/letsencrypt/live/api.fonrex.io/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/api.fonrex.io/privkey.pem;
+    ssl_certificate     /etc/letsencrypt/live/fonrex.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/fonrex.example.com/privkey.pem;
 
     location / {
         proxy_pass http://127.0.0.1:5000;
@@ -63,6 +64,7 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 120s;
     }
 
     location /ws/ {
@@ -71,6 +73,24 @@ server {
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "Upgrade";
         proxy_set_header Host $host;
+        proxy_read_timeout 3600s;
     }
 }
 ```
+
+Gunicorn tourne avec un délai d'expiration de 120 secondes : une première ingestion ou une requête `/fundamental` qui interroge tous les fournisseurs peut prendre plusieurs secondes.
+
+Sans serveur, un tunnel (zrok, Cloudflare Tunnel, Tailscale Funnel) donne une URL HTTPS à une instance locale : voir le [guide Google Sheets](../guides/google-sheets-connector.md).
+
+## Requêtes sortantes
+
+C'est l'adresse IP de votre serveur qui effectue les requêtes vers les sources de données. Les sites protégés par un service anti-bot peuvent refuser une IP de datacenter ; faites passer ces fournisseurs par un proxy :
+
+```env
+FONREX_PROXY_URL=http://user:password@proxy.example:8888
+FONREX_PROXY_PROVIDERS=Investing,Gurufocus,wallStreetJournal
+```
+
+## Données et sauvegardes
+
+La base se trouve dans le volume `timescale_data`. Sauvegardez-la avec `pg_dump` (voir [Docker Compose](../getting-started/docker-compose.md#backing-up-the-database)) avant chaque mise à jour, et gardez les dumps hors de Git.

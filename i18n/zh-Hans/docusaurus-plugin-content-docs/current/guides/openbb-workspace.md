@@ -1,99 +1,85 @@
 ---
 id: "openbb-workspace"
-title: "将 Fonrex 连接至 OpenBB Workspace"
+title: "将 Fonrex 连接到 OpenBB Workspace"
 sidebar_label: "OpenBB Workspace 指南"
-description: "将自托管 Fonrex 数据管道连接至 OpenBB Workspace 仪表盘的逐步配置指南"
+description: "将您自托管的 Fonrex 实例连接到 OpenBB Workspace 的小组件和仪表板"
 ---
 
-# 将 Fonrex 连接至 OpenBB Workspace
+# 将 Fonrex 连接到 OpenBB Workspace
 
-[OpenBB Workspace](https://openbb.co) 是一款现代化的开源金融终端与仪表盘平台。Fonrex 提供了原生集成适配器，允许您将自托管的 Fonrex API 实例直接无缝连接至 OpenBB Workspace。
+[OpenBB Workspace](https://openbb.co) 可以将您的 Fonrex 实例用作自定义后端：欧洲市场基本面数据、DCF 估值、技术指标和新闻会以 OpenBB 小组件的形式呈现。
 
-连接后，您可以直接在 OpenBB 桌面端或云端工作区中无缝接入欧洲基本面数据、DCF 内在价值估值、自定义技术指标计算以及多源聚合财经新闻。
+## 前提条件
 
----
+1. 一个 OpenBB 能够访问的正在运行的 Fonrex 实例。浏览器中的 OpenBB Workspace（`pro.openbb.co`）从您的浏览器调用您的实例：当浏览器运行在同一台机器上时，`http://localhost:5000` 即可使用；否则请通过隧道或您的网络公开该实例。
+2. 该实例的一个 API 密钥。**只读**密钥（`FONREX_READ_ONLY_API_KEYS`）足以支持所有小组件，也是推荐使用的密钥。
 
-## 准备工作 (Prerequisites)
+## 第 1 步 — 将 Fonrex 添加为数据源
 
-在开始前，请确保您具备：
+1. 在 OpenBB Workspace 中，右键单击仪表板并选择 **Add data**（或打开后端连接）。
+2. 输入您实例的 URL，例如 `http://localhost:5000` 或 `https://myfonrex.share.zrok.io`。
+3. OpenBB 读取 `/widgets.json` 并列出 19 个小组件。该文件和 `/apps.json` 无需密钥即可响应。
 
-1. 一个正常运行的 Fonrex API 实例（在本地通过 `http://localhost:5000` 访问或通过自定义域名 / 远程 Relay 访问）。
-2. OpenBB Workspace 应用程序（桌面端或 Web 界面）。
-3. 如果您的 Fonrex 实例启用了身份验证（`FONREX_AUTH_REQUIRED=true` 或已设置 `OPENBB_API_KEY`），请准备好您的 API Key（例如 `frx_live_...`）。
+## 第 2 步 — 添加密钥
 
----
+为连接添加一个自定义请求头：
 
-## 逐步配置步骤
+- **Name**：`X-API-KEY`
+- **Value**：`frx_live_...`
 
-### 步骤 1：在 OpenBB 中将 Fonrex 添加为数据源
+每个 `/openbb/...` 路由都需要它。
 
-1. 打开 **OpenBB Workspace**。
-2. 在工作区网格的任意位置右键点击并选择 **"Add data"**（或在设置中打开 **Backend Connections**）。
-3. 输入您的 Fonrex 后端地址：
-   - 本地开发环境：`http://localhost:5000`
-   - 远程部署环境：`https://your-fonrex-instance.com`
-4. OpenBB Workspace 将会自动请求 `/openbb/widgets.json` 端点以检索全部 19 个可用小组件。
+## 第 3 步 — 导入仪表板
 
-### 步骤 2：配置身份验证请求头
+`/apps.json` 包含两个仪表板：
 
-如果您的 Fonrex 服务器需要 API 密钥：
+**Fonrex — EU Markets** — 单个 ticker：
+- *Overview*：报价、宏观利率、EOD 图表、深度基本面数据、新闻
+- *Valuation*：DCF 估值、模型对比和敏感性矩阵
+- *Technical*：技术图表和多指标图表
+- *News*：该 ticker 的新闻和全局资讯流
+- *Watchlist*：批量报价
 
-1. 在 OpenBB 的后端连接设置弹窗中，添加自定义请求头：
-   - 请求头名称 (Header Name)：`X-API-KEY`
-   - 请求头数值 (Header Value)：`frx_live_your_api_key_here`
-2. 此外，标准请求头 `Authorization: Bearer frx_live_...` 同样受到支持。
-3. 点击 **Save Connection** 保存连接。
+**Fonrex — Screener & Macro** — 发现：
+- *Screener*：技术筛选器（例如 RSI < 30）
+- *Macro Context*：FRED 利率和指数成分股
 
-### 步骤 3：导入预置仪表盘应用
+可以从 OpenBB 的 Apps 菜单导入它们，也可以将小组件逐个添加到您自己的仪表板。
 
-Fonrex 通过 `/openbb/apps.json` 提供了两个预先配置的多标签页应用：
+## 小组件
 
-#### 1. Fonrex — EU Markets
-单代码全方位分析套件，包含：
-- **概览标签页 (Overview)**：实时行情指标、深度基本面及日线 K线图。
-- **估值标签页 (Valuation)**：DCF 内在价值计算及 WACC × 永续增长率敏感性分析矩阵。
-- **技术分析标签页 (Technical)**：叠加技术指标图表（RSI、SMA、MACD）。
-- **新闻标签页 (News)**：来自 7 大财经新闻源的去重新闻流。
-
-#### 2. Fonrex — Screener & Macro
-选股与宏观分析工作区：
-- **选股器标签页 (Screener)**：实时技术指标选股表格。
-- **宏观背景标签页 (Macro Context)**：主要宏观经济利率数据 (FRED) 及核心指数成分股（S&P 500、CAC 40、NASDAQ 100、DAX）。
-
-导入方法：
-1. 打开 OpenBB 中的 **Apps / Marketplace** 菜单。
-2. 选择 **"Import App"** 并选择 **Fonrex — EU Markets**。
-
----
-
-## 小组件 (Widget) 汇总一览
-
-| Widget ID | 小组件名称 | 分类 | 输出类型 |
+| 小组件 | 名称 | 类别 | 类型 |
 |---|---|---|---|
-| `fonrex_fundamentals` | Fonrex 基本面 | Fundamentals | 表格 (Table) |
-| `fonrex_fundamentals_deep` | Fonrex 深度基本面 | Fundamentals | 表格 (Table) |
-| `fonrex_eod` | Fonrex EOD 历史图表 | Historical | Plotly 图表 |
-| `fonrex_history` | Fonrex OHLCV 历史图表 | Historical | Plotly 图表 |
-| `fonrex_quote` | Fonrex 实时报价 | Market Data | 指标卡片 |
-| `fonrex_quotes_batch` | Fonrex 批量报价 | Market Data | 表格 (Table) |
-| `fonrex_technical` | Fonrex 技术指标 | Technical | Plotly 图表 |
-| `fonrex_technical_multi` | Fonrex 多指标图表 | Technical | Plotly 图表 |
-| `fonrex_technical_chart` | Fonrex 叠加技术图表 | Technical | Plotly 图表 |
-| `fonrex_screener` | Fonrex 技术指标选股器 | Technical | 表格 (Table) |
-| `fonrex_news` | Fonrex 个股新闻 | News | 表格 (Table) |
-| `fonrex_news_feed` | Fonrex 全球新闻流 | News | 表格 (Table) |
-| `fonrex_dcf` | Fonrex DCF 估值 | Valuation | 表格 (Table) |
-| `fonrex_dcf_compare` | Fonrex DCF 模型对比 | Valuation | 表格 (Table) |
-| `fonrex_dcf_sensitivity` | Fonrex DCF 敏感性矩阵 | Valuation | 表格 (Table) |
-| `fonrex_insider_transactions` | Fonrex 高管交易 | Fundamentals | 表格 (Table) |
-| `fonrex_etf_details` | Fonrex ETF 详情 | Fundamentals | 表格 (Table) |
-| `fonrex_index_constituents` | Fonrex 指数成分股 | Market Data | 表格 (Table) |
-| `fonrex_macro_rates` | Fonrex 宏观利率 | Macro | 指标卡片 |
+| `fonrex_fundamentals` | Fonrex Fundamentals | Fundamentals | table |
+| `fonrex_fundamentals_deep` | Fonrex Deep Fundamentals | Fundamentals | table |
+| `fonrex_insider_transactions` | Fonrex Insider Transactions | Fundamentals | table |
+| `fonrex_etf_details` | Fonrex ETF Details | Fundamentals | table |
+| `fonrex_eod` | Fonrex EOD History | Historical | chart |
+| `fonrex_history` | Fonrex OHLCV History | Historical | chart |
+| `fonrex_quote` | Fonrex Quote | Market Data | metric |
+| `fonrex_quotes_batch` | Fonrex Batch Quotes | Market Data | table |
+| `fonrex_index_constituents` | Fonrex Index Constituents | Market Data | table |
+| `fonrex_technical` | Fonrex Technical Indicator | Technical | chart |
+| `fonrex_technical_multi` | Fonrex Multi-Indicator | Technical | chart |
+| `fonrex_technical_chart` | Fonrex Technical Chart | Technical | chart |
+| `fonrex_screener` | Fonrex Technical Screener | Technical | table |
+| `fonrex_news` | Fonrex News | News | table |
+| `fonrex_news_feed` | Fonrex News Feed | News | table |
+| `fonrex_dcf` | Fonrex DCF Valuation | Valuation | table |
+| `fonrex_dcf_compare` | Fonrex DCF Models Comparison | Valuation | table |
+| `fonrex_dcf_sensitivity` | Fonrex DCF Sensitivity Matrix | Valuation | table |
+| `fonrex_macro_rates` | Fonrex Macro Rates | Macro | metric |
 
----
+它们背后的路由列在 [OpenBB API 参考](../api-reference/openbb.md)中。
 
-## 常见连接故障排除
+## 须知
 
-- **连接被拒绝 (Connection Refused)**：通过 `docker compose ps` 检查 `fonrex-api` 容器是否处于 running 状态且端口 `5000` 已正常对外映射。
-- **401 / 403 错误**：检查 OpenBB 中配置的 `X-API-KEY` 请求头是否与 Fonrex `.env` 文件中的配置相匹配。
-- **CORS 跨域错误**：若使用 OpenBB Web 版，请确保 Fonrex 允许来自 OpenBB 域名的跨域请求，或在 `.env` 中设置 `CORS_ORIGINS=*`。
+- **报价**：报价小组件永远不会启动实时流。该 ticker 被订阅后（使用完全访问密钥调用 `POST /realtime/subscribe`），它显示实时价格；否则显示 Yahoo Finance 的延迟价格。
+- **价格和指标**需要数据库中有该 ticker 的价格；EOD 小组件在首次使用时会采集这些价格。
+- **DCF** 需要该 ticker 的深度基本面数据：请先打开深度基本面小组件。
+
+## 故障排查
+
+- **连接被拒绝**：检查 `docker compose ps`，并确认 OpenBB 能够访问该 URL。
+- **401 / 403**：缺少 `X-API-KEY` 请求头，或其值与 `.env` 中的任何密钥都不匹配（修改后请重启 API）。
+- **CORS 错误**：浏览器从 OpenBB 的来源调用您的实例。`OPENBB_ALLOWED_ORIGIN`（默认 `https://pro.openbb.co`）列出允许的来源，以逗号分隔。

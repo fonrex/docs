@@ -1,111 +1,112 @@
 ---
 id: "historical"
 title: "Historical Ingestion API Reference"
-sidebar_label: "Historical Ingestion"
-description: "Endpoints for backfilling historical OHLCV data, bulk ingestion, and historical query routes"
+sidebar_label: "Historical Prices"
+description: "Ingest end-of-day prices into TimescaleDB and read them back"
 ---
 
 # Historical Ingestion API Reference
 
-The Historical API provides methods to ingest, backfill, and query historical daily OHLCV bar data into TimescaleDB storage.
+Prices are stored per **listing**, resolution (`1D`, `1W`, `1M`) and trading session in the `prices_eod` hypertable. The ingestion routes change data: they need a **full-access** key (a read-only key gets `403`).
 
 ---
 
 ## <span className="api-method post">POST</span> `/historical/ingest`
 
-Trigger a single-asset historical ingestion or backfill.
+Ingest the history of one listing. The parameters are **query parameters**.
 
-### Request Body
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `ticker` | string | — | Ticker to ingest (required) |
+| `resolution` | string | `1D` | `1D`, `1W` or `1M` |
+| `source` | string | `auto` | `auto` (Yahoo Finance, then TradingView), `yfinance` or `tradingview` |
+| `force_refresh` | boolean | `false` | Fetch the whole range again, replace the stored bars of that range and look the source symbol up again |
+| `from_date`, `to_date` | date | — | Window `YYYY-MM-DD`. Without them: ten years on a first ingestion, otherwise from the day after the last stored session |
+| `currency`, `exchange` | string | — | Choose the listing when several share the ticker (the primary one otherwise) |
 
-```json
-{
-  "ticker": "BNP.PA",
-  "resolution": "d",
-  "from_date": "2020-01-01",
-  "to_date": "2026-08-01",
-  "force": false
-}
+```bash
+curl -s -X POST -H "X-API-KEY: $FONREX_API_KEY" \
+  "http://localhost:5000/historical/ingest?ticker=AIR.PA"
 ```
 
-### Parameters
-
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `ticker` | `string` | ✅ | — | Ticker symbol to ingest |
-| `resolution` | `string` | ❌ | `d` | Candle resolution (`d`, `w`, `m`) |
-| `from_date` | `string` | ❌ | — | Start date (`YYYY-MM-DD`) |
-| `to_date` | `string` | ❌ | — | End date (`YYYY-MM-DD`) |
-| `force` | `boolean` | ❌ | `false` | Re-download and overwrite existing database records |
-
-### Response Example
-
 ```json
 {
+  "ticker": "AIR.PA",
+  "resolution": "1D",
   "status": "success",
-  "ticker": "BNP.PA",
-  "records_added": 1650,
-  "source": "YahooFinance",
-  "duration_ms": 1240
+  "source_used": "yfinance",
+  "provider_symbol": "AIR.PA",
+  "records_added": 2531,
+  "from_date": "2016-10-10",
+  "to_date": "2026-10-07",
+  "duration_ms": 1840,
+  "error": null,
+  "note": null
 }
 ```
+
+| Field | Meaning |
+|---|---|
+| `status` | `success`, `up_to_date` (nothing to fetch) or `failed` |
+| `source_used` | `yfinance` or `tradingview`; on a failure, the source that was asked (`auto`…) |
+| `provider_symbol` | The symbol asked to the source — the Yahoo symbol verified for the listing, or the TradingView symbol |
+| `note` | Why Yahoo was not the source, when the prices come from TradingView |
+| `error` | Why nothing could be ingested, e.g. no Yahoo symbol quoted in the currency of the listing |
 
 ---
 
 ## <span className="api-method post">POST</span> `/historical/ingest/bulk`
 
-Trigger bulk ingestion across multiple tickers with concurrency controls.
-
-### Request Body
+Ingest several tickers in parallel. JSON body:
 
 ```json
 {
-  "tickers": ["AIR.PA", "BNP.PA", "TTE.PA", "MC.PA"],
-  "resolution": "d",
-  "concurrency": 4
+  "tickers": ["AIR.PA", "BNP.PA", "MC.PA"],
+  "resolution": "1D",
+  "source": "auto",
+  "force_refresh": false,
+  "concurrency": 5
 }
 ```
 
-### Response Example
-
-```json
-{
-  "total": 4,
-  "successful": 4,
-  "failed": 0,
-  "details": [
-    { "ticker": "AIR.PA", "status": "success", "records_added": 250 },
-    { "ticker": "BNP.PA", "status": "success", "records_added": 250 }
-  ]
-}
-```
+`concurrency` is between 1 and 20. Each ticker designates its primary listing. The answer is `{"status": "completed", "results": [...]}` with one result per ticker, in the format above.
 
 ---
 
 ## <span className="api-method get">GET</span> `/ticker/{symbol}/history`
 
-Query historical OHLCV candles from the `prices_eod` table. Automatically ingests missing data if `auto_ingest=true`.
+OHLCV bars of a listing, read from the database only — this route never ingests. Bars are returned newest first.
 
-### Parameters
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `symbol` | string | — | Ticker |
+| `start_date`, `end_date` | date | — | Window `YYYY-MM-DD` |
+| `interval` | string | `1D` | `1D`, `1W`, `1M` (or `daily`, `weekly`, `monthly`) |
+| `currency`, `exchange` | string | — | Choose the listing |
 
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `symbol` | `string` | ✅ | — | Instrument symbol |
-| `resolution` | `string` | ❌ | `d` | Resolution (`d`, `w`, `m`) |
-| `limit` | `integer` | ❌ | `500` | Number of historical bars |
-| `auto_ingest` | `boolean` | ❌ | `true` | Automatically backfill missing bars from yfinance |
-
-### Examples
-
-#### cURL
 ```bash
-curl -s "http://localhost:5000/ticker/AAPL/history?limit=10"
+curl -s -H "X-API-KEY: $FONREX_API_KEY" \
+  "http://localhost:5000/ticker/AIR.PA/history?start_date=2026-09-28&end_date=2026-10-02"
 ```
 
-#### Python
-```python
-import requests
-
-resp = requests.get("http://localhost:5000/ticker/AAPL/history", params={"limit": 10})
-bars = resp.json()["data"]
-print("Fetched bars:", len(bars))
+```json
+{
+  "ticker": "AIR.PA",
+  "interval": "1D",
+  "count": 5,
+  "data": [
+    { "time": "2026-10-02T00:00:00Z", "open": 149.07, "high": 151.07, "low": 147.07, "close": 150.07, "adj_close": 150.07, "volume": 1395000 },
+    { "time": "2026-10-01T00:00:00Z", "open": 147.97, "high": 149.97, "low": 145.97, "close": 148.97, "adj_close": 148.97, "volume": 1394000 }
+  ]
+}
 ```
+
+`time` is the date of the trading session, at midnight UTC. Answers are cached 24 hours and dropped when the ticker is ingested again.
+
+---
+
+## Weekly and monthly bars
+
+Besides the `1W` and `1M` bars you can ingest, the database maintains two continuous aggregates computed from the daily bars of each listing, `prices_weekly` and `prices_monthly`. They are refreshed daily and answer from the daily bars for the recent period.
+
+See [Ingesting historical data](../guides/ingest-historical-data.md) for the pipeline and the choice of the source symbol.

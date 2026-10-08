@@ -1,87 +1,97 @@
 ---
 id: "realtime"
 title: "Realtime & WebSocket API Reference"
-sidebar_label: "Realtime & WebSockets"
-description: "WebSocket live price streaming, REST quote snapshots, and subscription management endpoints"
+sidebar_label: "Realtime Streaming"
+description: "WebSocket price stream, quote snapshots and stream subscriptions"
 ---
 
 # Realtime & WebSocket API Reference
 
-The Realtime API streams live 1-minute market ticks over WebSockets via TradingView bridge connections and Redis Pub/Sub, and exposes high-speed quote REST snapshots.
+The realtime worker of the API streams 1-minute ticks from TradingView, stores the last tick of each ticker in Redis (`quote:{ticker}`, 60 s), publishes it on the Redis channel `price:{ticker}` and saves it in the `prices_intraday` hypertable when the instrument is in the catalogue.
+
+Streams are started by a full-access key: by `POST /realtime/subscribe`, or by connecting to the WebSocket. A **read-only key never starts a stream**; it is served what is already streamed. Subscriptions of tickers that name an instrument of the catalogue are stored in `realtime_subscriptions` and restored when the API starts; other tickers are streamed but not restored after a restart.
 
 ---
 
 ## <span className="api-method ws">WS</span> `/ws/realtime/{ticker}`
 
-Open a persistent WebSocket streaming channel for real-time tick updates on a given ticker.
-
-### Connection Protocol
-
 ```javascript
-const ws = new WebSocket("ws://localhost:5000/ws/realtime/AIR.PA");
+const ws = new WebSocket(`ws://localhost:5000/ws/realtime/AIR.PA?token=${FONREX_API_KEY}`);
 ```
 
-### Event Messages
+The key is checked during the handshake. A WebSocket client can send it as a header (`Authorization` or `X-API-KEY`) or in the query string as `token`, `api_key` or `key`. A missing or wrong key closes the connection with code `1008`.
 
-Upon connection, the server sends a initial `snapshot` message followed by real-time `tick` events:
+### Messages sent by the server
 
-#### Initial Snapshot Event
-```json
-{
-  "type": "snapshot",
-  "ticker": "AIR.PA",
-  "data": {
-    "close": 135.90,
-    "open": 134.20,
-    "high": 136.50,
-    "low": 133.80,
-    "volume": 1245000,
-    "timestamp": "2026-08-11T10:15:00Z"
-  }
-}
-```
+Every message has the form `{"type", "ticker", "data", "error", "ts"}`, except `pong`, sent as `{"type": "pong"}`.
 
-#### Live Tick Event
+| `type` | When | `data` |
+|---|---|---|
+| `not_streaming` | Read-only key on a ticker that is not streamed (sent first; `error` explains it) | — |
+| `snapshot` | Right after the connection, when a last tick is cached | The last tick |
+| `tick` | Each new tick | The tick |
+| `pong` | Answer to a `ping` from the client | — |
+
 ```json
 {
   "type": "tick",
   "ticker": "AIR.PA",
   "data": {
-    "close": 136.10,
-    "change": 0.20,
-    "change_pct": 0.147,
-    "volume": 1246500,
-    "timestamp": "2026-08-11T10:16:00Z"
-  }
+    "ticker": "AIR.PA",
+    "timestamp": "2026-10-08T09:31:00Z",
+    "open": "155.20",
+    "high": "155.48",
+    "low": "155.10",
+    "close": "155.42",
+    "volume": 18250,
+    "source": "tradingview",
+    "exchange": null,
+    "currency": null
+  },
+  "error": null,
+  "ts": "2026-10-08T09:31:02.114Z"
 }
 ```
+
+Prices are decimal numbers serialised as strings.
+
+### Messages sent by the client
+
+| Text | Effect |
+|---|---|
+| `ping` | The server answers `{"type": "pong"}` |
+| `unsubscribe` | The server closes the connection |
+
+The TradingView symbol is derived from the ticker suffix (`AIR.PA` → `EURONEXT:AIR`, `.DE` → `XETRA`); a ticker without suffix is taken for a NASDAQ line.
 
 ---
 
 ## <span className="api-method get">GET</span> `/quote/{ticker}`
 
-Retrieve the latest price quote snapshot from the Redis volatile cache. Auto-triggers realtime stream subscription if `REALTIME_AUTO_SUBSCRIBE=true`.
+The last known price of a ticker.
 
-### Parameters
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `subscribe_if_missing` | boolean | `false` | Also start the stream of the ticker in the background. Ignored for a read-only key |
 
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `ticker` | `string` | ✅ | — | Ticker symbol (e.g. `AAPL`) |
-
-### Response Example
+When the ticker is streamed, the cached tick is returned (`is_realtime: true`, `source: "tradingview"`). Otherwise Fonrex returns the delayed Yahoo Finance price of the ticker **as typed** (`is_realtime: false`, `source: "yfinance"`, `delay_seconds: 900`). Nothing found answers `404`. A tick carries no previous close: for a streamed ticker `change` and `change_pct` are `0` and `previous_close` is `null`; the delayed Yahoo answer fills them.
 
 ```json
 {
-  "ticker": "AAPL",
-  "price": 224.50,
-  "open": 222.10,
-  "high": 225.00,
-  "low": 221.80,
-  "volume": 45200000,
-  "change": 2.40,
-  "change_pct": 1.08,
-  "source": "tradingview_stream",
-  "timestamp": "2026-08-11T10:15:30Z"
+  "ticker": "AIR.PA",
+  "price": "155.42",
+  "open": "155.20",
+  "high": "155.48",
+  "low": "155.10",
+  "close": "155.42",
+  "volume": 18250,
+  "change": "0",
+  "change_pct": "0",
+  "previous_close": null,
+  "timestamp": "2026-10-08T09:31:00Z",
+  "is_realtime": true,
+  "source": "tradingview",
+  "delay_seconds": 0
 }
 ```
 
@@ -89,52 +99,57 @@ Retrieve the latest price quote snapshot from the Redis volatile cache. Auto-tri
 
 ## <span className="api-method get">GET</span> `/quotes`
 
-Batch quote snapshot retrieval for multiple tickers.
+Quotes of several tickers: `tickers` is a comma-separated list, cut to the first 20. A ticker without a quote is `null`. This route never starts a stream.
 
-### Parameters
-
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `tickers` | `string` | ✅ | — | Comma-separated list of tickers (e.g. `AAPL,MSFT,TSLA`) |
+```json
+{ "count": 2, "tickers": ["AIR.PA", "BNP.PA"], "quotes": { "AIR.PA": { "...": "..." }, "BNP.PA": null } }
+```
 
 ---
 
 ## <span className="api-method post">POST</span> `/realtime/subscribe`
 
-Explicitly subscribe a ticker to the background streaming worker `RealtimePriceWorker`.
+Start the stream of up to 50 tickers. Full-access key only.
 
-### Request Body
+```bash
+curl -s -X POST -H "X-API-KEY: $FONREX_API_KEY" -H "Content-Type: application/json" \
+  -d '{"tickers": ["AIR.PA", "BNP.PA"]}' http://localhost:5000/realtime/subscribe
+```
 
 ```json
-{
-  "ticker": "NVDA"
-}
+[
+  {
+    "ticker": "AIR.PA",
+    "tv_exchange": "EURONEXT",
+    "tv_symbol": "AIR",
+    "is_active": true,
+    "subscribed_at": "2026-10-08T09:30:00Z",
+    "last_tick_at": null,
+    "tick_count": 0,
+    "is_streaming": true
+  }
+]
 ```
 
 ---
 
 ## <span className="api-method delete">DELETE</span> `/realtime/subscribe/{ticker}`
 
-Unsubscribe a ticker from background live streaming.
+Stop the stream of a ticker. Full-access key only. Answers `{"status": "unsubscribed", "ticker": "AIR.PA"}`, or `404` when the ticker is not streamed.
 
 ---
 
 ## <span className="api-method get">GET</span> `/realtime/status`
 
-List all active market streaming worker subscriptions.
-
-### Response Example
-
 ```json
 {
-  "active_subscriptions": 3,
-  "subscriptions": [
-    {
-      "ticker": "AIR.PA",
-      "subscribed_at": "2026-08-11T08:00:00Z",
-      "last_tick_at": "2026-08-11T10:15:30Z",
-      "tick_count": 1350
-    }
-  ]
+  "streaming_count": 1,
+  "active_tickers": ["AIR.PA"],
+  "ws_connections": { "AIR.PA": 2 },
+  "total_ws_clients": 2,
+  "stale_tickers": [],
+  "worker_running": true
 }
 ```
+
+`stale_tickers` lists streamed tickers without a fresh tick in Redis.

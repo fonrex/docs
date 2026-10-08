@@ -7,6 +7,35 @@ description: "Project history, feature additions, schema migrations, and version
 
 # Fonrex Version Changelog
 
+## October 2026 — Secure defaults, per-listing prices, verified provider data
+
+Merged on `main` on 8 October 2026 (pull request #15).
+
+### ⚠️ Breaking changes
+- **An API key is required by default.** Every route except `/health`, the documentation, `/widgets.json`, `/apps.json` and `/static` answers `401` until `FONREX_API_KEY` is set. `FONREX_AUTH_REQUIRED=false` only opens an instance with no key configured. New **read-only keys** (`FONREX_READ_ONLY_API_KEYS`) for clients outside the machine.
+- **`GET /quote` and `GET /openbb/quote` no longer start a realtime stream.** Use `POST /realtime/subscribe`; `subscribe_if_missing=true` remains on `/quote` for full-access keys.
+- **Prices are stored per listing** (migration 014): `prices_eod` is keyed by `(asset_listing_id, resolution, time)` and dated by trading session. The migration converts existing rows; back up before upgrading.
+- **Dividend yields are ratios** everywhere, including stored values (migration 015).
+
+### Security and operations
+- Docker Compose loads `.env` and overrides the service addresses; PostgreSQL and Redis published on `127.0.0.1` only; database volume mounted on the right data directory.
+- Usage log written in background batches, without the caller's IP by default (`USAGE_LOG_IP`), purged after `USAGE_LOG_RETENTION_DAYS`.
+- `POST /database/cleanup` bounded (`days_to_keep` ≥ 30) with a `dry_run`.
+- Redis cache entries are JSON only.
+
+### Data quality
+- Prices and fundamentals of a listing are fetched with a **Yahoo symbol verified** from the ISIN and the currency of the listing; a listing without one is not ingested, and the answer says why.
+- Providers read the figures their pages really display (`financials/numbers.py`); percentages are normalised before validation; an answer about another ISIN is rejected.
+- `/fundamental` builds each figure from Yahoo, then the stored figures, then the scraped providers, and names the source in a `Sources` section.
+- Financial statements are read by fiscal year (DCF, solvency ratios).
+- Every request parameter is part of its cache key (fundamentals, news, insider transactions, technical indicators per listing).
+- The stored risk-free rate is refreshed from FRED; each realtime tick reaches each WebSocket client once.
+- Migration 014 waits for running TimescaleDB jobs instead of deadlocking with them.
+
+### Quality
+- Locked, hash-checked dependencies; a coverage floor per module (global 70 %); database tests on TimescaleDB in the CI; guards keeping `ARCHITECTURE.md` and `AGENTS.md` in step with the code.
+
+
 ## v1.6.0 (2026-09)
 
 ### Major Features

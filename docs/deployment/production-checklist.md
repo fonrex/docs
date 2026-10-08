@@ -2,26 +2,33 @@
 id: "production-checklist"
 title: "Production Deployment Checklist"
 sidebar_label: "Production Checklist"
-description: "Mandatory security, performance, monitoring, and database backup checklist before going live"
+description: "Security, configuration, monitoring and backup checks before exposing an instance"
 ---
 
 # Production Deployment Checklist
 
-Before going live with a production Fonrex instance, verify every item on this checklist:
+## Security
+- [ ] `FONREX_API_KEY` set to a random key (`echo "frx_live_$(openssl rand -hex 24)"`); `FONREX_AUTH_REQUIRED` left at `true`.
+- [ ] Read-only keys (`FONREX_READ_ONLY_API_KEYS`) for every client outside the machine: Google Sheets, dashboards, OpenBB.
+- [ ] `POSTGRES_PASSWORD` changed before the first start.
+- [ ] PostgreSQL and Redis published on `127.0.0.1` only (the default); the API reachable only through the reverse proxy.
+- [ ] TLS on the reverse proxy, WebSocket upgrade forwarded for `/ws/`.
+- [ ] `USAGE_LOG_IP` at `none` or `truncated`.
+- [ ] `.env` and database dumps never committed.
 
-## 🔒 Security & Environment
-- [ ] Changed default PostgreSQL password in `.env` (`POSTGRES_PASSWORD`).
-- [ ] Changed `SECRET_KEY` in `.env` to a cryptographically random 64-character string.
-- [ ] Ensured `SEC_EDGAR_EMAIL` contains a valid corporate contact email.
-- [ ] Restricted access to PostgreSQL port `5432` and Redis port `6379` via firewall rules (only accessible internally to `fonrex-api`).
-- [ ] Configured TLS 1.3 / SSL certificates on NGINX / reverse proxy.
+## Configuration
+- [ ] `SEC_EDGAR_EMAIL` set to your own contact address.
+- [ ] `WEB_CONCURRENCY=1`.
+- [ ] `FRED_API_KEY` set if you use the DCF.
+- [ ] A proxy (`FONREX_PROXY_URL`) for the websites that refuse your server's IP, if needed.
 
-## ⚡ Performance & Caching
-- [ ] Verified Redis memory policy is set to `maxmemory-policy allkeys-lru`.
-- [ ] Configured PostgreSQL `shared_buffers` and `work_mem` for TimescaleDB workloads.
-- [ ] Verified TimescaleDB intraday automatic retention chunk purges are operational.
+## Data
+- [ ] Instruments imported (`import_assets.py`) and prices ingested (`scripts/ingest_all.py`).
+- [ ] `POST /database/cleanup` never run with the default `days_to_keep` (730) unless you mean to delete eight of the ten ingested years — count first with `dry_run`.
+- [ ] Daily `pg_dump` backup of the whole database, restore tested once.
 
-## Health Monitoring & Backups
-- [ ] Tested `/health` and `/health/providers` API endpoints.
-- [ ] Configured daily `pg_dump` backups for `assets`, `asset_listings`, and `fundamentals` tables.
-- [ ] Verified daily Canary checks run automatically at 06:00 UTC.
+## Monitoring
+- [ ] `/health` answers, `providers.unavailable` is empty.
+- [ ] `/health/providers` filled after the first canary run (06:00 UTC by default).
+- [ ] Critical alerts checked regularly: `GET /health/alerts?severity=critical`.
+- [ ] Container health check green: `docker compose ps`.

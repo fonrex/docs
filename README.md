@@ -28,7 +28,7 @@ Ensure you have the following installed on your machine:
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/fonrex/fonrex.git
+   git clone https://github.com/fonrex/docs.git
    cd docs
    ```
 
@@ -64,13 +64,20 @@ npm run serve
 
 ```text
 .
-├── docs/                  # Core documentation markdown & MDX files
-│   ├── api-reference/     # API endpoints and schemas
-│   ├── architecture/      # System architecture & core concepts
-│   └── getting-started/   # Installation and quickstart guides
+├── docs/                  # English pages (source locale)
+│   ├── pathways/          # Guided journeys by profile
+│   ├── getting-started/   # Installation, configuration, first call
+│   ├── api-reference/     # Routes, parameters and answers
+│   ├── guides/            # Tasks: import, ingestion, realtime, integrations
+│   ├── architecture/      # System design, data model, migrations
+│   ├── providers/         # Data providers
+│   ├── monitoring/        # Validation layer, canary, alerts
+│   ├── deployment/        # Production deployment
+│   └── contributing/      # Development, tests, rules, changelog
 ├── i18n/                  # Localizations (Translations)
 │   ├── fr/                # French translations
 │   └── zh-Hans/           # Simplified Chinese translations
+├── scripts/               # generate-llms.mjs (static/llms*.txt)
 ├── src/                   # Custom pages, components, and styles
 │   ├── css/               # Global & custom CSS styles
 │   └── pages/             # Non-doc React pages (e.g., Landing page)
@@ -95,6 +102,7 @@ In the project directory, you can run:
 | `npm run typecheck` | Runs TypeScript type checker across the codebase. |
 | `npm run clear` | Clears Docusaurus cache (`.docusaurus/` & `build/`). |
 | `npm run write-translations` | Extracts translatable strings into `i18n/`. |
+| `npm run llms` | Regenerates `static/llms*.txt` from the English pages. Run it after editing `docs/`. |
 
 ---
 
@@ -123,7 +131,8 @@ npm start -- --locale zh-Hans
 We welcome contributions to improve the Fonrex documentation!
 
 1. Fork the repository and create your feature branch: `git checkout -b doc/my-update`
-2. Make your documentation updates in `docs/` (or update translations in `i18n/`).
+2. Make your documentation updates in `docs/`, report them in the translations (`i18n/fr/` and `i18n/zh-Hans/`), and run `npm run llms`.
+   Describe the code of `main` of [fonrex/fonrex](https://github.com/fonrex/fonrex): routes, parameters and settings must exist there.
 3. Ensure there are no broken links and type checking passes:
    ```bash
    npm run typecheck

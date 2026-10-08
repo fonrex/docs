@@ -2,98 +2,84 @@
 id: "openbb-workspace"
 title: "Connecting Fonrex to OpenBB Workspace"
 sidebar_label: "OpenBB Workspace Guide"
-description: "Step-by-step guide to connect self-hosted Fonrex data pipelines to OpenBB Workspace dashboards"
+description: "Connect your self-hosted Fonrex instance to OpenBB Workspace widgets and dashboards"
 ---
 
 # Connecting Fonrex to OpenBB Workspace
 
-[OpenBB Workspace](https://openbb.co) is a modern open-source financial terminal and dashboard platform. Fonrex includes native integration adapters that allow you to connect your self-hosted Fonrex API instance directly to OpenBB Workspace.
-
-By connecting Fonrex, you bring European fundamentals, DCF valuations, custom technical indicator calculations, and multi-source aggregated financial news into your OpenBB desktop or cloud workspace.
-
----
+[OpenBB Workspace](https://openbb.co) can use your Fonrex instance as a custom backend: European fundamentals, DCF valuations, technical indicators and news appear as OpenBB widgets.
 
 ## Prerequisites
 
-Before starting, ensure you have:
+1. A running Fonrex instance that OpenBB can reach. OpenBB Workspace in the browser (`pro.openbb.co`) calls your instance from your browser: `http://localhost:5000` works when the browser runs on the same machine; otherwise expose the instance through a tunnel or your network.
+2. An API key of the instance. A **read-only** key (`FONREX_READ_ONLY_API_KEYS`) is enough for every widget and is the one to use.
 
-1. A running Fonrex API instance (accessible locally at `http://localhost:5000` or hosted via custom domain/relay).
-2. OpenBB Workspace (Desktop application or Web interface).
-3. If your Fonrex instance has authentication enabled (`FONREX_AUTH_REQUIRED=true` or `OPENBB_API_KEY` set), have your API key ready (e.g. `frx_live_...`).
+## Step 1 — Add Fonrex as a data source
 
----
+1. In OpenBB Workspace, right-click on the dashboard and select **Add data** (or open the backend connections).
+2. Enter the URL of your instance, e.g. `http://localhost:5000` or `https://myfonrex.share.zrok.io`.
+3. OpenBB reads `/widgets.json` and lists the 19 widgets. This file and `/apps.json` answer without a key.
 
-## Step-by-Step Setup
+## Step 2 — Add the key
 
-### Step 1: Add Fonrex as a Data Source in OpenBB
+Add a custom header to the connection:
 
-1. Open **OpenBB Workspace**.
-2. Right-click anywhere on your workspace grid and select **"Add data"** (or open **Backend Connections** in Settings).
-3. Enter your Fonrex backend URL:
-   - For local development: `http://localhost:5000`
-   - For remote deployments: `https://your-fonrex-instance.com`
-4. OpenBB Workspace will automatically ping `/openbb/widgets.json` to discover all 19 available widgets.
+- **Name**: `X-API-KEY`
+- **Value**: `frx_live_...`
 
-### Step 2: Configure Authentication Headers
+Every `/openbb/...` route requires it.
 
-If your Fonrex server requires an API key:
+## Step 3 — Import the dashboards
 
-1. In the backend setup modal in OpenBB, add a custom request header:
-   - Header Name: `X-API-KEY`
-   - Header Value: `frx_live_your_api_key_here`
-2. Alternatively, standard `Authorization: Bearer frx_live_...` is also supported.
-3. Click **Save Connection**.
+`/apps.json` holds two dashboards:
 
-### Step 3: Import Dashboard Applications
+**Fonrex — EU Markets** — one ticker:
+- *Overview*: quote, macro rates, EOD chart, deep fundamentals, news
+- *Valuation*: DCF valuation, model comparison and sensitivity matrix
+- *Technical*: technical chart and multi-indicator chart
+- *News*: news of the ticker and global feed
+- *Watchlist*: batch quotes
 
-Fonrex provides two pre-configured multi-tab dashboards via `/openbb/apps.json`:
+**Fonrex — Screener & Macro** — discovery:
+- *Screener*: technical screener (e.g. RSI < 30)
+- *Macro Context*: FRED rates and index constituents
 
-#### 1. Fonrex — EU Markets
-A full single-ticker analytical suite containing:
-- **Overview Tab**: Live quote metrics, deep fundamentals, and EOD candlestick price chart.
-- **Valuation Tab**: DCF intrinsic value calculation and WACC × growth sensitivity matrix.
-- **Technical Tab**: Overlaid technical indicator chart (RSI, SMA, MACD).
-- **News Tab**: Deduplicated news feed from 7 financial news providers.
+Import them from the Apps menu of OpenBB, or add widgets one by one to your own dashboard.
 
-#### 2. Fonrex — Screener & Macro
-An idea generation and market context workspace:
-- **Screener Tab**: Real-time technical screener table.
-- **Macro Context Tab**: Key macroeconomic interest rates (FRED) and major index constituents (S&P 500, CAC 40, NASDAQ 100, DAX).
+## Widgets
 
-To import:
-1. Open the **Apps / Marketplace** menu in OpenBB.
-2. Select **"Import App"** and choose **Fonrex — EU Markets**.
-
----
-
-## Widget Reference Summary
-
-| Widget ID | Name | Category | Output Type |
+| Widget | Name | Category | Type |
 |---|---|---|---|
-| `fonrex_fundamentals` | Fonrex Fundamentals | Fundamentals | Table |
-| `fonrex_fundamentals_deep` | Fonrex Deep Fundamentals | Fundamentals | Table |
-| `fonrex_eod` | Fonrex EOD History | Historical | Chart (Plotly) |
-| `fonrex_history` | Fonrex OHLCV History | Historical | Chart (Plotly) |
-| `fonrex_quote` | Fonrex Quote | Market Data | Metric |
-| `fonrex_quotes_batch` | Fonrex Batch Quotes | Market Data | Table |
-| `fonrex_technical` | Fonrex Technical Indicator | Technical | Chart (Plotly) |
-| `fonrex_technical_multi` | Fonrex Multi-Indicator | Technical | Chart (Plotly) |
-| `fonrex_technical_chart` | Fonrex Technical Chart | Technical | Chart (Plotly) |
-| `fonrex_screener` | Fonrex Technical Screener | Technical | Table |
-| `fonrex_news` | Fonrex Ticker News | News | Table |
-| `fonrex_news_feed` | Fonrex News Feed | News | Table |
-| `fonrex_dcf` | Fonrex DCF Valuation | Valuation | Table |
-| `fonrex_dcf_compare` | Fonrex DCF Compare | Valuation | Table |
-| `fonrex_dcf_sensitivity` | Fonrex DCF Sensitivity | Valuation | Table |
-| `fonrex_insider_transactions` | Fonrex Insider Trading | Fundamentals | Table |
-| `fonrex_etf_details` | Fonrex ETF Details | Fundamentals | Table |
-| `fonrex_index_constituents` | Fonrex Index Constituents | Market Data | Table |
-| `fonrex_macro_rates` | Fonrex Macro Rates | Macro | Metric |
+| `fonrex_fundamentals` | Fonrex Fundamentals | Fundamentals | table |
+| `fonrex_fundamentals_deep` | Fonrex Deep Fundamentals | Fundamentals | table |
+| `fonrex_insider_transactions` | Fonrex Insider Transactions | Fundamentals | table |
+| `fonrex_etf_details` | Fonrex ETF Details | Fundamentals | table |
+| `fonrex_eod` | Fonrex EOD History | Historical | chart |
+| `fonrex_history` | Fonrex OHLCV History | Historical | chart |
+| `fonrex_quote` | Fonrex Quote | Market Data | metric |
+| `fonrex_quotes_batch` | Fonrex Batch Quotes | Market Data | table |
+| `fonrex_index_constituents` | Fonrex Index Constituents | Market Data | table |
+| `fonrex_technical` | Fonrex Technical Indicator | Technical | chart |
+| `fonrex_technical_multi` | Fonrex Multi-Indicator | Technical | chart |
+| `fonrex_technical_chart` | Fonrex Technical Chart | Technical | chart |
+| `fonrex_screener` | Fonrex Technical Screener | Technical | table |
+| `fonrex_news` | Fonrex News | News | table |
+| `fonrex_news_feed` | Fonrex News Feed | News | table |
+| `fonrex_dcf` | Fonrex DCF Valuation | Valuation | table |
+| `fonrex_dcf_compare` | Fonrex DCF Models Comparison | Valuation | table |
+| `fonrex_dcf_sensitivity` | Fonrex DCF Sensitivity Matrix | Valuation | table |
+| `fonrex_macro_rates` | Fonrex Macro Rates | Macro | metric |
 
----
+The routes behind them are listed in the [OpenBB API reference](../api-reference/openbb.md).
 
-## Troubleshooting Connection Issues
+## Good to know
 
-- **Connection Refused**: Verify `docker compose ps` shows `fonrex-api` is running and port `5000` is exposed.
-- **401 / 403 Errors**: Check that the `X-API-KEY` header in OpenBB matches the key set in your Fonrex `.env`.
-- **CORS Errors**: If running OpenBB Web, ensure your server allows requests from OpenBB domain or set `CORS_ORIGINS=*` in `.env`.
+- **Quotes**: the quote widget never starts a realtime stream. It shows the real-time price once the ticker is subscribed (`POST /realtime/subscribe` with a full-access key), the delayed Yahoo Finance price otherwise.
+- **Prices and indicators** need the ticker's prices in the database; the EOD widget ingests them on first use.
+- **DCF** needs the deep fundamentals of the ticker: open the deep fundamentals widget first.
+
+## Troubleshooting
+
+- **Connection refused**: check `docker compose ps` and that OpenBB can reach the URL.
+- **401 / 403**: the `X-API-KEY` header is missing or does not match a key of your `.env` (restart the API after changing it).
+- **CORS error**: the browser calls your instance from the OpenBB origin. `OPENBB_ALLOWED_ORIGIN` (default `https://pro.openbb.co`) lists the allowed origins, comma-separated.

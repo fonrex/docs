@@ -2,56 +2,46 @@
 id: "environment-variables"
 title: "Environment Variables Deployment Reference"
 sidebar_label: "Environment Variables"
-description: "Comprehensive deployment reference for all environment variables used by python modules"
+description: "The settings that matter when deploying Fonrex, and how .env reaches the containers"
 ---
 
 # Environment Variables Deployment Reference
 
-Below is the complete inventory of environment variables referenced across all Fonrex Python modules (`os.getenv(...)`).
+Every setting is described in [Configuration](../getting-started/configuration.md). This page covers what matters for a deployment.
 
-## 1. Database & Persistence
+## How `.env` reaches the containers
 
-- `DATABASE_URL`: Full PostgreSQL connection URL.
-- `ASYNC_DATABASE_URL`: AsyncPG driver connection URL (derived automatically if empty).
-- `POSTGRES_DB`: PostgreSQL database name.
-- `POSTGRES_USER`: PostgreSQL username.
-- `POSTGRES_PASSWORD`: PostgreSQL password.
+- `docker-compose.yml` loads `.env` into the API container (`env_file`).
+- It then **overrides** the service addresses written for a local run: `DATABASE_URL` (built from `POSTGRES_PASSWORD`, host `db`), `REDIS_URL` (host `redis`) and `ASYNC_DATABASE_URL` (emptied, so it is derived from `DATABASE_URL`). It also sets `WEB_CONCURRENCY` and clears `HTTP_PROXY` / `HTTPS_PROXY`.
+- `.env` is never copied into the image.
+- One `KEY=value` per line; a comment after an empty value is read as the value.
 
-## 2. In-Memory Cache & Pub/Sub
+Every variable of `.env.example` is read by the code (`tests/test_env_settings.py`); an invalid value falls back to its default with a warning instead of stopping the API.
 
-- `REDIS_URL`: Connection string for Redis.
-- `CACHE_TTL`: Global default cache TTL in seconds.
+## Must be set
 
-## 3. Web & Application Server
+| Variable | Why |
+|---|---|
+| `FONREX_API_KEY` | Without a key, every protected route answers `401` |
+| `FONREX_READ_ONLY_API_KEYS` | Keys for clients outside the machine (Sheets, dashboards) |
+| `POSTGRES_PASSWORD` | Before the first start; stored in the volume at initialisation |
+| `SEC_EDGAR_EMAIL` | Your contact address: the SEC refuses anonymous automated clients |
 
-- `FLASK_ENV` / `ENVIRONMENT`: Environment mode (`production`, `development`).
-- `SECRET_KEY`: Cryptographic signing secret.
-- `PORT`: HTTP listener port (default `5000`).
+## Never in production
 
-## 4. Market Data & Streaming
+| Setting | Why |
+|---|---|
+| `FONREX_AUTH_REQUIRED=false` | Opens every route, including cache and database administration (only effective when no key is configured) |
+| `WEB_CONCURRENCY` > 1 | Duplicates realtime streams and the daily canary |
+| `USAGE_LOG_IP=full` | Keeps full caller IP addresses in `usage_logs`; prefer `none` or `truncated` |
 
-- `TV_MAX_CONNECTIONS`: Max WebSocket connections to TradingView.
-- `TV_RECONNECT_DELAY`: Initial delay for WebSocket reconnect backoff.
-- `REALTIME_QUOTE_TTL`: Snapshot TTL in Redis.
-- `REALTIME_AUTO_SUBSCRIBE`: Flag to enable auto-subscriptions on quote requests.
+## Often adjusted
 
-## 5. Indicator Calculation
-
-- `TECHNICAL_CACHE_ENABLED`: Enable/disable Redis caching of indicator series.
-- `TECHNICAL_DEFAULT_LIMIT`: Default OHLCV window size.
-- `TECHNICAL_MAX_BATCH_TICKERS`: Max tickers per batch API call.
-- `TECHNICAL_MAX_BATCH_INDICATORS`: Max indicators per batch call.
-
-## 6. Provider Quality & Health
-
-- `VALIDATION_OUTLIER_THRESHOLD`: Max allowed consensus deviation (e.g. `0.50`).
-- `VALIDATION_MIN_PROVIDERS`: Minimum provider count for consensus calculation.
-- `CANARY_RUN_HOUR`: Hour UTC to trigger daily canary checks (0-23).
-- `CANARY_PROVIDER_SEMAPHORE`: Max parallel canary check workers.
-
-## 7. Authentication & OpenBB Integration
-
-- `OPENBB_API_KEY`: API key allowed for OpenBB Workspace integrations.
-- `FONREX_API_KEY` / `FONREX_RELAY_KEY`: Configured valid API keys for authentication.
-- `FONREX_AUTH_REQUIRED`: Enforce strict authentication (`true` or `false`).
-
+| Variable | Default | When |
+|---|---|---|
+| `FRED_API_KEY` | *(empty)* | Live risk-free rate for the DCF |
+| `FONREX_PROXY_URL`, `FONREX_PROXY_PROVIDERS` | *(empty)* | Websites refusing your server's IP |
+| `FONREX_PROVIDER_MAX_CONCURRENCY` | `4` | Fewer simultaneous requests per website |
+| `OPENBB_ALLOWED_ORIGIN` | `https://pro.openbb.co` | Another OpenBB origin (CORS) |
+| `USAGE_LOG_RETENTION_DAYS` | `90` | Usage log retention |
+| `CANARY_RUN_HOUR` | `6` | Hour (UTC) of the daily provider check |

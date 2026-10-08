@@ -1,75 +1,94 @@
 ---
 id: "news"
-title: "Référence API Agrégateur d'Actualités"
-sidebar_label: "Agrégateur d'Actualités"
-description: "Endpoints pour les flux d'actualités multi-sources, articles par ticker et ingestion en arrière-plan"
+title: "Référence API Agrégateur d'actualités"
+sidebar_label: "Actualités"
+description: "Les actualités d'un ticker issues de 7 fournisseurs, dédoublonnées, et le flux global des articles enregistrés"
 ---
 
+# Référence API Agrégateur d'actualités
 
-# Référence API Agrégateur d'Actualités
-
-The Agrégateur d'Actualités API collects, deduplicates, and classifies financial news articles across 7 scrapers: Yahoo Finance, Google Finance, ZoneBourse, Boursorama, Investing.com, MarketWatch, and MSN Finance.
+`GET /news/{ticker}` interroge sept fournisseurs en parallèle (Yahoo Finance, Google Finance, ZoneBourse, Boursorama, Investing.com, MarketWatch et MSN Finance), supprime les doublons et enregistre dans `news_articles` les articles des instruments présents dans le catalogue. Voir [Fournisseurs d'actualités](../providers/news-providers.md).
 
 ---
 
 ## <span className="api-method get">GET</span> `/news/{ticker}`
 
-Récupérer les articles d'actualités financières mentionnant un ticker spécifique. Résultats mis en cache dans Redis pendant 30 minutes.
+| Paramètre | Type | Défaut | Description |
+|---|---|---|---|
+| `ticker` | string | — | Ticker (ex. `AIR.PA`) |
+| `limit` | integer | `20` | Nombre d'articles renvoyés (au plus `NEWS_MAX_LIMIT`, 100) |
+| `language` | string | — | Ne garder que cette langue (`en`, `fr`…) ; les articles de langue inconnue sont conservés. `all` signifie aucun filtre |
+| `force_refresh` | boolean | `false` | Ignorer la réponse en cache |
 
-### Paramètres
-
-| Paramètre | Type | Requis | Défaut | Description |
-|---|---|---|---|---|
-| `ticker` | `string` | ✅ | — | Ticker financier (ex. `AIR.PA`, `AAPL`) |
-| `limit` | `integer` | ❌ | `20` | Nombre d'articles |
-| `lang` | `string` | ❌ | — | Filtre par langue (`en`, `fr`) |
-
-### Exemple de Réponse
+```bash
+curl -s -H "X-API-KEY: $FONREX_API_KEY" "http://localhost:5000/news/AIR.PA?limit=5&language=fr"
+```
 
 ```json
 {
   "ticker": "AIR.PA",
-  "count": 2,
+  "isin": "NL0000235190",
+  "count": 1,
+  "providers": ["boursorama"],
+  "cached": false,
   "articles": [
     {
-      "id": 842,
-      "title": "Airbus Delivers 65 Aircraft in July, Reaffirms Full-Year Target",
-      "summary": "Airbus reported strong commercial airplane deliveries for July...",
-      "url": "https://www.marketwatch.com/story/airbus-delivers-65-aircraft-2026",
-      "source": "MarketWatch",
-      "provider": "marketwatch_news",
-      "author": "Financial Desk",
-      "published_at": "2026-08-10T14:30:00Z",
-      "sentiment": "POSITIVE",
-      "sentiment_score": 0.78,
-      "language": "en"
+      "title": "Airbus : livraisons en hausse en septembre",
+      "summary": "...",
+      "url": "https://www.boursorama.com/bourse/actualites/...",
+      "image_url": null,
+      "source": "Boursorama",
+      "provider": "boursorama",
+      "author": null,
+      "published_at": "2026-10-08T07:45:00Z",
+      "related_tickers": [],
+      "language": "fr"
     }
   ]
 }
 ```
 
+Chaque réponse est mise en cache 30 minutes (`NEWS_CACHE_TTL`), séparément pour chaque `limit` et chaque langue. Un fournisseur en échec ne renvoie rien sans bloquer les autres.
+
+### Dédoublonnage
+
+1. **URL** : minuscules, paramètres `utm_*`, fragment et barre oblique finale supprimés. Le premier article reçu est conservé.
+2. **Similarité des titres** : `difflib.SequenceMatcher` sur les titres normalisés ; à partir de `NEWS_DEDUP_SIMILARITY` (0.85), l'article le plus récent est conservé.
+
+Les articles sont ensuite triés du plus récent au plus ancien et tronqués à `limit` (chaque fournisseur est interrogé pour le double de ce nombre).
+
 ---
 
 ## <span className="api-method get">GET</span> `/news/feed`
 
-Récupérer le flux d'actualités financières global pour tous les actifs.
+Les derniers articles enregistrés dans `news_articles`, tous instruments confondus. Rien n'est récupéré auprès des fournisseurs.
 
-### Paramètres
+| Paramètre | Type | Défaut | Description |
+|---|---|---|---|
+| `limit` | integer | `50` | Nombre d'articles renvoyés |
+| `language` | string | — | Filtre de langue (`all` = aucun) |
+| `tickers` | string | — | Tickers séparés par des virgules ; conserve les articles liés à l'un d'eux |
 
-| Paramètre | Type | Requis | Défaut | Description |
-|---|---|---|---|---|
-| `limit` | `integer` | ❌ | `20` | Nombre maximum d'articles à retourner |
-| `lang` | `string` | ❌ | — | Filtrer par langue (`en`, `fr`) |
-| `provider` | `string` | ❌ | — | Filtrer par provider (ex. `zonebourse_news`) |
+```json
+{ "count": 0, "from_date": null, "to_date": null, "articles": [] }
+```
 
 ---
 
 ## <span className="api-method post">POST</span> `/news/{ticker}/refresh`
 
-Déclencher un rafraîchissement asynchrone en arrière-plan des scrapers d'actualités pour un ticker sans bloquer la requête.
+Récupérer à nouveau les actualités d'un ticker en arrière-plan et répondre immédiatement : `{"status": "queued", "ticker": "AIR.PA"}`. Clé à accès complet uniquement.
 
 ---
 
 ## <span className="api-method get">GET</span> `/news/stats`
 
-Récupérer les statistiques globales de l'agrégateur d'actualités (nombre total d'articles indexés, répartition par provider, totaux par langue).
+```json
+{
+  "total_articles": 0,
+  "by_provider": {},
+  "by_language": {},
+  "last_fetched_at": null,
+  "top_assets": {}
+}
+```

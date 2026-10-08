@@ -2,176 +2,76 @@
 id: "openbb"
 title: "OpenBB Workspace 集成 API"
 sidebar_label: "OpenBB 集成"
-description: "OpenBB Workspace 适配器、组件发现、预置应用及身份验证 API 参考文档"
+description: "为 OpenBB Workspace 组件提供数据的 /openbb 路由和发现文件"
 ---
 
 # OpenBB Workspace 集成 API
 
-Fonrex 为 **OpenBB Workspace**（桌面端与云端）提供原生后端接口。`/openbb` 路由将 Fonrex 核心金融数据模型转换为 OpenBB 小组件（Widget）所需的严格 Schema 契约：
+`/openbb` 路由从你自己的实例为 [OpenBB Workspace](https://openbb.co) 的组件提供数据。每个路由调用其所适配的 Fonrex 路由，并将响应重塑为 OpenBB 所需的三种格式之一：
 
-- **指标卡片** (`type: "metric"`): `[ { "label": "...", "value": ..., "delta": ... } ]`
-- **Plotly 图表** (`type: "chart"`): `Plotly.js` 图表 JSON 对象 `{ "data": [...], "layout": {...} }`
-- **数据表格** (`type: "table"`): 适用于 AgGrid 的展平行记录数组 `[ { ... }, { ... } ]`
+- **metric**：指标卡片列表 `[{"label": "...", "value": ..., "delta": ...}]`
+- **chart**：Plotly 图形 `{"data": [...], "layout": {...}}`
+- **table**：供 AgGrid 使用的扁平行列表 `[{...}, {...}]`
 
----
+配置方法见 [OpenBB Workspace 指南](../guides/openbb-workspace.md)。
 
-## 身份验证 (Authentication)
+## 认证
 
-OpenBB Workspace 支持通过自定义 HTTP 请求头进行 REST 后端身份验证。Fonrex 通过双重提取验证请求凭据：
+| 路由 | 密钥 |
+|---|---|
+| `GET /widgets.json`, `GET /apps.json` | 无需密钥——OpenBB 在配置密钥之前就会获取它们 |
+| `GET /openbb/...` | 必需，放在 `X-API-KEY` 请求头中（或 `Authorization: Bearer`） |
 
-| 验证方式 | 请求头 (Header) | 使用示例 |
-|---|---|---|
-| **API Key 请求头 (推荐)** | `X-API-KEY: frx_live_...` | OpenBB Workspace 中配置的原生自定义请求头 |
-| **Bearer Token** | `Authorization: Bearer frx_live_...` | 标准 HTTP 客户端与 curl 请求 |
+只读密钥（`FONREX_READ_ONLY_API_KEYS`）即可使用所有组件。CORS 接受 `OPENBB_ALLOWED_ORIGIN` 中的来源（默认为 `https://pro.openbb.co`）。
 
-> **提示**：两种请求头格式最终均映射至相同的底层密钥验证逻辑。如果您的实例启用了身份验证，请在 `.env` 文件中设置 `OPENBB_API_KEY` 或 `FONREX_API_KEY`。
+## 发现文件
 
----
+- `GET /widgets.json`——19 个组件：每个组件的名称、类别、类型、路由和参数（`integrations/openbb/widgets.json`）。
+- `GET /apps.json`——两个预先组装好的仪表板：**Fonrex — EU Markets** 和 **Fonrex — Screener & Macro**（`integrations/openbb/apps.json`）。
 
-## 发现与应用端点
+## 路由
 
-### 发现可用小组件
+| 组件 | 类型 | 路由 | 适配自 |
+|---|---|---|---|
+| `fonrex_quote` | metric | `GET /openbb/quote/{ticker}` | `/quote/{ticker}` |
+| `fonrex_macro_rates` | metric | `GET /openbb/macro/rates` | `/macro/rates` |
+| `fonrex_eod` | chart | `GET /openbb/eod/{ticker}`（`period` 默认为 1y） | `/eod/{ticker}` |
+| `fonrex_history` | chart | `GET /openbb/ticker/{symbol}/history` | `/ticker/{symbol}/history` |
+| `fonrex_technical` | chart | `GET /openbb/technical/{ticker}` | `/technical/{ticker}` |
+| `fonrex_technical_multi` | chart | `GET /openbb/technical/{ticker}/multi` | `/technical/{ticker}/multi` |
+| `fonrex_technical_chart` | chart | `GET /openbb/technical/{ticker}/chart` | `/technical/{ticker}/chart` |
+| `fonrex_fundamentals` | table | `GET /openbb/fundamental` | `/fundamental` |
+| `fonrex_fundamentals_deep` | table | `GET /openbb/fundamental/deep` | `/fundamental/deep` |
+| `fonrex_quotes_batch` | table | `GET /openbb/quotes` | `/quotes` |
+| `fonrex_screener` | table | `GET /openbb/technical/screen` | `/technical/screen` |
+| `fonrex_news` | table | `GET /openbb/news/{ticker}` | `/news/{ticker}` |
+| `fonrex_news_feed` | table | `GET /openbb/news/feed` | `/news/feed` |
+| `fonrex_dcf` | table | `GET /openbb/dcf/{ticker}` | `/dcf/{ticker}` |
+| `fonrex_dcf_compare` | table | `GET /openbb/dcf/{ticker}/compare` | `/dcf/{ticker}/compare` |
+| `fonrex_dcf_sensitivity` | table | `GET /openbb/dcf/{ticker}/sensitivity` | `/dcf/{ticker}/sensitivity` |
+| `fonrex_insider_transactions` | table | `GET /openbb/insider-transactions/{ticker}` | `/insider-transactions/{ticker}` |
+| `fonrex_etf_details` | table | `GET /openbb/etf/{isin}/details` | `/etf/{isin}/details` |
+| `fonrex_index_constituents` | table | `GET /openbb/index/{index_name}/constituents` | `/index/{index_name}/constituents` |
 
-```http
-GET /openbb/widgets.json
+每个路由接受其所适配路由的参数（参见相应的 API 参考页面），但有少数差异：`/openbb/fundamental` 没有 `fmt`；`/openbb/technical/{ticker}/multi` 没有 `include_ohlcv`，默认为 `sma_20,ema_50,rsi_14`；`/openbb/technical/{ticker}/chart` 默认为 `sma_20,rsi_14`；`/openbb/news/feed` 默认返回 20 篇文章。
+
+`GET /openbb/quote/{ticker}` 从不启动实时数据流：当该代码已通过 `POST /realtime/subscribe` 订阅时，报价为实时报价，否则为 Yahoo Finance 的延迟价格。
+
+## 示例
+
+```bash
+curl -s -H "X-API-KEY: $FONREX_API_KEY" "http://localhost:5000/openbb/quote/AIR.PA"
 ```
 
-返回 Fonrex 实例提供的全部 19 个交互式小组件清单。添加 Fonrex 为自定义数据源时，OpenBB Workspace 会自动查询此端点。
-
-### 获取预置应用配置
-
-```http
-GET /openbb/apps.json
+```json
+[
+  { "label": "AIR.PA Price", "value": 154.6, "delta": 0.13 },
+  { "label": "Change", "value": "+0.20", "delta": "+0.13%" },
+  { "label": "Previous Close", "value": 154.4, "delta": null },
+  { "label": "Day High", "value": 155.48, "delta": null },
+  { "label": "Day Low", "value": 155.1, "delta": null },
+  { "label": "Volume", "value": 18250, "delta": null }
+]
 ```
 
-返回 OpenBB Workspace 的预置 Dashboard 应用配置：
-1. **Fonrex — EU Markets**：单代码深度分析仪表盘（概览、估值、技术分析、新闻标签页）。
-2. **Fonrex — Screener & Macro**：市场选股与宏观分析仪表盘（技术指标选股器与 FRED 宏观经济数据）。
-
----
-
-## 数据接口 (Data Endpoints)
-
-### 指标端点 (`type: "metric"`)
-
-#### 实时行情指标
-```http
-GET /openbb/quote/{ticker}
-```
-返回实时价格快照、涨跌幅、成交量及当日高低价指标卡片。
-
-#### 宏观利率
-```http
-GET /openbb/macro/rates
-```
-返回当前宏观经济利率与收益率数据（结合 FRED API）。
-
----
-
-### 图表端点 (`type: "chart"`)
-
-#### EOD K线图
-```http
-GET /openbb/eod/{ticker}?period=1y&order=a
-```
-返回日线级 OHLCV 历史价格 Plotly K线图表。
-
-#### 历史 K线数据
-```http
-GET /openbb/ticker/{symbol}/history?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD&interval=1D
-```
-返回指定日期范围的 Plotly K线图表。
-
-#### 单技术指标图表
-```http
-GET /openbb/technical/{ticker}?indicator=rsi&period=14
-```
-返回单个技术指标时间序列 Plotly 折线图。
-
-#### 多技术指标组合图表
-```http
-GET /openbb/technical/{ticker}/multi?indicators=sma_20,ema_50,rsi_14
-```
-在单个 Plotly 图表中叠加展示多个技术指标。
-
-#### 技术分析叠加图表
-```http
-GET /openbb/technical/{ticker}/chart?indicators=sma_20,rsi_14
-```
-返回包含 K线价格主图及技术指标主/副图的叠加 Plotly 图表。
-
----
-
-### 表格端点 (`type: "table"`)
-
-#### 多源基本面数据
-```http
-GET /openbb/fundamental?ticker=AAPL
-```
-将多源基本面指标（市盈率 P/E、净资产收益率 ROE、股息率、市值）展平为表格记录。
-
-#### 深度财务报表与 ESG
-```http
-GET /openbb/fundamental/deep?ticker=AAPL&sections=all
-```
-返回财务报表、ESG 评分、分析师评级及内部交易数据。
-
-#### 批量行情表格
-```http
-GET /openbb/quotes?tickers=AAPL,MSFT,SAP.DE
-```
-返回多个代码的实时价格快照结构化表格。
-
-#### DCF 内在价值估值
-```http
-GET /openbb/dcf/{ticker}
-```
-返回自由现金流 (FCF)、每股收益 (EPS) 及股息贴现 (DDM) 模型的估值结果。
-
-#### DCF 模型对比
-```http
-GET /openbb/dcf/{ticker}/compare
-```
-返回 3 种 DCF 估值模型的横向对比表格。
-
-#### DCF 敏感性分析矩阵
-```http
-GET /openbb/dcf/{ticker}/sensitivity?model=fcf&wacc_min=0.06&wacc_max=0.16&growth_min=0.01&growth_max=0.05
-```
-返回 WACC × 永续增长率敏感性分析矩阵。
-
-#### 技术指标选股器
-```http
-GET /openbb/technical/screen?indicator=rsi&operator=lt&value=30
-```
-筛选满足技术指标阈值的股票并返回表格结果。
-
-#### 聚合新闻表格
-```http
-GET /openbb/news/{ticker}?limit=20
-```
-返回经过去重处理的 7 大新闻源财经营销新闻。
-
-#### 全球财经新闻流
-```http
-GET /openbb/news/feed?limit=20
-```
-返回全球实时财经新闻资讯列表。
-
-#### 内部人交易
-```http
-GET /openbb/insider_transactions/{ticker}?limit=20
-```
-返回美股 SEC Form 4 高管/内部人交易记录。
-
-#### ETF 详情
-```http
-GET /openbb/etf/{isin}/details
-```
-返回 UCITS ETF 元数据、基金规模、管理费率 (TER)、前十大持仓及行业分布。
-
-#### 指数成分股
-```http
-GET /openbb/index/{index_name}/constituents
-```
-返回主要指数（`sp500`、`cac40`、`nasdaq100`、`dax`）的成分股列表。
+此示例为 Yahoo Finance 的延迟报价。没有值的卡片（无前收盘价、无成交量……）会被省略。

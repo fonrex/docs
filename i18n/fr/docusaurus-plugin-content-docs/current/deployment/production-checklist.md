@@ -1,28 +1,34 @@
 ---
 id: "production-checklist"
-title: "Checklist de Déploiement en Production"
-sidebar_label: "Checklist de Production"
-description: "Checklist obligatoire de sécurité, performance, monitoring et sauvegardes avant la mise en production"
+title: "Liste de contrôle du déploiement en production"
+sidebar_label: "Liste de contrôle production"
+description: "Vérifications de sécurité, de configuration, de surveillance et de sauvegarde avant d'exposer une instance"
 ---
 
+# Liste de contrôle du déploiement en production
 
-# Checklist de Déploiement en Production
+## Sécurité
+- [ ] `FONREX_API_KEY` défini avec une clé aléatoire (`echo "frx_live_$(openssl rand -hex 24)"`) ; `FONREX_AUTH_REQUIRED` laissé à `true`.
+- [ ] Des clés en lecture seule (`FONREX_READ_ONLY_API_KEYS`) pour chaque client extérieur à la machine : Google Sheets, tableaux de bord, OpenBB.
+- [ ] `POSTGRES_PASSWORD` modifié avant le premier démarrage.
+- [ ] PostgreSQL et Redis publiés sur `127.0.0.1` uniquement (par défaut) ; l'API accessible uniquement via le reverse proxy.
+- [ ] TLS sur le reverse proxy, upgrade WebSocket transmis pour `/ws/`.
+- [ ] `USAGE_LOG_IP` à `none` ou `truncated`.
+- [ ] `.env` et les dumps de la base jamais commités.
 
-Before going live with a production Fonrex instance, verify every item on this checklist:
+## Configuration
+- [ ] `SEC_EDGAR_EMAIL` défini avec votre propre adresse de contact.
+- [ ] `WEB_CONCURRENCY=1`.
+- [ ] `FRED_API_KEY` défini si vous utilisez le DCF.
+- [ ] Un proxy (`FONREX_PROXY_URL`) pour les sites qui refusent l'IP de votre serveur, si besoin.
 
-## 🔒 Security & Environment
-- [ ] Changed default Mot de passe PostgreSQL in `.env` (`POSTGRES_PASSWORD`).
-- [ ] Changed `SECRET_KEY` in `.env` to a cryptographically random 64-character string.
-- [ ] Ensured `SEC_EDGAR_EMAIL` contains a valid corporate contact email.
-- [ ] Restricted access to PostgreSQL port `5432` and Redis port `6379` via firewall rules (only accessible internally to `fonrex-api`).
-- [ ] Configured TLS 1.3 / SSL certificates on NGINX / reverse proxy.
+## Données
+- [ ] Instruments importés (`import_assets.py`) et prix ingérés (`scripts/ingest_all.py`).
+- [ ] `POST /database/cleanup` jamais exécuté avec le `days_to_keep` par défaut (730), sauf si vous voulez supprimer huit des dix années ingérées : comptez d'abord avec `dry_run`.
+- [ ] Sauvegarde quotidienne par `pg_dump` de toute la base, restauration testée au moins une fois.
 
-## ⚡ Performance & Caching
-- [ ] Verified Redis memory policy is set to `maxmemory-policy allkeys-lru`.
-- [ ] Configured PostgreSQL `shared_buffers` and `work_mem` for TimescaleDB workloads.
-- [ ] Verified TimescaleDB intraday automatic retention chunk purges are operational.
-
-## Health Monitoring & Backups
-- [ ] Tested `/health` and `/health/providers` API endpoints.
-- [ ] Configured daily `pg_dump` backups for `assets`, `asset_listings`, and `fundamentals` tables.
-- [ ] Verified daily Canary checks run automatically at 06:00 UTC.
+## Surveillance
+- [ ] `/health` répond, `providers.unavailable` est vide.
+- [ ] `/health/providers` rempli après la première exécution du canari (06:00 UTC par défaut).
+- [ ] Alertes critiques vérifiées régulièrement : `GET /health/alerts?severity=critical`.
+- [ ] Health check du conteneur au vert : `docker compose ps`.

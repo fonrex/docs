@@ -1,58 +1,47 @@
 ---
 id: "environment-variables"
-title: "Référence de Déploiement des Variables d'Environnement"
-sidebar_label: "Variables d'Environnement"
-description: "Référence complète de déploiement pour toutes les variables d'environnement utilisées par les modules Python"
+title: "Référence des variables d'environnement pour le déploiement"
+sidebar_label: "Variables d'environnement"
+description: "Les réglages qui comptent pour déployer Fonrex, et comment .env parvient aux conteneurs"
 ---
 
+# Référence des variables d'environnement pour le déploiement
 
-# Référence de Déploiement des Variables d'Environnement
+Chaque réglage est décrit dans [Configuration](../getting-started/configuration.md). Cette page couvre ce qui compte pour un déploiement.
 
-Below is the complete inventory of environment variables referenced across all Fonrex Python modules (`os.getenv(...)`).
+## Comment `.env` parvient aux conteneurs
 
-## 1. Database & Persistence
+- `docker-compose.yml` charge `.env` dans le conteneur de l'API (`env_file`).
+- Il **remplace** ensuite les adresses de services écrites pour une exécution locale : `DATABASE_URL` (construite à partir de `POSTGRES_PASSWORD`, hôte `db`), `REDIS_URL` (hôte `redis`) et `ASYNC_DATABASE_URL` (vidée, pour qu'elle soit dérivée de `DATABASE_URL`). Il fixe aussi `WEB_CONCURRENCY` et vide `HTTP_PROXY` / `HTTPS_PROXY`.
+- `.env` n'est jamais copié dans l'image.
+- Un `KEY=value` par ligne ; un commentaire placé après une valeur vide est lu comme la valeur.
 
-- `DATABASE_URL`: URL de connexion PostgreSQL complète.
-- `ASYNC_DATABASE_URL`: URL de connexion pour le driver AsyncPG (déduite automatiquement si vide).
-- `POSTGRES_DB`: Nom de la base de données PostgreSQL.
-- `POSTGRES_USER`: Nom d'utilisateur PostgreSQL.
-- `POSTGRES_PASSWORD`: Mot de passe PostgreSQL.
+Chaque variable de `.env.example` est lue par le code (`tests/test_env_settings.py`) ; une valeur invalide revient à sa valeur par défaut avec un avertissement au lieu d'arrêter l'API.
 
-## 2. In-Memory Cache & Pub/Sub
+## À définir obligatoirement
 
-- `REDIS_URL`: Chaîne de connexion pour Redis.
-- `CACHE_TTL`: TTL de cache par défaut global en secondes.
+| Variable | Pourquoi |
+|---|---|
+| `FONREX_API_KEY` | Sans clé, toutes les routes protégées répondent `401` |
+| `FONREX_READ_ONLY_API_KEYS` | Clés pour les clients extérieurs à la machine (Sheets, tableaux de bord) |
+| `POSTGRES_PASSWORD` | Avant le premier démarrage ; enregistré dans le volume à l'initialisation |
+| `SEC_EDGAR_EMAIL` | Votre adresse de contact : la SEC refuse les clients automatisés anonymes |
 
-## 3. Web & Application Server
+## Jamais en production
 
-- `FLASK_ENV` / `ENVIRONMENT`: Mode d'environnement (`production`, `development`).
-- `SECRET_KEY`: Clé secrète de signature cryptographique.
-- `PORT`: Port d'écoute HTTP (par défaut `5000`).
+| Réglage | Pourquoi |
+|---|---|
+| `FONREX_AUTH_REQUIRED=false` | Ouvre toutes les routes, y compris l'administration du cache et de la base (effectif uniquement lorsqu'aucune clé n'est configurée) |
+| `WEB_CONCURRENCY` > 1 | Duplique les flux temps réel et le canari quotidien |
+| `USAGE_LOG_IP=full` | Conserve les adresses IP complètes des appelants dans `usage_logs` ; préférez `none` ou `truncated` |
 
-## 4. Market Data & Streaming
+## Souvent ajustées
 
-- `TV_MAX_CONNECTIONS`: Connexions WebSocket maximum vers TradingView.
-- `TV_RECONNECT_DELAY`: Délai initial pour la reconnexion WebSocket (backoff).
-- `REALTIME_QUOTE_TTL`: TTL des snapshots dans Redis.
-- `REALTIME_AUTO_SUBSCRIBE`: Drapeau d'activation de l'auto-abonnement lors des requêtes de quote.
-
-## 5. Indicator Calculation
-
-- `TECHNICAL_CACHE_ENABLED`: Activer/désactiver le cache Redis des séries d'indicateurs.
-- `TECHNICAL_DEFAULT_LIMIT`: Défaut OHLCV window size.
-- `TECHNICAL_MAX_BATCH_TICKERS`: Tickers maximum par appel API en masse.
-- `TECHNICAL_MAX_BATCH_INDICATORS`: Indicateurs maximum par appel en masse.
-
-## 6. Provider Quality & Health
-
-- `VALIDATION_OUTLIER_THRESHOLD`: Déviation de consensus maximum autorisée (ex. `0.50`).
-- `VALIDATION_MIN_PROVIDERS`: Nombre minimum de providers pour le calcul du consensus.
-- `CANARY_RUN_HOUR`: Heure UTC pour déclencher les contrôles canary quotidiens (0-23).
-- `CANARY_PROVIDER_SEMAPHORE`: Nombre maximum de workers de contrôles canary parallèles.
-
-## 7. Authentification & Intégration OpenBB
-
-- `OPENBB_API_KEY` : Clé API autorisée pour l'intégration OpenBB Workspace.
-- `FONREX_API_KEY` / `FONREX_RELAY_KEY` : Clés API valides configurées pour l'authentification.
-- `FONREX_AUTH_REQUIRED` : Activer l'authentification stricte (`true` ou `false`).
-
+| Variable | Défaut | Quand |
+|---|---|---|
+| `FRED_API_KEY` | *(vide)* | Taux sans risque en direct pour le DCF |
+| `FONREX_PROXY_URL`, `FONREX_PROXY_PROVIDERS` | *(vide)* | Sites qui refusent l'IP de votre serveur |
+| `FONREX_PROVIDER_MAX_CONCURRENCY` | `4` | Moins de requêtes simultanées par site |
+| `OPENBB_ALLOWED_ORIGIN` | `https://pro.openbb.co` | Une autre origine OpenBB (CORS) |
+| `USAGE_LOG_RETENTION_DAYS` | `90` | Rétention du journal d'utilisation |
+| `CANARY_RUN_HOUR` | `6` | Heure (UTC) de la vérification quotidienne des fournisseurs |

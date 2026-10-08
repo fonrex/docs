@@ -2,115 +2,129 @@
 id: "first-api-call"
 title: "Making Your First API Call"
 sidebar_label: "First API Call"
-description: "Learn how to retrieve financial data, technical indicators, and real-time streams using cURL, Python, and WebSocket clients"
+description: "Authenticate and query prices, indicators and real-time quotes with cURL, Python and WebSocket clients"
 ---
 
 # Making Your First API Call
 
-This guide demonstrates how to interact with Fonrex using REST HTTP endpoints and real-time WebSockets.
+Every route except `/health`, `/docs`, `/redoc`, `/openapi.json`, `/widgets.json`, `/apps.json` and `/static` requires an API key, sent in one of two headers:
 
-## 1. Get EOD Price History
+```
+Authorization: Bearer frx_live_...
+X-API-KEY: frx_live_...
+```
 
-Retrieve End-of-Day (EOD) OHLCV historical prices for **Airbus SE (`AIR.PA`)**.
+A missing key answers `401`, an unknown key `403`. The examples below use the key you set in `.env` during the [installation](installation.md):
 
-### cURL
 ```bash
-curl -s "http://localhost:5000/eod/AIR.PA?period=1mo"
+export FONREX_API_KEY="frx_live_..."   # the value of FONREX_API_KEY in .env
+AUTH="X-API-KEY: $FONREX_API_KEY"
 ```
 
-### Python
-```python
-import requests
+The interactive documentation of your instance is at `http://localhost:5000/docs`.
 
-url = "http://localhost:5000/eod/AIR.PA"
-params = {"period": "1mo"}
-response = requests.get(url, params=params)
+## 1. End-of-day prices
 
-data = response.json()
-print(f"Ticker: {data['symbol']}, Total Candles: {len(data['data'])}")
-for bar in data['data']:
-    print(f"Date: {bar['time']} | Close: {bar['close']} {data['currency']}")
+```bash
+curl -s -H "$AUTH" "http://localhost:5000/eod/AIR.PA?period=5d"
 ```
 
-### Sample Response
+When nothing is stored yet for the listing, Fonrex ingests its history first (Yahoo Finance, TradingView as a fallback), so the first call can take a few seconds.
+
 ```json
 {
-  "symbol": "AIR.PA",
-  "name": "Airbus SE",
-  "currency": "EUR",
-  "resolution": "d",
-  "count": 5,
+  "ticker": "AIR.PA",
+  "period": "5d",
+  "format": "json",
+  "count": 3,
+  "retrieved_at": "2026-10-08T16:34:42.404598+00:00",
+  "data_source": "database",
   "data": [
     {
-      "time": "2026-08-07T00:00:00Z",
-      "open": 134.20,
-      "high": 136.50,
-      "low": 133.80,
-      "close": 135.90,
-      "adj_close": 135.90,
-      "volume": 1245000
+      "Date": "2026-10-07",
+      "Open": 154.46,
+      "High": 156.46,
+      "Low": 152.46,
+      "Close": 155.46,
+      "Adj Close": 155.46,
+      "Volume": 1400000
     }
   ]
 }
 ```
 
----
-
-## 2. Compute Technical Indicators
-
-:::note Prerequisite
-Before computing technical indicators for a ticker (e.g., `AAPL`), historical data must be ingested first via `POST /historical/ingest?ticker=AAPL` (e.g., `curl -X POST "http://localhost:5000/historical/ingest?ticker=AAPL"`). If data has not been ingested beforehand, the endpoint will return `{"detail":"No historical data found for AAPL"}`.
-:::
-
-Calculate a 14-period **RSI (Relative Strength Index)** for **Apple Inc. (`AAPL`)**.
-
-### cURL
-```bash
-curl -s "http://localhost:5000/technical/AAPL?indicator=rsi&period=14"
-```
+Add `&fmt=csv` for CSV. When several listings share a ticker, choose one with `currency` or `exchange`.
 
 ### Python
+
 ```python
+import os
 import requests
 
-resp = requests.get("http://localhost:5000/technical/AAPL", params={"indicator": "rsi", "period": 14})
-rsi_data = resp.json()
-latest_rsi = rsi_data["values"][-1]
-print(f"AAPL Current RSI(14): {latest_rsi['value']:.2f}")
+session = requests.Session()
+session.headers["X-API-KEY"] = os.environ["FONREX_API_KEY"]
+
+eod = session.get("http://localhost:5000/eod/AIR.PA", params={"period": "1mo"}).json()
+for bar in eod["data"]:
+    print(bar["Date"], bar["Close"])
 ```
 
----
+## 2. A technical indicator
 
-## 3. Connect to Realtime WebSocket Stream
+Indicators are computed on the prices stored in the database: ingest the listing first (step 1, or `POST /historical/ingest?ticker=AIR.PA`). Without prices the answer is `404`.
 
-Subscribe to live 1-minute candle ticks for **Tesla (`TSLA`)**.
+```bash
+curl -s -H "$AUTH" "http://localhost:5000/technical/AIR.PA?indicator=rsi&period=14"
+```
 
-### JavaScript Browser / Node.js
+```python
+rsi = session.get(
+    "http://localhost:5000/technical/AIR.PA",
+    params={"indicator": "rsi", "period": 14},
+).json()
+last = rsi["series"][0]["values"][-1]
+print(f"RSI(14) on {last['t']}: {last['v']}")
+```
+
+Values are returned as strings (decimal numbers) or `null` while the indicator has too few bars.
+
+## 3. Fundamentals
+
+```bash
+curl -s -H "$AUTH" "http://localhost:5000/fundamental?ticker=AIR.PA"
+```
+
+The answer is one document in the EODHD layout (`General`, `Highlights`, `Valuation`, …) with a `Sources` section naming the source of each figure. See [Fundamentals](../api-reference/fundamentals.md).
+
+## 4. Real-time prices over WebSocket
+
+Browsers cannot set headers on a WebSocket: pass the key in the query string (`token`, `api_key` or `key`).
+
 ```javascript
-const ws = new WebSocket("ws://localhost:5000/ws/realtime/TSLA");
-
-ws.onopen = () => {
-  console.log("Connected to Fonrex Realtime Stream for TSLA");
-};
+const ws = new WebSocket(`ws://localhost:5000/ws/realtime/AIR.PA?token=${FONREX_API_KEY}`);
 
 ws.onmessage = (event) => {
   const message = JSON.parse(event.data);
-  console.log("Stream Event:", message.type, message.data);
+  if (message.type === "tick") console.log(message.data.close, message.data.timestamp);
 };
 ```
 
-### Python WebSocket Client
 ```python
 import asyncio
-import websockets
 import json
+import os
 
-async def stream_quote():
-    async with websockets.connect("ws://localhost:5000/ws/realtime/TSLA") as websocket:
-        while True:
-            msg = await websocket.recv()
-            data = json.loads(msg)
-            print(f"[{data['type']}] Close: {data['data'].get('close')} Volume: {data['data'].get('volume')}")
+import websockets
 
-asyncio.run(stream_quote())
+async def stream(ticker: str) -> None:
+    url = f"ws://localhost:5000/ws/realtime/{ticker}?token={os.environ['FONREX_API_KEY']}"
+    async with websockets.connect(url) as ws:
+        async for raw in ws:
+            message = json.loads(raw)
+            if message["type"] in ("snapshot", "tick"):
+                print(message["type"], message["data"]["close"])
+
+asyncio.run(stream("AIR.PA"))
 ```
+
+With a full-access key, connecting starts the TradingView stream of the ticker when it is not streamed yet. A read-only key never starts one: it receives a `not_streaming` message and then the ticks, once a full-access client has subscribed the ticker. See [Realtime](../api-reference/realtime.md).

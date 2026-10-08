@@ -1,84 +1,71 @@
 ---
 id: "adding-providers"
-title: "Guide : Ajouter un Provider Financier Personnalisé"
-sidebar_label: "Ajouter un Provider Personnalisé"
-description: "Tutoriel étape par étape pour créer, enregistrer et tester un provider de données financières personnalisé"
+title: "Guide : ajouter un fournisseur de données fondamentales"
+sidebar_label: "Ajouter des fournisseurs"
+description: "Toutes les étapes nécessaires à un nouveau fournisseur de données fondamentales : code, enregistrement, unités, canary, tests et seuil de couverture"
 ---
 
+# Guide : ajouter un fournisseur de données fondamentales
 
-# Guide : Ajouter un Provider Financier Personnalisé
+Un fournisseur de `/fundamental` est une classe de `financials/providers/` qui transforme un site web ou une API en objet `FinancialMetrics`. Le dépôt impose chacune des étapes ci-dessous par un test : un fournisseur qui en manque une fait échouer `make ci`. Les règles viennent de `AGENTS.md`.
 
-Ce guide vous accompagne dans l'implémentation d'un nouveau provider financier asynchrone dans Fonrex.
+## 1. Écrire le fournisseur
 
-## 1. Créer le Fichier du Provider
+Créez `financials/providers/MySite_provider.py`, une sous-classe de `BaseFinancialProvider` qui implémente `get_financials(ticker)`. La [page de référence](../providers/adding-custom-provider.md) contient un squelette complet.
 
-Create a new file under `financials/providers/myprovider_provider.py`:
+- **Une seule couche HTTP.** Ne créez jamais de client HTTP : utilisez `self._get()`, `self._get_json()`, `self._post_json()` ou `async with self._session()` (cookies partagés entre une recherche et une page). Les nouvelles tentatives, les pauses, la limite de concurrence par fournisseur et le proxy s'y trouvent. *(`tests/test_provider_http_policy.py`)*
+- **Les nombres sont lus en un seul endroit.** Transformez un texte affiché en nombre avec `parse_number` (une cellule) ou `find_number` (une phrase) de `financials/numbers.py` : les signes, les séparateurs de milliers, les échelles (`k`, `M`, `Md`, `B`) et les devises y sont gérés. Pas de `float()` sur un texte scrapé. *(`tests/test_numbers.py`)*
+- **Renvoyez l'ISIN quand la page l'affiche.** L'exécuteur rejette une réponse portant sur un autre ISIN : un site interrogé par ticker peut renvoyer un homonyme.
 
-```python
-import logging
-from financials.providers.base import BaseFinancialProvider
+L'exécuteur transmet à votre fournisseur, dans cet ordre : sa correspondance `provider_url`, sa correspondance `provider_ticker`, l'ISIN (pour les fournisseurs interrogés par ISIN), ou le ticker.
 
-logger = logging.getLogger(__name__)
+## 2. L'enregistrer
 
-class MyProviderProvider(BaseFinancialProvider):
-    name = "MyProvider"
-    timeout = 8.0  # Network timeout in seconds
-
-    async def fetch(self, ticker: str = None, isin: str = None, **kwargs) -> dict:
-        """
-        Fetch fundamental metrics for a given ticker or ISIN.
-        Return a normalized dictionary of financial indicators.
-        """
-        search_term = ticker or isin
-        if not search_term:
-            return {}
-
-        url = f"https://api.example.com/data/{search_term}"
-        try:
-            response_json = await self._get_json(url)
-            return self._parse(response_json)
-        except Exception as exc:
-            logger.warning("[%s] Failed to fetch data for %s: %s", self.name, search_term, exc)
-            return {}
-
-    def _parse(self, data: dict) -> dict:
-        return {
-          "pe_ratio": data.get("pe"),
-          "dividend_yield": data.get("div_yield"),
-          "market_cap": data.get("mcap")
-        }
-```
-
-## 2. Enregistrer le Provider dans `main.py`
-
-Open `main.py` and register your new provider in the `configure_application_state` function:
+Ajoutez une ligne à `PROVIDER_SPECS` dans `main.py` :
 
 ```python
-provider_specs = (
-    ("ZoneBourse", "financials.providers.ZoneBourse_provider", "ZoneBourseProvider"),
-    ("MyProvider", "financials.providers.myprovider_provider", "MyProviderProvider"),  # Added
+PROVIDER_SPECS = (
     ...
+    ("MySite", "financials.providers.MySite_provider", "MySiteProvider"),
 )
 ```
 
-## 3. Enregistrer le Test de Santé Canary
+Un fournisseur qui ne peut pas être importé est listé dans `providers.unavailable` de `GET /health` au lieu de disparaître silencieusement. *(`tests/test_docs_consistency.py`)*
 
-Add a synthetic test ticker to `monitoring/canary_catalog.py` to ensure your new provider is automatically checked every morning at 06:00 UTC by `CanaryMonitor`.
+## 3. Déclarer ses unités
 
-## 4. Ajouter des Tests Unitaires
+Les plages de surveillance sont des ratios (un rendement de 3,45 % vaut `0.0345`). Si votre fournisseur renvoie des pourcentages affichés (`3.45`), déclarez ces champs dans `PROVIDER_PERCENT_FIELDS` de `monitoring/units.py` ; un fournisseur qui renvoie des ratios est déclaré avec un ensemble vide. *(`tests/test_provider_units.py`)*
 
-Create a unit test in `tests/test_myprovider.py` mocking the HTTP client call:
+## 4. L'ajouter au canary
+
+Ajoutez le fournisseur à `MONITORED_PROVIDERS` et `_PROVIDER_IMPORTS` dans `monitoring/canary_catalog.py`, pour que le canary quotidien le vérifie sur les actifs du canary. Un fournisseur limité à l'UE n'est testé que sur des tickers de l'UE.
+
+## 5. Le tester sans réseau
+
+Les tests n'atteignent jamais un vrai site web. Enregistrez une copie réduite d'une vraie page dans `tests/fixtures/providers/` et servez-la avec la fixture `fake_network` de `tests/conftest.py` :
 
 ```python
-import pytest
-from financials.providers.myprovider_provider import MyProviderProvider
+async def test_my_site_reads_the_displayed_figures(fake_network):
+    page = (FIXTURES / "mysite_airbus.html").read_text(encoding="utf-8")
+    fake_network.get("mysite.example/search", httpx.Response(200, json={"url": "/airbus"}))
+    fake_network.get("mysite.example/airbus", httpx.Response(200, text=page))
 
-@pytest.mark.asyncio
-async def test_myprovider_fetch(mocker):
-    provider = MyProviderProvider()
-    mocker.patch.object(provider, "_get_json", return_value={"pe": 15.4, "div_yield": 0.03})
-    
-    result = await provider.fetch(ticker="AAPL")
-    assert result["pe_ratio"] == 15.4
-    assert result["dividend_yield"] == 0.03
+    metrics = await MySiteProvider().get_financials("AIR.PA")
+
+    assert metrics.pe_ratio == pytest.approx(24.1)
+    assert fake_network.calls("mysite.example") == 2
+```
+
+Une requête sans réponse préenregistrée fait échouer le test.
+
+## 6. Lui donner un seuil de couverture
+
+Chaque module de `financials/providers/` a un seuil de couverture dans `scripts/check_coverage_distribution.py`. Ajoutez le vôtre ; les seuils ne font que monter. *(`tests/test_coverage_gate.py`)*
+
+## 7. Mettre à jour les documents
+
+Le nombre de fournisseurs indiqué dans `README.md` est vérifié par rapport au code, et `ARCHITECTURE.md` liste les fournisseurs. Lancez ensuite l'ensemble des contrôles :
+
+```bash
+make ci
 ```

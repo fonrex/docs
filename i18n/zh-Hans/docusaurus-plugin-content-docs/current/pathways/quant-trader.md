@@ -1,114 +1,65 @@
 ---
 id: "quant-trader"
-title: "量化交易员使用路径"
-sidebar_label: "量化交易员"
-description: "量化分析师技术指南：OHLCV K线数据摄取、Pandas-TA指标计算与Zipline回测集成"
+title: "量化与算法交易者路径"
+sidebar_label: "量化与算法交易者"
+description: "从空实例到回测：按上市品种采集价格、在服务端计算指标、为 Zipline 提供数据"
 ---
 
-# 量化交易员使用路径
+# 量化与算法交易者路径
 
-本路径为**量化分析师与算法交易员**提供技术集成指南。涵盖本地基础设施部署、TimescaleDB K线数据摄取、服务端 Pandas-TA 技术指标计算以及 Python Zipline 回测框架集成。
+本路径带您从一个空实例走到回测：日线价格按上市品种（listing）存储在 TimescaleDB 中，指标由 API 计算，Zipline bundle 直接读取您的数据库。
 
-| 领域组件 | 技术栈 | 规格说明 |
-|---|---|---|
-| **数据摄取** | TimescaleDB Hypertables | 分区 K 线 (OHLCV) 时序存储 |
-| **技术指标** | Pandas-TA 引擎 | 18+ 内置服务端指标 (SMA, EMA, RSI, MACD, Bollinger) |
-| **回测集成** | Zipline 适配器 | 原生 Python DataBundle 客户端 |
+| 步骤 | 使用的工具 |
+|---|---|
+| 价格 | `POST /historical/ingest`、`scripts/ingest_all.py`、`GET /eod` |
+| 指标 | `GET /technical/{ticker}` 和 `/multi`，18 个指标（pandas-ta） |
+| 筛选 | `GET /technical/screen` |
+| 回测 | `zipline_bundle`（zipline-reloaded）或 pandas |
 
----
-
-## 1. 本地基础设施部署
-
-使用 Docker Compose 启动 Fonrex 应用服务器、TimescaleDB 和 Redis 容器：
+## 1. 启动实例
 
 ```bash
-git clone https://github.com/fonrex/fonrex.git
-cd fonrex
+git clone https://github.com/fonrex/fonrex.git && cd fonrex
 cp .env.example .env
-docker compose up -d
+export FONREX_API_KEY="frx_live_$(openssl rand -hex 24)"
+sed -i.bak "s/^FONREX_API_KEY=.*/FONREX_API_KEY=$FONREX_API_KEY/" .env && rm .env.bak
+mkdir -p logs && docker compose up -d
+AUTH="X-API-KEY: $FONREX_API_KEY"
 ```
 
-验证实例健康状态：
+## 2. 导入金融工具并采集价格
 
-```http
-GET /health
+```bash
+docker compose exec fonrex-api python import_assets.py --file data/stocks.csv
+curl -s -X POST -H "$AUTH" "http://localhost:5000/historical/ingest?ticker=AIR.PA"
 ```
 
-预期 JSON 响应：
+采集过程使用为该上市品种验证过的代码，从 Yahoo Finance 获取十年的日线 K 线（TradingView 作为回退），这些数据已针对拆股和分红复权，并按交易日标注日期。如需采集整个目录：`docker compose exec fonrex-api python scripts/ingest_all.py`。详情：[采集历史数据](../guides/ingest-historical-data.md)。
 
-```json
-{
-  "status": "healthy",
-  "database": "connected",
-  "redis": "connected",
-  "alembic_version": "011_provider_monitoring"
-}
+## 3. 计算指标
+
+```bash
+curl -s -H "$AUTH" "http://localhost:5000/technical/AIR.PA?indicator=rsi&period=14"
+curl -s -H "$AUTH" "http://localhost:5000/technical/AIR.PA/multi?indicators=sma_50,sma_200,macd,bbands_20"
+curl -s -H "$AUTH" "http://localhost:5000/technical/screen?indicator=rsi&operator=lt&value=30"
 ```
 
----
+指标使用 pandas-ta 基于已存储的价格计算，并缓存在 Redis 中。请参阅[技术指标参考](../api-reference/technical-indicators.md)。
 
-## 2. 摄取历史 K 线数据
+## 4. 回测
 
-通过摄取端点导入目标资产的历史 K 线 (OHLCV) 数据至 TimescaleDB：
+使用 Zipline 时，注册 bundle 并从您的数据库导入：
 
-```http
-POST /api/v1/historical/ingest
-Content-Type: application/json
-
-{
-  "symbol": "AAPL",
-  "interval": "1d",
-  "provider": "yfinance",
-  "start_date": "2023-01-01"
-}
+```bash
+pip install zipline-reloaded
+export DATABASE_URL="postgresql://fonrex:<POSTGRES_PASSWORD>@localhost:5432/fonrex"
+python -m zipline_bundle ingest --start 2020-01-01 --end 2025-12-31 --tickers AIR.PA,BNP.PA --calendar XPAR
 ```
 
-> **注意**：批量摄取请参考 [历史数据摄取指南](/docs/guides/ingest-historical-data)。
-
----
-
-## 3. 服务端技术指标计算
-
-查询 Pandas-TA 指标引擎以直接根据存储的历史数据计算指标：
-
-```http
-GET /api/v1/indicators/sma?symbol=AAPL&period=20&interval=1d
-```
-
-响应 JSON 格式：
-
-```json
-{
-  "symbol": "AAPL",
-  "indicator": "SMA",
-  "period": 20,
-  "data": [
-    { "timestamp": "2024-01-15T00:00:00Z", "value": 185.42 },
-    { "timestamp": "2024-01-16T00:00:00Z", "value": 186.10 }
-  ]
-}
-```
-
----
-
-## 4. 连接 Zipline 进行策略回测
-
-在 Python 交易策略中直接集成 Fonrex 客户端适配器：
-
-```python
-from fonrex_client import FonrexDataIngestor
-import zipline
-
-ingestor = FonrexDataIngestor(base_url="http://localhost:5000")
-ingestor.register_bundle(name="fonrex-us-equities", symbols=["AAPL", "MSFT", "NVDA"])
-
-print("Zipline Bundle 注册成功。")
-```
-
----
+或者通过 `GET /eod/{ticker}` 将价格加载到 pandas 中。请参阅[使用 Zipline 进行回测](../guides/backtesting-zipline.md)。
 
 ## 后续步骤
 
-- 参考 [技术指标 API 参考](/docs/api-reference/technical-indicators)
-- 参考 [历史价格 API 参考](/docs/api-reference/historical)
-- 参考 [Zipline 回测指南](/docs/guides/backtesting-zipline)
+- [历史价格 API](../api-reference/historical.md)
+- [实时流](../api-reference/realtime.md)，用于获取 1 分钟 tick
+- [数据模型](../architecture/data-model.md)
