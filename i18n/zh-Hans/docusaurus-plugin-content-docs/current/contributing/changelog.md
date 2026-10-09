@@ -7,6 +7,13 @@ description: "项目历史、功能新增、Schema 迁移和版本更新"
 
 # Fonrex 版本更新日志
 
+## 下一版本 {#next-release}
+
+### 价格 {#prices}
+- **`close` 重新成为成交收盘价**，仅针对拆股调整；**`adj_close`** 针对拆股和分红调整。此前两者保存的都是经分红调整的价格。
+- **每个序列使用同一种调整。** 以前，上次采集之后发生的拆股或分红会在已存储 K 线与新 K 线的衔接处留下一个虚假的收益率（约为负的股息率，四拆一之后为 -75 %）。现在采集过程会将最后几根已存储的 K 线与来源进行比较，若不一致则重新获取整个序列。迁移 016 新增 `price_series_adjustments`；之前存储的序列会在下一次采集时被重新获取（使用 `scripts/ingest_all.py --force` 可一次性全部执行）。
+- `GET /eod/{ticker}`、`GET /ticker/{symbol}/history` 和 `POST /historical/ingest` 新增 **`isin` 参数**：当多个金融工具共用同一 ticker 时用于指定金融工具。响应会给出实际读取的 `listing`。
+
 ## 2026 年 10 月——默认安全、按上市品种存储价格、经过验证的数据提供方数据
 
 于 2026 年 10 月 8 日合并到 `main`（pull request #15）。

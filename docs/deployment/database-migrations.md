@@ -38,6 +38,7 @@ Restore the backup taken in step 1 with the previous version of the code (see [D
 |---|---|
 | 014 — prices per listing | Rebuilds `prices_eod` with one series per listing and re-dates the existing bars to their trading session. Runs by itself; nothing is downloaded again. If a series looks wrong afterwards: `POST /historical/ingest?ticker=<ticker>&force_refresh=true` |
 | 015 — dividend yields as ratios | Converts stored dividend yields from percentages to ratios |
+| 016 — adjustment of price series | Creates `price_series_adjustments`. Prices are not touched: each series stored before is fetched again in full at its next ingestion, with the traded close in `close` and the dividend-adjusted close in `adj_close`. To do it at once: `docker compose exec fonrex-api python scripts/ingest_all.py --force` |
 
 The full list is in [Schema migrations](../architecture/migrations.md).
 

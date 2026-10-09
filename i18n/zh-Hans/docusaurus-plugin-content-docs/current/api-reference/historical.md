@@ -20,9 +20,10 @@ description: "将日终价格采集到 TimescaleDB 并读取"
 | `ticker` | string | — | 要采集的代码（必填） |
 | `resolution` | string | `1D` | `1D`、`1W` 或 `1M` |
 | `source` | string | `auto` | `auto`（先 Yahoo Finance，再 TradingView）、`yfinance` 或 `tradingview` |
-| `force_refresh` | boolean | `false` | 重新获取整个区间，替换该区间内已存储的 K 线，并重新查找数据源代码 |
+| `force_refresh` | boolean | `false` | 将请求的区间和已存储的区间一次性整体重新获取，替换已存储的 K 线，并重新查找数据源代码 |
 | `from_date`, `to_date` | date | — | 时间窗口 `YYYY-MM-DD`。未提供时：首次采集取十年，否则从最后一个已存储交易日的次日开始 |
 | `currency`, `exchange` | string | — | 多个上市品种共用同一代码时用于选择上市品种（否则使用主上市品种） |
+| `isin` | string | — | 多个金融工具共用同一代码时，只保留该金融工具的上市品种。格式错误的 ISIN 会被拒绝，返回 `422` |
 
 ```bash
 curl -s -X POST -H "X-API-KEY: $FONREX_API_KEY" \
@@ -50,7 +51,7 @@ curl -s -X POST -H "X-API-KEY: $FONREX_API_KEY" \
 | `status` | `success`、`up_to_date`（无需获取）或 `failed` |
 | `source_used` | `yfinance` 或 `tradingview`；失败时为请求的数据源（`auto`……） |
 | `provider_symbol` | 向数据源查询时使用的代码——为该上市品种验证过的 Yahoo 代码，或 TradingView 代码 |
-| `note` | 价格来自 TradingView 时，说明为何未使用 Yahoo 作为数据源 |
+| `note` | 价格来自 TradingView 时，说明为何未使用 Yahoo 作为数据源；已存储的序列被替换时为 `Whole history fetched again: ...`（自上次采集以来发生了拆股或分红、强制刷新，或该序列存储于迁移 016 之前） |
 | `error` | 说明为何无法采集任何数据，例如 Yahoo 上没有以该上市品种货币报价的代码 |
 
 ---
@@ -83,6 +84,7 @@ curl -s -X POST -H "X-API-KEY: $FONREX_API_KEY" \
 | `start_date`, `end_date` | date | — | 时间窗口 `YYYY-MM-DD` |
 | `interval` | string | `1D` | `1D`、`1W`、`1M`（或 `daily`、`weekly`、`monthly`） |
 | `currency`, `exchange` | string | — | 选择上市品种 |
+| `isin` | string | — | 只保留该金融工具的上市品种（格式错误时返回 `422`） |
 
 ```bash
 curl -s -H "X-API-KEY: $FONREX_API_KEY" \
@@ -92,6 +94,7 @@ curl -s -H "X-API-KEY: $FONREX_API_KEY" \
 ```json
 {
   "ticker": "AIR.PA",
+  "listing": { "ticker": "AIR.PA", "isin": "NL0000235190", "currency": "EUR", "exchange": "XPAR" },
   "interval": "1D",
   "count": 5,
   "data": [
@@ -101,7 +104,7 @@ curl -s -H "X-API-KEY: $FONREX_API_KEY" \
 }
 ```
 
-`time` 是交易日的日期，取 UTC 午夜时刻。响应缓存 24 小时，并在该代码被重新采集时清除。
+`close` 是成交收盘价（已针对拆股调整）；`adj_close` 还针对分红进行了调整，对于 TradingView 的 K 线为空。`listing` 是实际读取的上市品种（代码未指向任何上市品种时为 `null`）。`time` 是交易日的日期，取 UTC 午夜时刻。响应缓存 24 小时，并在该代码被重新采集时清除。
 
 ---
 

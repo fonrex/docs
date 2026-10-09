@@ -18,13 +18,33 @@ Les prix sont stockés par **cotation** (ticker + place de marché + devise), pa
 `HistoricalIngestionService` exécute ces étapes :
 
 1. **Série** — le ticker désigne une cotation : la cotation qui porte ce ticker (la principale en premier ; `currency` ou `exchange` en choisissent une autre), sinon la cotation préférée de l'instrument. Un instrument sans cotation ne peut pas être ingéré.
-2. **Détection des trous** — sans barre stockée, dix ans sont récupérés ; quand la dernière séance stockée est aujourd'hui ou hier, la cotation est `up_to_date` ; sinon, seuls les jours manquants sont récupérés. Un `from_date` antérieur à la première barre stockée récupère aussi la partie la plus ancienne.
+2. **Détection des trous** — sans barre stockée, dix ans sont récupérés ; quand la dernière séance stockée est aujourd'hui ou hier, la cotation est `up_to_date` ; sinon, seuls les jours manquants sont récupérés. Un `from_date` antérieur à la première barre stockée récupère aussi la partie la plus ancienne. Avec `force_refresh`, la plage demandée et la plage stockée sont récupérées de nouveau d'un seul tenant.
 3. **Symbole source** — le ticker de votre catalogue n'est pas toujours un symbole Yahoo (`EUCO` est `SYBC.DE` sur Yahoo, et `SPFF` seul est un fonds américain). Fonrex interroge Yahoo par **ISIN**, retient la première ligne cotée dans la **devise de la cotation** et dotée d'un prix, et l'enregistre comme symbole vérifié de la cotation. Une cotation pour laquelle rien ne correspond n'est pas récupérée depuis Yahoo, et n'est pas recherchée à nouveau pendant 24 heures.
-4. **Récupération** — Yahoo Finance avec le symbole vérifié ; TradingView en solution de repli, accepté uniquement quand la ligne est cotée dans la devise de la cotation. Les prix sont ajustés des splits et des dividendes ; chaque barre est datée de sa séance.
+4. **Récupération** — Yahoo Finance avec le symbole vérifié ; TradingView en solution de repli, accepté uniquement quand la ligne est cotée dans la devise de la cotation. `open`, `high`, `low` et `close` sont les prix négociés, ajustés des splits ; `adj_close` est la clôture ajustée des splits **et des dividendes** (vide pour les barres TradingView). Chaque barre est datée de sa séance. Les dernières barres stockées sont récupérées de nouveau avec les nouvelles, pour vérifier l'ajustement (section suivante).
 5. **Normalisation** — barres sans prix écartées, plus haut/plus bas inversés corrigés, volume négatif mis à zéro, dates en double écartées.
-6. **Upsert** — lots de 1 000 lignes, `ON CONFLICT (asset_listing_id, resolution, time) DO UPDATE`. Avec `force_refresh`, les barres stockées de la plage récupérée sont remplacées.
+6. **Upsert** — lots de 1 000 lignes, `ON CONFLICT (asset_listing_id, resolution, time) DO UPDATE`. Avec `force_refresh`, ou quand toute la série a été récupérée de nouveau, les barres stockées de la plage récupérée sont remplacées.
 7. **Cache** — les réponses en cache calculées à partir des prix du ticker (`eod`, `history`, `technical`, `dcf`) sont supprimées.
 8. **Journal** — une ligne dans `ingest_log` : statut, source, lignes ajoutées, plage, durée, erreur.
+
+## Splits et dividendes : un seul ajustement pour toute la série {#splits-and-dividends-one-adjustment-for-the-whole-series}
+
+Yahoo ajuste de nouveau tout un historique après chaque split (tous les prix) et chaque dividende (`adj_close`). Si les nouvelles barres étaient simplement ajoutées aux barres stockées, les deux parties seraient ajustées différemment et un faux rendement apparaîtrait là où elles se rejoignent : environ moins le rendement du dividende après un dividende, -75 % après un split de quatre pour un.
+
+Fonrex garde donc chaque série (cotation et résolution) sur un seul ajustement :
+
+- Pour compléter une série, il récupère les nouvelles séances **et les cinq dernières barres stockées**. Si la source donne les mêmes prix pour ces barres, seules les nouvelles séances sont écrites.
+- Si les prix diffèrent (un split ou un dividende depuis la dernière ingestion), **toute la série est récupérée de nouveau** et remplace la série stockée. Le résultat l'indique dans `note` : `Whole history fetched again: the source adjusted the stored bars again (split or dividend)`. Si cette récupération échoue, rien n'est écrit et l'ingestion échoue en donnant la raison.
+- La table `price_series_adjustments` enregistre, pour chaque série, comment ses barres sont ajustées et quand elle a été récupérée d'un seul tenant pour la dernière fois.
+
+Utilisez `close` pour les prix tels que négociés (graphiques, indicateurs, valorisation), `adj_close` pour les rendements qui incluent les dividendes (performance, bêta, backtests).
+
+:::note Après la mise à niveau vers la migration 016
+Les séries stockées avant la migration 016 contiennent le prix ajusté des dividendes dans `close`. Chacune est récupérée de nouveau en entier à sa prochaine ingestion. Pour le faire d'un coup pour tout le catalogue :
+
+```bash
+docker compose exec fonrex-api python scripts/ingest_all.py --force
+```
+:::
 
 ## Quand un ticker n'obtient aucun prix, ou un mauvais prix
 

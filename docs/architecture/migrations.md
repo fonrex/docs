@@ -28,6 +28,7 @@ Alembic owns the schema, including the TimescaleDB hypertables, compression and 
 | 013 | `013_solvency_ratios.py` | Solvency ratios and cost of debt; `macro_rates_cache` |
 | 014 | `014_prices_per_listing.py` | `prices_eod` rebuilt per listing: key `(asset_listing_id, resolution, time)`, rows re-dated to their session; compression and aggregates per listing |
 | 015 | `015_dividend_yield_as_ratio.py` | Stored dividend yields converted from percentages to ratios |
+| 016 | `016_price_series_adjustments.py` | `price_series_adjustments`: how each stored price series is adjusted and when it was last fetched in one piece. Series stored before are fetched again in full at their next ingestion |
 
 ## How migrations run
 
@@ -42,7 +43,7 @@ Migration 014 first deletes the TimescaleDB jobs of the price tables (waiting fo
 alembic revision -m "describe_the_change"
 ```
 
-Rename the new file of `alembic/versions/` and set its identifiers after the last migration (`revision = "016"`, `down_revision = "015"`, file `016_describe_the_change.py`), then:
+Rename the new file of `alembic/versions/` and set its identifiers after the last migration (`revision = "017"`, `down_revision = "016"`, file `017_describe_the_change.py`), then:
 
 ```bash
 alembic upgrade head

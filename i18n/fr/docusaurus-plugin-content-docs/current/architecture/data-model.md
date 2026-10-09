@@ -82,7 +82,8 @@ La correspondance Yahoo Finance d'une cotation contient son **symbole vérifié*
 
 | Table | Description |
 |---|---|
-| `prices_eod` | Hypertable TimescaleDB. Clé `(asset_listing_id, resolution, time)` : une série par cotation et par résolution. `time` est la date de la séance à minuit UTC. Les chunks de plus de 14 jours sont compressés (segmentés par cotation et résolution) |
+| `prices_eod` | Hypertable TimescaleDB. Clé `(asset_listing_id, resolution, time)` : une série par cotation et par résolution. `time` est la date de la séance à minuit UTC. `open`, `high`, `low`, `close` sont les prix négociés ajustés des splits ; `adj_close` est aussi ajusté des dividendes. Les chunks de plus de 14 jours sont compressés (segmentés par cotation et résolution) |
+| `price_series_adjustments` | Une ligne par série (cotation et résolution) : comment ses barres sont ajustées (`scheme`) et quand elle a été récupérée d'un seul tenant pour la dernière fois (`fetched_at`). Une série sans ligne est récupérée de nouveau en entier à sa prochaine ingestion |
 | `prices_weekly`, `prices_monthly` | Agrégats continus des barres journalières, par cotation, rafraîchis chaque jour ; utilisés lorsqu'aucune ligne `1W`/`1M` n'est enregistrée pour la cotation |
 | `prices_intraday` | Hypertable des bougies d'une minute issues du flux temps réel, par instrument, chunks d'un jour, purgée après 30 jours |
 | `realtime_subscriptions` | Tickers diffusés, restaurés au démarrage |

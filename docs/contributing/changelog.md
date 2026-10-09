@@ -7,6 +7,13 @@ description: "Project history, feature additions, schema migrations, and version
 
 # Fonrex Version Changelog
 
+## Next release
+
+### Prices
+- **`close` is the traded close again**, adjusted for splits only; **`adj_close`** is adjusted for splits and dividends. Before, both held the dividend-adjusted price.
+- **One adjustment per series.** A split or a dividend after the last ingestion used to leave a false return where the stored and the new bars met (about minus the dividend yield, -75 % after a 4-for-1 split). The ingestion now compares the last stored bars with the source and fetches the whole series again when they differ. Migration 016 adds `price_series_adjustments`; series stored before are fetched again at their next ingestion (`scripts/ingest_all.py --force` for all at once).
+- **`isin` parameter** on `GET /eod/{ticker}`, `GET /ticker/{symbol}/history` and `POST /historical/ingest`: names the instrument when several share a ticker. The answers give the `listing` they read.
+
 ## October 2026 — Secure defaults, per-listing prices, verified provider data
 
 Merged on `main` on 8 October 2026 (pull request #15).

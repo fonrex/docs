@@ -87,8 +87,18 @@ Les cours de clôture d'une cotation, en JSON ou en CSV. Lorsque rien n'est enre
 | `order` | string | `a` | `a` (plus ancien d'abord) ou `d` (plus récent d'abord) |
 | `currency` | string | — | Devise de la cotation, lorsque plusieurs cotations partagent le ticker |
 | `exchange` | string | — | Place de la cotation, lorsque plusieurs cotations partagent le ticker |
+| `isin` | string | — | ISIN de l'instrument, lorsque plusieurs instruments partagent le ticker (12 caractères, sans distinction de casse) |
 
-`weekly` renvoie des barres hebdomadaires et `monthly` des barres mensuelles ; toutes les autres périodes renvoient des barres journalières. Sans `currency` ni `exchange`, c'est la cotation principale qui est utilisée.
+`weekly` renvoie des barres hebdomadaires et `monthly` des barres mensuelles ; toutes les autres périodes renvoient des barres journalières.
+
+### Choisir la cotation {#choosing-the-listing}
+
+Un ticker seul ne désigne pas toujours un seul instrument : dans le catalogue par défaut, `NEM` est Newmont en USD, sa ligne australienne en AUD et Nemetschek en EUR — trois ISIN. Fonrex prend, parmi les cotations qui portent le ticker, d'abord la cotation principale, puis par devise et par place dans l'ordre alphabétique : pour `NEM`, la ligne australienne en AUD.
+
+- `isin` ne garde que les cotations d'un seul instrument. Une cotation d'un autre instrument n'est jamais renvoyée, même lorsque le ticker avec son suffixe n'est pas dans le catalogue (`MRK.DE` se replie sur `MRK` uniquement au sein de l'instrument indiqué).
+- `currency` et `exchange` choisissent parmi les cotations de cet instrument.
+
+`isin` avec `currency` désigne une cotation sans ambiguïté : `GET /eod/NEM?period=1y&isin=US6516391066&currency=USD`. Un ISIN qui n'a pas 12 caractères (deux lettres, puis dix lettres ou chiffres) est refusé avec `400`.
 
 ```bash
 curl -s -H "X-API-KEY: $FONREX_API_KEY" "http://localhost:5000/eod/AIR.PA?period=5d"
@@ -97,6 +107,7 @@ curl -s -H "X-API-KEY: $FONREX_API_KEY" "http://localhost:5000/eod/AIR.PA?period
 ```json
 {
   "ticker": "AIR.PA",
+  "listing": { "ticker": "AIR.PA", "isin": "NL0000235190", "currency": "EUR", "exchange": "XPAR" },
   "period": "5d",
   "format": "json",
   "count": 3,
@@ -109,7 +120,7 @@ curl -s -H "X-API-KEY: $FONREX_API_KEY" "http://localhost:5000/eod/AIR.PA?period
 }
 ```
 
-`Date` est la date de la séance. `data_source` vaut `database` lorsque les prix étaient déjà enregistrés, sinon la source de l'ingestion (`yfinance` ou `tradingview`). Les réponses sont mises en cache 24 heures dans Redis.
+`Open`, `High`, `Low` et `Close` sont les prix négociés, ajustés des splits ; `Adj Close` est la clôture ajustée des splits et des dividendes (la clôture quand la source n'en donne pas). `listing` est la cotation qui a été lue : comparez son `isin` avec l'instrument attendu. Son `exchange` vaut `null` lorsque le catalogue ne la connaît pas (tickers sans suffixe, comme les actions américaines). `Date` est la date de la séance. `data_source` vaut `database` lorsque les prix étaient déjà enregistrés, sinon la source de l'ingestion (`yfinance` ou `tradingview`). Les réponses sont mises en cache 24 heures dans Redis.
 
 Avec `fmt=csv` :
 
@@ -123,7 +134,7 @@ Date,Open,High,Low,Close,Adj Close,Volume
 
 | Code | Corps | Quand |
 |---|---|---|
-| `400` | `{"error": "Invalid request", "message": "..."}` | Ticker, période, format, ordre ou dates invalides |
-| `404` | `{"error": "No data found", "message": "...", "reason": "..."}` | Rien n'est enregistré et rien n'a pu être ingéré. `reason` explique pourquoi, par ex. aucun symbole Yahoo coté dans la devise de la cotation |
+| `400` | `{"error": "Invalid request", "message": "..."}` | Ticker, période, format, ordre, dates ou ISIN invalides |
+| `404` | `{"error": "No data found", "message": "...", "reason": "..."}` | Rien n'est enregistré et rien n'a pu être ingéré. `reason` explique pourquoi, par ex. aucune cotation du ticker pour cet ISIN et cette devise (`No listing found for ticker NEM (ISIN DE0006452907, currency USD)`), ou aucun symbole Yahoo coté dans la devise de la cotation |
 
 Voir [Ingérer des données historiques](../guides/ingest-historical-data.md) pour la façon dont le symbole source d'une cotation est choisi.

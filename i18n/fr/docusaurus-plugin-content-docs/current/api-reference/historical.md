@@ -20,9 +20,10 @@ Ingérer l'historique d'une cotation. Les paramètres sont des **paramètres de 
 | `ticker` | string | — | Ticker à ingérer (obligatoire) |
 | `resolution` | string | `1D` | `1D`, `1W` ou `1M` |
 | `source` | string | `auto` | `auto` (Yahoo Finance, puis TradingView), `yfinance` ou `tradingview` |
-| `force_refresh` | boolean | `false` | Récupérer à nouveau toute la plage, remplacer les barres enregistrées sur cette plage et rechercher à nouveau le symbole source |
+| `force_refresh` | boolean | `false` | Récupérer de nouveau d'un seul tenant la plage demandée et la plage enregistrée, remplacer les barres enregistrées et rechercher à nouveau le symbole source |
 | `from_date`, `to_date` | date | — | Fenêtre `YYYY-MM-DD`. Sans elles : dix ans lors d'une première ingestion, sinon à partir du lendemain de la dernière séance enregistrée |
 | `currency`, `exchange` | string | — | Choisir la cotation lorsque plusieurs partagent le ticker (la principale sinon) |
+| `isin` | string | — | Ne garder que les cotations de cet instrument, lorsque plusieurs instruments partagent le ticker. Un ISIN mal formé est refusé avec `422` |
 
 ```bash
 curl -s -X POST -H "X-API-KEY: $FONREX_API_KEY" \
@@ -50,7 +51,7 @@ curl -s -X POST -H "X-API-KEY: $FONREX_API_KEY" \
 | `status` | `success`, `up_to_date` (rien à récupérer) ou `failed` |
 | `source_used` | `yfinance` ou `tradingview` ; en cas d'échec, la source demandée (`auto`…) |
 | `provider_symbol` | Le symbole demandé à la source : le symbole Yahoo vérifié pour la cotation, ou le symbole TradingView |
-| `note` | Pourquoi Yahoo n'a pas été la source, lorsque les prix viennent de TradingView |
+| `note` | Pourquoi Yahoo n'a pas été la source, lorsque les prix viennent de TradingView ; `Whole history fetched again: ...` lorsque la série enregistrée a été remplacée (split ou dividende depuis la dernière ingestion, rafraîchissement forcé, ou série enregistrée avant la migration 016) |
 | `error` | Pourquoi rien n'a pu être ingéré, par ex. aucun symbole Yahoo coté dans la devise de la cotation |
 
 ---
@@ -83,6 +84,7 @@ Les barres OHLCV d'une cotation, lues uniquement en base : cette route n'ingère
 | `start_date`, `end_date` | date | — | Fenêtre `YYYY-MM-DD` |
 | `interval` | string | `1D` | `1D`, `1W`, `1M` (ou `daily`, `weekly`, `monthly`) |
 | `currency`, `exchange` | string | — | Choisir la cotation |
+| `isin` | string | — | Ne garder que les cotations de cet instrument (`422` s'il est mal formé) |
 
 ```bash
 curl -s -H "X-API-KEY: $FONREX_API_KEY" \
@@ -92,6 +94,7 @@ curl -s -H "X-API-KEY: $FONREX_API_KEY" \
 ```json
 {
   "ticker": "AIR.PA",
+  "listing": { "ticker": "AIR.PA", "isin": "NL0000235190", "currency": "EUR", "exchange": "XPAR" },
   "interval": "1D",
   "count": 5,
   "data": [
@@ -101,7 +104,7 @@ curl -s -H "X-API-KEY: $FONREX_API_KEY" \
 }
 ```
 
-`time` est la date de la séance, à minuit UTC. Les réponses sont mises en cache 24 heures et invalidées lorsque le ticker est ingéré à nouveau.
+`close` est la clôture négociée (ajustée des splits) ; `adj_close` est aussi ajusté des dividendes, et il est vide pour les barres TradingView. `listing` est la cotation qui a été lue (`null` lorsque le ticker n'en désigne aucune). `time` est la date de la séance, à minuit UTC. Les réponses sont mises en cache 24 heures et invalidées lorsque le ticker est ingéré à nouveau.
 
 ---
 

@@ -86,7 +86,7 @@ result = run_algorithm(
 
 - **Daily bars only**, from `prices_eod`.
 - **One listing per instrument**: the primary one, then an active one; the other listings (other currencies) are not exposed.
-- **Adjusted prices**: `adj_close` is used as the Zipline close. Split and dividend tables are written empty.
+- **Adjusted prices**: `adj_close` (adjusted for splits and dividends) is used as the Zipline close, and the open, high and low of the bar are scaled by the same factor; a bar without `adj_close` (TradingView) keeps its prices. Split and dividend tables are written empty.
 - **Calendar alignment**: bars outside the sessions of the calendar are dropped.
 - **Stable `sid`s**: assigned in the alphabetical order of the symbols.
 
