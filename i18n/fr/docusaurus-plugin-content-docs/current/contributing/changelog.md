@@ -7,6 +7,13 @@ description: "Historique du projet, ajouts de fonctionnalités, migrations de sc
 
 # Journal des versions de Fonrex
 
+## Prochaine version {#next-release}
+
+### Prix {#prices}
+- **`close` est de nouveau la clôture négociée**, ajustée des splits seulement ; **`adj_close`** est ajusté des splits et des dividendes. Avant, les deux contenaient le prix ajusté des dividendes.
+- **Un seul ajustement par série.** Un split ou un dividende après la dernière ingestion laissait un faux rendement là où les barres enregistrées et les nouvelles se rejoignaient (environ moins le rendement du dividende, -75 % après un split de 4 pour 1). L'ingestion compare maintenant les dernières barres enregistrées avec la source et récupère de nouveau toute la série quand elles diffèrent. La migration 016 ajoute `price_series_adjustments` ; les séries enregistrées avant sont récupérées de nouveau à leur prochaine ingestion (`scripts/ingest_all.py --force` pour toutes d'un coup).
+- **Paramètre `isin`** sur `GET /eod/{ticker}`, `GET /ticker/{symbol}/history` et `POST /historical/ingest` : désigne l'instrument quand plusieurs partagent un ticker. Les réponses donnent la `listing` qu'elles ont lue.
+
 ## Octobre 2026 — Sécurité par défaut, prix par cotation, données fournisseurs vérifiées
 
 Fusionné sur `main` le 8 octobre 2026 (pull request #15).

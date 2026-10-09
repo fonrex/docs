@@ -38,6 +38,7 @@ API 容器每次启动时都会执行 `alembic upgrade head`。因此，升级 F
 |---|---|
 | 014 — 按上市品种存储价格 | 以每个上市品种一个序列的方式重建 `prices_eod`，并将现有 K 线重新标注为其交易日日期。自动运行；不会重新下载任何数据。如果之后某个序列看起来有误：`POST /historical/ingest?ticker=<ticker>&force_refresh=true` |
 | 015 — 股息率改为比率 | 将已存储的股息率从百分比转换为比率 |
+| 016 — 价格序列的调整 | 创建 `price_series_adjustments`。价格不会被改动：之前存储的每个序列会在下一次采集时被完整地重新获取，`close` 中为成交收盘价，`adj_close` 中为经分红调整的收盘价。如需立即执行：`docker compose exec fonrex-api python scripts/ingest_all.py --force` |
 
 完整列表见 [Schema 迁移](../architecture/migrations.md)。
 

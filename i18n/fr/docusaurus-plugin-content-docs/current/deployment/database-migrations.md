@@ -38,6 +38,7 @@ Restaurez la sauvegarde faite à l'étape 1 avec la version précédente du code
 |---|---|
 | 014 — prix par cotation | Reconstruit `prices_eod` avec une série par cotation et redate les barres existantes à leur séance. S'exécute seule ; rien n'est retéléchargé. Si une série semble fausse ensuite : `POST /historical/ingest?ticker=<ticker>&force_refresh=true` |
 | 015 — rendements du dividende en ratios | Convertit les rendements du dividende enregistrés de pourcentages en ratios |
+| 016 — ajustement des séries de prix | Crée `price_series_adjustments`. Les prix ne sont pas modifiés : chaque série enregistrée avant est récupérée de nouveau en entier à sa prochaine ingestion, avec la clôture négociée dans `close` et la clôture ajustée des dividendes dans `adj_close`. Pour le faire d'un coup : `docker compose exec fonrex-api python scripts/ingest_all.py --force` |
 
 La liste complète se trouve dans [Migrations du schéma](../architecture/migrations.md).
 

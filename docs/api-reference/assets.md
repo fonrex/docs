@@ -87,8 +87,18 @@ End-of-day prices of a listing, in JSON or CSV. When nothing is stored for the r
 | `order` | string | `a` | `a` (oldest first) or `d` (newest first) |
 | `currency` | string | — | Currency of the listing, when several listings share the ticker |
 | `exchange` | string | — | Exchange of the listing, when several listings share the ticker |
+| `isin` | string | — | ISIN of the instrument, when several instruments share the ticker (12 characters, case-insensitive) |
 
-`weekly` returns weekly bars and `monthly` monthly bars; every other period returns daily bars. Without `currency` or `exchange`, the primary listing is used.
+`weekly` returns weekly bars and `monthly` monthly bars; every other period returns daily bars.
+
+### Choosing the listing
+
+A ticker alone does not always designate one instrument: in the default catalogue, `NEM` is Newmont in USD, its Australian line in AUD and Nemetschek in EUR — three ISINs. Fonrex takes, among the listings bearing the ticker, the primary one first, then by currency and exchange in alphabetical order: for `NEM`, the Australian line in AUD.
+
+- `isin` keeps the listings of one instrument only. A listing of another instrument is never returned, even when the ticker with its suffix is not in the catalogue (`MRK.DE` falls back to `MRK` only within the named instrument).
+- `currency` and `exchange` choose among the listings of that instrument.
+
+`isin` with `currency` names a listing without ambiguity: `GET /eod/NEM?period=1y&isin=US6516391066&currency=USD`. An ISIN that does not have 12 characters (two letters, then ten letters or digits) is refused with `400`.
 
 ```bash
 curl -s -H "X-API-KEY: $FONREX_API_KEY" "http://localhost:5000/eod/AIR.PA?period=5d"
@@ -97,6 +107,7 @@ curl -s -H "X-API-KEY: $FONREX_API_KEY" "http://localhost:5000/eod/AIR.PA?period
 ```json
 {
   "ticker": "AIR.PA",
+  "listing": { "ticker": "AIR.PA", "isin": "NL0000235190", "currency": "EUR", "exchange": "XPAR" },
   "period": "5d",
   "format": "json",
   "count": 3,
@@ -109,7 +120,7 @@ curl -s -H "X-API-KEY: $FONREX_API_KEY" "http://localhost:5000/eod/AIR.PA?period
 }
 ```
 
-`Date` is the date of the trading session. `data_source` is `database` when the prices were already stored, otherwise the source of the ingestion (`yfinance` or `tradingview`). Answers are cached 24 hours in Redis.
+`Open`, `High`, `Low` and `Close` are the traded prices, adjusted for splits; `Adj Close` is the close adjusted for splits and dividends (the close when the source gives none). `listing` is the listing that was read: compare its `isin` with the instrument you expect. Its `exchange` is `null` when the catalogue does not know it (tickers without suffix, such as US stocks). `Date` is the date of the trading session. `data_source` is `database` when the prices were already stored, otherwise the source of the ingestion (`yfinance` or `tradingview`). Answers are cached 24 hours in Redis.
 
 With `fmt=csv`:
 
@@ -123,7 +134,7 @@ Date,Open,High,Low,Close,Adj Close,Volume
 
 | Code | Body | When |
 |---|---|---|
-| `400` | `{"error": "Invalid request", "message": "..."}` | Invalid ticker, period, format, order or dates |
-| `404` | `{"error": "No data found", "message": "...", "reason": "..."}` | Nothing stored and nothing could be ingested. `reason` explains why, e.g. no Yahoo symbol quoted in the currency of the listing |
+| `400` | `{"error": "Invalid request", "message": "..."}` | Invalid ticker, period, format, order, dates or ISIN |
+| `404` | `{"error": "No data found", "message": "...", "reason": "..."}` | Nothing stored and nothing could be ingested. `reason` explains why, e.g. no listing of the ticker for that ISIN and currency (`No listing found for ticker NEM (ISIN DE0006452907, currency USD)`), or no Yahoo symbol quoted in the currency of the listing |
 
 See [Ingesting historical data](../guides/ingest-historical-data.md) for the way the source symbol of a listing is chosen.

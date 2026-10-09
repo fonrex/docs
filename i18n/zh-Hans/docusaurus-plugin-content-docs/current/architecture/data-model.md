@@ -82,7 +82,8 @@ erDiagram
 
 | 表 | 说明 |
 |---|---|
-| `prices_eod` | TimescaleDB 超表。键为 `(asset_listing_id, resolution, time)`：每个上市品种和分辨率对应一个序列。`time` 是交易日日期，取 UTC 午夜时刻。超过 14 天的分块会被压缩（按上市品种和分辨率分段） |
+| `prices_eod` | TimescaleDB 超表。键为 `(asset_listing_id, resolution, time)`：每个上市品种和分辨率对应一个序列。`time` 是交易日日期，取 UTC 午夜时刻。`open`、`high`、`low`、`close` 是已针对拆股调整的成交价格；`adj_close` 还针对分红进行了调整。超过 14 天的分块会被压缩（按上市品种和分辨率分段） |
+| `price_series_adjustments` | 每个序列（上市品种和分辨率）一行：其 K 线的调整方式（`scheme`）以及最后一次整体获取的时间（`fetched_at`）。没有对应行的序列会在下一次采集时被完整地重新获取 |
 | `prices_weekly`, `prices_monthly` | 基于日线的连续聚合，按上市品种计算，每天刷新；当该上市品种没有存储 `1W`/`1M` 行时使用 |
 | `prices_intraday` | 来自实时数据流的 1 分钟 K 线超表，按金融工具存储，分块为一天，30 天后清除 |
 | `realtime_subscriptions` | 正在推送的代码，启动时恢复 |

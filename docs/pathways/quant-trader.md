@@ -34,7 +34,7 @@ docker compose exec fonrex-api python import_assets.py --file data/stocks.csv
 curl -s -X POST -H "$AUTH" "http://localhost:5000/historical/ingest?ticker=AIR.PA"
 ```
 
-The ingestion fetches ten years of daily bars from Yahoo Finance with the symbol verified for the listing (TradingView as a fallback), adjusted for splits and dividends and dated by trading session. For the whole catalogue: `docker compose exec fonrex-api python scripts/ingest_all.py`. Details: [Ingesting historical data](../guides/ingest-historical-data.md).
+The ingestion fetches ten years of daily bars from Yahoo Finance with the symbol verified for the listing (TradingView as a fallback), dated by trading session: the traded prices adjusted for splits, and an `adj_close` adjusted for dividends too, kept on one adjustment basis when a split or a dividend occurs. For the whole catalogue: `docker compose exec fonrex-api python scripts/ingest_all.py`. Details: [Ingesting historical data](../guides/ingest-historical-data.md).
 
 ## 3. Compute indicators
 
@@ -56,7 +56,7 @@ export DATABASE_URL="postgresql://fonrex:<POSTGRES_PASSWORD>@localhost:5432/fonr
 python -m zipline_bundle ingest --start 2020-01-01 --end 2025-12-31 --tickers AIR.PA,BNP.PA --calendar XPAR
 ```
 
-Or load the prices into pandas through `GET /eod/{ticker}`. See [Backtesting with Zipline](../guides/backtesting-zipline.md).
+Or load the prices into pandas through `GET /eod/{ticker}` — see [Python & Jupyter](../guides/python-jupyter.md), with an example notebook. See [Backtesting with Zipline](../guides/backtesting-zipline.md).
 
 ## Next steps
 

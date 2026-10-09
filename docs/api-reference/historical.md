@@ -20,9 +20,10 @@ Ingest the history of one listing. The parameters are **query parameters**.
 | `ticker` | string | — | Ticker to ingest (required) |
 | `resolution` | string | `1D` | `1D`, `1W` or `1M` |
 | `source` | string | `auto` | `auto` (Yahoo Finance, then TradingView), `yfinance` or `tradingview` |
-| `force_refresh` | boolean | `false` | Fetch the whole range again, replace the stored bars of that range and look the source symbol up again |
+| `force_refresh` | boolean | `false` | Fetch the requested range and the stored range again in one piece, replace the stored bars and look the source symbol up again |
 | `from_date`, `to_date` | date | — | Window `YYYY-MM-DD`. Without them: ten years on a first ingestion, otherwise from the day after the last stored session |
 | `currency`, `exchange` | string | — | Choose the listing when several share the ticker (the primary one otherwise) |
+| `isin` | string | — | Keep the listings of this instrument only, when several instruments share the ticker. A malformed ISIN is refused with `422` |
 
 ```bash
 curl -s -X POST -H "X-API-KEY: $FONREX_API_KEY" \
@@ -50,7 +51,7 @@ curl -s -X POST -H "X-API-KEY: $FONREX_API_KEY" \
 | `status` | `success`, `up_to_date` (nothing to fetch) or `failed` |
 | `source_used` | `yfinance` or `tradingview`; on a failure, the source that was asked (`auto`…) |
 | `provider_symbol` | The symbol asked to the source — the Yahoo symbol verified for the listing, or the TradingView symbol |
-| `note` | Why Yahoo was not the source, when the prices come from TradingView |
+| `note` | Why Yahoo was not the source, when the prices come from TradingView; `Whole history fetched again: ...` when the stored series was replaced (split or dividend since the last ingestion, forced refresh, or a series stored before migration 016) |
 | `error` | Why nothing could be ingested, e.g. no Yahoo symbol quoted in the currency of the listing |
 
 ---
@@ -83,6 +84,7 @@ OHLCV bars of a listing, read from the database only — this route never ingest
 | `start_date`, `end_date` | date | — | Window `YYYY-MM-DD` |
 | `interval` | string | `1D` | `1D`, `1W`, `1M` (or `daily`, `weekly`, `monthly`) |
 | `currency`, `exchange` | string | — | Choose the listing |
+| `isin` | string | — | Keep the listings of this instrument only (`422` when malformed) |
 
 ```bash
 curl -s -H "X-API-KEY: $FONREX_API_KEY" \
@@ -92,6 +94,7 @@ curl -s -H "X-API-KEY: $FONREX_API_KEY" \
 ```json
 {
   "ticker": "AIR.PA",
+  "listing": { "ticker": "AIR.PA", "isin": "NL0000235190", "currency": "EUR", "exchange": "XPAR" },
   "interval": "1D",
   "count": 5,
   "data": [
@@ -101,7 +104,7 @@ curl -s -H "X-API-KEY: $FONREX_API_KEY" \
 }
 ```
 
-`time` is the date of the trading session, at midnight UTC. Answers are cached 24 hours and dropped when the ticker is ingested again.
+`close` is the traded close (adjusted for splits); `adj_close` is also adjusted for dividends, and is empty for TradingView bars. `listing` is the listing that was read (`null` when the ticker designates none). `time` is the date of the trading session, at midnight UTC. Answers are cached 24 hours and dropped when the ticker is ingested again.
 
 ---
 

@@ -42,6 +42,7 @@
 - [Ingesting Historical Market Data](https://docs.fonrex.io/docs/guides/ingest-historical-data): How Fonrex fetches, verifies and stores end-of-day prices per listing
 - [Realtime Streaming & WebSocket Setup](https://docs.fonrex.io/docs/guides/configure-realtime): Start TradingView streams, receive ticks over WebSocket and tune the realtime worker
 - [Backtesting with Zipline](https://docs.fonrex.io/docs/guides/backtesting-zipline): Run zipline-reloaded backtests on the prices of your Fonrex database, or load them into pandas
+- [Using Fonrex from Python and Jupyter](https://docs.fonrex.io/docs/guides/python-jupyter): Load prices from your Fonrex instance into pandas, and replace OpenBB price calls in a notebook
 - [Guide: Adding a Fundamentals Provider](https://docs.fonrex.io/docs/guides/adding-providers): Every step a new fundamentals provider needs: code, registration, units, canary, tests and coverage floor
 - [Google Sheets Connector](https://docs.fonrex.io/docs/guides/google-sheets-connector): Fill a Google Sheets template with fundamentals, DCF valuations and indicators from your own Fonrex instance
 - [Connecting Fonrex to OpenBB Workspace](https://docs.fonrex.io/docs/guides/openbb-workspace): Connect your self-hosted Fonrex instance to OpenBB Workspace widgets and dashboards

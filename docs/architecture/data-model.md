@@ -82,7 +82,8 @@ The Yahoo Finance mapping of a listing holds its **verified symbol** — found f
 
 | Table | Description |
 |---|---|
-| `prices_eod` | TimescaleDB hypertable. Key `(asset_listing_id, resolution, time)`: one series per listing and resolution. `time` is the trading session date at midnight UTC. Chunks older than 14 days are compressed (segmented by listing and resolution) |
+| `prices_eod` | TimescaleDB hypertable. Key `(asset_listing_id, resolution, time)`: one series per listing and resolution. `time` is the trading session date at midnight UTC. `open`, `high`, `low`, `close` are traded prices adjusted for splits; `adj_close` is also adjusted for dividends. Chunks older than 14 days are compressed (segmented by listing and resolution) |
+| `price_series_adjustments` | One row per series (listing and resolution): how its bars are adjusted (`scheme`) and when it was last fetched in one piece (`fetched_at`). A series without a row is fetched again in full at its next ingestion |
 | `prices_weekly`, `prices_monthly` | Continuous aggregates of the daily bars, per listing, refreshed daily; used when no `1W`/`1M` row is stored for the listing |
 | `prices_intraday` | Hypertable of 1-minute candles from the realtime stream, per instrument, one-day chunks, purged after 30 days |
 | `realtime_subscriptions` | Streamed tickers, restored at start-up |

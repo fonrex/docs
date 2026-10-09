@@ -117,7 +117,7 @@ docker compose exec fonrex-api python import_assets.py --file data/stocks.csv
 curl -s -X POST -H "$AUTH" "http://localhost:5000/historical/ingest?ticker=AIR.PA"
 ```
 
-The ingestion fetches ten years of daily bars from Yahoo Finance with the symbol verified for the listing (TradingView as a fallback), adjusted for splits and dividends and dated by trading session. For the whole catalogue: `docker compose exec fonrex-api python scripts/ingest_all.py`. Details: [Ingesting historical data](../guides/ingest-historical-data.md).
+The ingestion fetches ten years of daily bars from Yahoo Finance with the symbol verified for the listing (TradingView as a fallback), dated by trading session: the traded prices adjusted for splits, and an `adj_close` adjusted for dividends too, kept on one adjustment basis when a split or a dividend occurs. For the whole catalogue: `docker compose exec fonrex-api python scripts/ingest_all.py`. Details: [Ingesting historical data](../guides/ingest-historical-data.md).
 
 ## 3. Compute indicators
 
@@ -139,7 +139,7 @@ export DATABASE_URL="postgresql://fonrex:<POSTGRES_PASSWORD>@localhost:5432/fonr
 python -m zipline_bundle ingest --start 2020-01-01 --end 2025-12-31 --tickers AIR.PA,BNP.PA --calendar XPAR
 ```
 
-Or load the prices into pandas through `GET /eod/{ticker}`. See [Backtesting with Zipline](../guides/backtesting-zipline.md).
+Or load the prices into pandas through `GET /eod/{ticker}` — see [Python & Jupyter](../guides/python-jupyter.md), with an example notebook. See [Backtesting with Zipline](../guides/backtesting-zipline.md).
 
 ## Next steps
 
@@ -945,8 +945,18 @@ End-of-day prices of a listing, in JSON or CSV. When nothing is stored for the r
 | `order` | string | `a` | `a` (oldest first) or `d` (newest first) |
 | `currency` | string | — | Currency of the listing, when several listings share the ticker |
 | `exchange` | string | — | Exchange of the listing, when several listings share the ticker |
+| `isin` | string | — | ISIN of the instrument, when several instruments share the ticker (12 characters, case-insensitive) |
 
-`weekly` returns weekly bars and `monthly` monthly bars; every other period returns daily bars. Without `currency` or `exchange`, the primary listing is used.
+`weekly` returns weekly bars and `monthly` monthly bars; every other period returns daily bars.
+
+### Choosing the listing
+
+A ticker alone does not always designate one instrument: in the default catalogue, `NEM` is Newmont in USD, its Australian line in AUD and Nemetschek in EUR — three ISINs. Fonrex takes, among the listings bearing the ticker, the primary one first, then by currency and exchange in alphabetical order: for `NEM`, the Australian line in AUD.
+
+- `isin` keeps the listings of one instrument only. A listing of another instrument is never returned, even when the ticker with its suffix is not in the catalogue (`MRK.DE` falls back to `MRK` only within the named instrument).
+- `currency` and `exchange` choose among the listings of that instrument.
+
+`isin` with `currency` names a listing without ambiguity: `GET /eod/NEM?period=1y&isin=US6516391066&currency=USD`. An ISIN that does not have 12 characters (two letters, then ten letters or digits) is refused with `400`.
 
 ```bash
 curl -s -H "X-API-KEY: $FONREX_API_KEY" "http://localhost:5000/eod/AIR.PA?period=5d"
@@ -955,6 +965,7 @@ curl -s -H "X-API-KEY: $FONREX_API_KEY" "http://localhost:5000/eod/AIR.PA?period
 ```json
 {
   "ticker": "AIR.PA",
+  "listing": { "ticker": "AIR.PA", "isin": "NL0000235190", "currency": "EUR", "exchange": "XPAR" },
   "period": "5d",
   "format": "json",
   "count": 3,
@@ -967,7 +978,7 @@ curl -s -H "X-API-KEY: $FONREX_API_KEY" "http://localhost:5000/eod/AIR.PA?period
 }
 ```
 
-`Date` is the date of the trading session. `data_source` is `database` when the prices were already stored, otherwise the source of the ingestion (`yfinance` or `tradingview`). Answers are cached 24 hours in Redis.
+`Open`, `High`, `Low` and `Close` are the traded prices, adjusted for splits; `Adj Close` is the close adjusted for splits and dividends (the close when the source gives none). `listing` is the listing that was read: compare its `isin` with the instrument you expect. Its `exchange` is `null` when the catalogue does not know it (tickers without suffix, such as US stocks). `Date` is the date of the trading session. `data_source` is `database` when the prices were already stored, otherwise the source of the ingestion (`yfinance` or `tradingview`). Answers are cached 24 hours in Redis.
 
 With `fmt=csv`:
 
@@ -981,8 +992,8 @@ Date,Open,High,Low,Close,Adj Close,Volume
 
 | Code | Body | When |
 |---|---|---|
-| `400` | `{"error": "Invalid request", "message": "..."}` | Invalid ticker, period, format, order or dates |
-| `404` | `{"error": "No data found", "message": "...", "reason": "..."}` | Nothing stored and nothing could be ingested. `reason` explains why, e.g. no Yahoo symbol quoted in the currency of the listing |
+| `400` | `{"error": "Invalid request", "message": "..."}` | Invalid ticker, period, format, order, dates or ISIN |
+| `404` | `{"error": "No data found", "message": "...", "reason": "..."}` | Nothing stored and nothing could be ingested. `reason` explains why, e.g. no listing of the ticker for that ISIN and currency (`No listing found for ticker NEM (ISIN DE0006452907, currency USD)`), or no Yahoo symbol quoted in the currency of the listing |
 
 See [Ingesting historical data](../guides/ingest-historical-data.md) for the way the source symbol of a listing is chosen.
 
@@ -1123,9 +1134,10 @@ Ingest the history of one listing. The parameters are **query parameters**.
 | `ticker` | string | — | Ticker to ingest (required) |
 | `resolution` | string | `1D` | `1D`, `1W` or `1M` |
 | `source` | string | `auto` | `auto` (Yahoo Finance, then TradingView), `yfinance` or `tradingview` |
-| `force_refresh` | boolean | `false` | Fetch the whole range again, replace the stored bars of that range and look the source symbol up again |
+| `force_refresh` | boolean | `false` | Fetch the requested range and the stored range again in one piece, replace the stored bars and look the source symbol up again |
 | `from_date`, `to_date` | date | — | Window `YYYY-MM-DD`. Without them: ten years on a first ingestion, otherwise from the day after the last stored session |
 | `currency`, `exchange` | string | — | Choose the listing when several share the ticker (the primary one otherwise) |
+| `isin` | string | — | Keep the listings of this instrument only, when several instruments share the ticker. A malformed ISIN is refused with `422` |
 
 ```bash
 curl -s -X POST -H "X-API-KEY: $FONREX_API_KEY" \
@@ -1153,7 +1165,7 @@ curl -s -X POST -H "X-API-KEY: $FONREX_API_KEY" \
 | `status` | `success`, `up_to_date` (nothing to fetch) or `failed` |
 | `source_used` | `yfinance` or `tradingview`; on a failure, the source that was asked (`auto`…) |
 | `provider_symbol` | The symbol asked to the source — the Yahoo symbol verified for the listing, or the TradingView symbol |
-| `note` | Why Yahoo was not the source, when the prices come from TradingView |
+| `note` | Why Yahoo was not the source, when the prices come from TradingView; `Whole history fetched again: ...` when the stored series was replaced (split or dividend since the last ingestion, forced refresh, or a series stored before migration 016) |
 | `error` | Why nothing could be ingested, e.g. no Yahoo symbol quoted in the currency of the listing |
 
 ---
@@ -1186,6 +1198,7 @@ OHLCV bars of a listing, read from the database only — this route never ingest
 | `start_date`, `end_date` | date | — | Window `YYYY-MM-DD` |
 | `interval` | string | `1D` | `1D`, `1W`, `1M` (or `daily`, `weekly`, `monthly`) |
 | `currency`, `exchange` | string | — | Choose the listing |
+| `isin` | string | — | Keep the listings of this instrument only (`422` when malformed) |
 
 ```bash
 curl -s -H "X-API-KEY: $FONREX_API_KEY" \
@@ -1195,6 +1208,7 @@ curl -s -H "X-API-KEY: $FONREX_API_KEY" \
 ```json
 {
   "ticker": "AIR.PA",
+  "listing": { "ticker": "AIR.PA", "isin": "NL0000235190", "currency": "EUR", "exchange": "XPAR" },
   "interval": "1D",
   "count": 5,
   "data": [
@@ -1204,7 +1218,7 @@ curl -s -H "X-API-KEY: $FONREX_API_KEY" \
 }
 ```
 
-`time` is the date of the trading session, at midnight UTC. Answers are cached 24 hours and dropped when the ticker is ingested again.
+`close` is the traded close (adjusted for splits); `adj_close` is also adjusted for dividends, and is empty for TradingView bars. `listing` is the listing that was read (`null` when the ticker designates none). `time` is the date of the trading session, at midnight UTC. Answers are cached 24 hours and dropped when the ticker is ingested again.
 
 ---
 
@@ -2248,13 +2262,33 @@ Prices are stored per **listing** (ticker + exchange + currency), resolution and
 `HistoricalIngestionService` runs these steps:
 
 1. **Series** — the ticker designates a listing: the listing bearing that ticker (the primary one first; `currency` or `exchange` choose another), otherwise the preferred listing of the instrument. An instrument without a listing cannot be ingested.
-2. **Gap detection** — with no stored bar, ten years are fetched; when the last stored session is today or yesterday, the listing is `up_to_date`; otherwise only the missing days are fetched. A `from_date` older than the first stored bar fetches the older part too.
+2. **Gap detection** — with no stored bar, ten years are fetched; when the last stored session is today or yesterday, the listing is `up_to_date`; otherwise only the missing days are fetched. A `from_date` older than the first stored bar fetches the older part too. With `force_refresh`, the requested range and the stored range are fetched again in one piece.
 3. **Source symbol** — the ticker of your catalogue is not always a Yahoo symbol (`EUCO` is `SYBC.DE` on Yahoo, and `SPFF` alone is a US fund). Fonrex searches Yahoo by the **ISIN**, keeps the first line quoted in the **currency of the listing** with a price, and stores it as the listing's verified symbol. A listing for which nothing matches is not fetched from Yahoo, and is not searched again for 24 hours.
-4. **Fetch** — Yahoo Finance with the verified symbol; TradingView as a fallback, accepted only when the line is quoted in the currency of the listing. Prices are adjusted for splits and dividends; each bar is dated by its trading session.
+4. **Fetch** — Yahoo Finance with the verified symbol; TradingView as a fallback, accepted only when the line is quoted in the currency of the listing. `open`, `high`, `low` and `close` are the traded prices, adjusted for splits; `adj_close` is the close adjusted for splits **and dividends** (empty for TradingView bars). Each bar is dated by its trading session. The last stored bars are fetched again with the new ones, to check the adjustment (next section).
 5. **Normalisation** — bars without prices dropped, inverted high/low fixed, negative volume set to zero, duplicate dates dropped.
-6. **Upsert** — batches of 1,000 rows, `ON CONFLICT (asset_listing_id, resolution, time) DO UPDATE`. With `force_refresh`, the stored bars of the fetched range are replaced.
+6. **Upsert** — batches of 1,000 rows, `ON CONFLICT (asset_listing_id, resolution, time) DO UPDATE`. With `force_refresh`, or when the whole series was fetched again, the stored bars of the fetched range are replaced.
 7. **Cache** — the cached answers computed from the ticker's prices (`eod`, `history`, `technical`, `dcf`) are dropped.
 8. **Log** — one row in `ingest_log`: status, source, rows added, range, duration, error.
+
+## Splits and dividends: one adjustment for the whole series
+
+Yahoo adjusts a whole history again after each split (all prices) and each dividend (`adj_close`). If the new bars were simply added to the stored ones, the two parts would be adjusted differently and a false return would appear where they meet: about minus the dividend yield after a dividend, -75 % after a four-for-one split.
+
+So Fonrex keeps each series (listing and resolution) on one adjustment:
+
+- To complete a series, it fetches the new sessions **and the last five stored bars**. If the source gives the same prices for those bars, only the new sessions are written.
+- If the prices differ — a split or a dividend since the last ingestion — the **whole series is fetched again** and replaces the stored one. The result says so in `note`: `Whole history fetched again: the source adjusted the stored bars again (split or dividend)`. If that fetch fails, nothing is written and the ingestion fails with the reason.
+- The table `price_series_adjustments` records, per series, how its bars are adjusted and when it was last fetched in one piece.
+
+Use `close` for prices as traded (charts, indicators, valuation), `adj_close` for returns that include dividends (performance, beta, backtests).
+
+:::note After upgrading to migration 016
+Series stored before migration 016 hold the dividend-adjusted price in `close`. Each one is fetched again in full at its next ingestion. To do it at once for the whole catalogue:
+
+```bash
+docker compose exec fonrex-api python scripts/ingest_all.py --force
+```
+:::
 
 ## When a ticker gets no price, or the wrong one
 
@@ -2476,7 +2510,7 @@ result = run_algorithm(
 
 - **Daily bars only**, from `prices_eod`.
 - **One listing per instrument**: the primary one, then an active one; the other listings (other currencies) are not exposed.
-- **Adjusted prices**: `adj_close` is used as the Zipline close. Split and dividend tables are written empty.
+- **Adjusted prices**: `adj_close` (adjusted for splits and dividends) is used as the Zipline close, and the open, high and low of the bar are scaled by the same factor; a bar without `adj_close` (TradingView) keeps its prices. Split and dividend tables are written empty.
 - **Calendar alignment**: bars outside the sessions of the calendar are dropped.
 - **Stable `sid`s**: assigned in the alphabetical order of the symbols.
 
@@ -2506,6 +2540,172 @@ print(df.tail())
 ```
 
 The columns are `open`, `high`, `low`, `close`, `adj close` and `volume`, one row per trading session.
+
+
+
+<!-- FILE: /docs/guides/python-jupyter.md -->
+
+---
+id: "python-jupyter"
+title: "Using Fonrex from Python and Jupyter"
+sidebar_label: "Python & Jupyter"
+description: "Load prices from your Fonrex instance into pandas, and replace OpenBB price calls in a notebook"
+---
+
+# Using Fonrex from Python and Jupyter
+
+Fonrex is an HTTP API: there is no `fonrex` Python package to import, and Fonrex is not an OpenBB Platform provider (`obb`). From Python, you call your instance with `requests` and build pandas objects from the JSON answers. A dozen lines replace a call such as `obb.equity.price.historical(...)`.
+
+## Prerequisites
+
+- A running instance — see [Installation](../getting-started/installation.md).
+- An API key in the environment, set before starting Jupyter. A **read-only** key is enough to read prices:
+
+```bash
+export FONREX_URL=http://localhost:5000
+export FONREX_API_KEY=frx_live_...
+jupyter lab
+```
+
+- The listings you need in the catalogue (next section).
+
+## 1. Put the listings in the catalogue
+
+Fonrex stores prices per **listing** of an instrument known by its ISIN. A ticker that is not in the catalogue has no prices: `GET /eod/{ticker}` answers `404` with `"reason": "No listing found for ticker ..."`.
+
+The example below uses eight US stocks and the SPY ETF. Write them in a CSV file ([download it](pathname:///notebooks/us-hedging-listings.csv)):
+
+```csv
+name,ticker,isin,productType,currency
+Newmont Corporation,NEM,US6516391066,STOCK,USD
+Royal Gold Inc,RGLD,US7802871084,STOCK,USD
+SSR Mining Inc,SSRM,CA7847301032,STOCK,USD
+Coeur Mining Inc,CDE,US1921085049,STOCK,USD
+Eli Lilly and Co,LLY,US5324571083,STOCK,USD
+UnitedHealth Group Inc,UNH,US91324P1021,STOCK,USD
+Johnson & Johnson,JNJ,US4781601046,STOCK,USD
+Merck & Co Inc,MRK,US58933Y1055,STOCK,USD
+SPDR S&P 500 ETF Trust,SPY,US78462F1030,ETF,USD
+```
+
+Copy the file into the container and import it:
+
+```bash
+docker compose cp us-hedging-listings.csv fonrex-api:/app/data/us-hedging-listings.csv
+docker compose exec fonrex-api python import_assets.py --file data/us-hedging-listings.csv
+```
+
+See [Importing assets](import-assets.md) for the CSV rules.
+
+## 2. Read prices into pandas
+
+`GET /eod/{ticker}` with `from` and `to` returns the daily bars of a window. When the database has no bar in that window, the route first ingests it from Yahoo Finance (with the symbol verified for the listing), so the first call of a ticker takes a few seconds.
+
+A ticker alone does not always designate one instrument. In the default catalogue, `NEM` is Newmont in USD, its Australian line in AUD and Nemetschek in EUR; `MRK` is also Merck KGaA, and `CDE` also City Developments. Name each instrument with its **ISIN** (`isin`) and the listing with its **currency** (`currency`): together they designate one listing.
+
+```python
+import os
+
+import pandas as pd
+import requests
+
+FONREX_URL = os.environ.get("FONREX_URL", "http://localhost:5000")
+FONREX_API_KEY = os.environ["FONREX_API_KEY"]
+
+
+def fonrex_prices(instruments, start_date, end_date, currency="USD"):
+    """Daily closing prices of several listings, one column per ticker.
+
+    ``instruments`` maps each ticker to the ISIN of its instrument.
+    """
+    session = requests.Session()
+    session.headers["X-API-KEY"] = FONREX_API_KEY
+    closes = {}
+    for ticker, isin in instruments.items():
+        response = session.get(
+            f"{FONREX_URL}/eod/{ticker}",
+            params={"from": start_date, "to": end_date, "isin": isin, "currency": currency},
+            timeout=120,  # the first call ingests the prices from Yahoo Finance
+        )
+        if response.status_code != 200:
+            raise RuntimeError(f"{ticker}: {response.status_code} {response.text}")
+        bars = pd.DataFrame(response.json()["data"])
+        closes[ticker] = bars.set_index(pd.to_datetime(bars["Date"]))["Close"]
+    data = pd.DataFrame(closes).sort_index(axis=1)
+    data.index.name = "date"
+    data.columns.name = "symbol"
+    return data
+
+
+data = fonrex_prices(
+    {"NEM": "US6516391066", "LLY": "US5324571083", "SPY": "US78462F1030"},
+    "2020-01-01",
+    "2022-12-31",
+)
+```
+
+Each bar has `Date`, `Open`, `High`, `Low`, `Close`, `Adj Close` and `Volume`. The answer also gives the `listing` that was read (`ticker`, `isin`, `currency`, `exchange`) — see [`GET /eod/{ticker}`](../api-reference/assets.md).
+
+:::tip Without the ISIN
+`isin` is optional. Without it, Fonrex takes, among the listings bearing the ticker, the primary one first, then by currency in alphabetical order: `/eod/NEM` without `isin` nor `currency` returns the Australian line in AUD. With `currency="USD"` alone, the nine tickers of the example happen to be unique, but 196 ticker and currency pairs of the default catalogue still belong to several instruments. Check `listing.isin` in the answer when you do not pass `isin`.
+:::
+
+## Replacing OpenBB in a notebook
+
+| OpenBB | Fonrex |
+|---|---|
+| `from openbb import obb` | `import requests` and the `fonrex_prices()` function above |
+| `obb.equity.price.historical(symbols, start_date=..., end_date=..., provider="yfinance")` | `fonrex_prices(instruments, start_date, end_date)`, with `instruments` mapping each ticker to its ISIN |
+| `.pivot(columns="symbol", values="close")` | Already done: one column per symbol, index `date` |
+| `obb.user.preferences.output_type = "dataframe"` | Not needed |
+
+The rest of a notebook that works on the DataFrame (`pct_change()`, regressions, plots) does not change.
+
+:::note Close or Adj Close
+`Close` is the traded close, adjusted for splits only — the default of OpenBB's `yfinance` provider, so the notebook gives the same numbers as with OpenBB. `Adj Close` is also adjusted for dividends: use it for returns that include dividends, the usual choice to measure alpha and beta.
+:::
+
+## Example notebook: beta hedging
+
+[beta-hedging-fonrex.ipynb](pathname:///notebooks/beta-hedging-fonrex.ipynb) builds an equally weighted portfolio of gold stocks (NEM, RGLD, SSRM, CDE) and healthcare stocks (LLY, UNH, JNJ, MRK), estimates its alpha and beta against SPY with an OLS regression (`statsmodels`), then builds a beta-hedged portfolio whose beta is about zero.
+
+Its only Fonrex-specific part is the price loading:
+
+```python
+instruments = {
+    "NEM": "US6516391066",   # Newmont
+    "RGLD": "US7802871084",  # Royal Gold
+    "SSRM": "CA7847301032",  # SSR Mining
+    "CDE": "US1921085049",   # Coeur Mining
+    "LLY": "US5324571083",   # Eli Lilly
+    "UNH": "US91324P1021",   # UnitedHealth
+    "JNJ": "US4781601046",   # Johnson & Johnson
+    "MRK": "US58933Y1055",   # Merck & Co
+    "SPY": "US78462F1030",   # SPDR S&P 500 ETF
+}
+data = fonrex_prices(instruments, start_date="2020-01-01", end_date="2022-12-31")
+
+benchmark_returns = data.pop("SPY").pct_change().dropna()
+portfolio_returns = data.pct_change().dropna().sum(axis=1)
+```
+
+Import the listings of step 1, set `FONREX_API_KEY`, then open the notebook in Jupyter.
+
+## Troubleshooting
+
+| Answer | Cause |
+|---|---|
+| `401` | `FONREX_API_KEY` is missing or not a key of the instance |
+| `400` with `L'ISIN ... n'est pas valide` | The ISIN does not have 12 characters (two letters, then ten letters or digits) |
+| `404` with `No listing found for ticker` | No listing of the catalogue has this ticker with this ISIN and currency: import it, or check the ISIN |
+| `404` with another `reason` | The ingestion failed, e.g. no Yahoo symbol quoted in the currency of the listing |
+| `404` `No data found` without `reason`, or fewer rows than expected | The database already holds other dates of the listing: `/eod` ingests only an empty window, and the ingestion completes after the last stored date. Fetch the window again with a full-access key: `POST /historical/ingest?ticker=NEM&isin=US6516391066&currency=USD&from_date=2020-01-01&to_date=2022-12-31&force_refresh=true` |
+
+## Related pages
+
+- [Historical prices API](../api-reference/historical.md)
+- [Ingesting historical data](ingest-historical-data.md)
+- [Quant & Algo-Trader pathway](../pathways/quant-trader.md)
 
 
 
@@ -3072,7 +3272,8 @@ The Yahoo Finance mapping of a listing holds its **verified symbol** — found f
 
 | Table | Description |
 |---|---|
-| `prices_eod` | TimescaleDB hypertable. Key `(asset_listing_id, resolution, time)`: one series per listing and resolution. `time` is the trading session date at midnight UTC. Chunks older than 14 days are compressed (segmented by listing and resolution) |
+| `prices_eod` | TimescaleDB hypertable. Key `(asset_listing_id, resolution, time)`: one series per listing and resolution. `time` is the trading session date at midnight UTC. `open`, `high`, `low`, `close` are traded prices adjusted for splits; `adj_close` is also adjusted for dividends. Chunks older than 14 days are compressed (segmented by listing and resolution) |
+| `price_series_adjustments` | One row per series (listing and resolution): how its bars are adjusted (`scheme`) and when it was last fetched in one piece (`fetched_at`). A series without a row is fetched again in full at its next ingestion |
 | `prices_weekly`, `prices_monthly` | Continuous aggregates of the daily bars, per listing, refreshed daily; used when no `1W`/`1M` row is stored for the listing |
 | `prices_intraday` | Hypertable of 1-minute candles from the realtime stream, per instrument, one-day chunks, purged after 30 days |
 | `realtime_subscriptions` | Streamed tickers, restored at start-up |
@@ -3143,6 +3344,7 @@ Alembic owns the schema, including the TimescaleDB hypertables, compression and 
 | 013 | `013_solvency_ratios.py` | Solvency ratios and cost of debt; `macro_rates_cache` |
 | 014 | `014_prices_per_listing.py` | `prices_eod` rebuilt per listing: key `(asset_listing_id, resolution, time)`, rows re-dated to their session; compression and aggregates per listing |
 | 015 | `015_dividend_yield_as_ratio.py` | Stored dividend yields converted from percentages to ratios |
+| 016 | `016_price_series_adjustments.py` | `price_series_adjustments`: how each stored price series is adjusted and when it was last fetched in one piece. Series stored before are fetched again in full at their next ingestion |
 
 ## How migrations run
 
@@ -3157,7 +3359,7 @@ Migration 014 first deletes the TimescaleDB jobs of the price tables (waiting fo
 alembic revision -m "describe_the_change"
 ```
 
-Rename the new file of `alembic/versions/` and set its identifiers after the last migration (`revision = "016"`, `down_revision = "015"`, file `016_describe_the_change.py`), then:
+Rename the new file of `alembic/versions/` and set its identifiers after the last migration (`revision = "017"`, `down_revision = "016"`, file `017_describe_the_change.py`), then:
 
 ```bash
 alembic upgrade head
@@ -3881,6 +4083,7 @@ Restore the backup taken in step 1 with the previous version of the code (see [D
 |---|---|
 | 014 — prices per listing | Rebuilds `prices_eod` with one series per listing and re-dates the existing bars to their trading session. Runs by itself; nothing is downloaded again. If a series looks wrong afterwards: `POST /historical/ingest?ticker=<ticker>&force_refresh=true` |
 | 015 — dividend yields as ratios | Converts stored dividend yields from percentages to ratios |
+| 016 — adjustment of price series | Creates `price_series_adjustments`. Prices are not touched: each series stored before is fetched again in full at its next ingestion, with the traded close in `close` and the dividend-adjusted close in `adj_close`. To do it at once: `docker compose exec fonrex-api python scripts/ingest_all.py --force` |
 
 The full list is in [Schema migrations](../architecture/migrations.md).
 
@@ -4135,6 +4338,13 @@ description: "Project history, feature additions, schema migrations, and version
 ---
 
 # Fonrex Version Changelog
+
+## Next release
+
+### Prices
+- **`close` is the traded close again**, adjusted for splits only; **`adj_close`** is adjusted for splits and dividends. Before, both held the dividend-adjusted price.
+- **One adjustment per series.** A split or a dividend after the last ingestion used to leave a false return where the stored and the new bars met (about minus the dividend yield, -75 % after a 4-for-1 split). The ingestion now compares the last stored bars with the source and fetches the whole series again when they differ. Migration 016 adds `price_series_adjustments`; series stored before are fetched again at their next ingestion (`scripts/ingest_all.py --force` for all at once).
+- **`isin` parameter** on `GET /eod/{ticker}`, `GET /ticker/{symbol}/history` and `POST /historical/ingest`: names the instrument when several share a ticker. The answers give the `listing` they read.
 
 ## October 2026 — Secure defaults, per-listing prices, verified provider data
 

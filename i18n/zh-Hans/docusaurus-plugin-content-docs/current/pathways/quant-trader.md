@@ -34,7 +34,7 @@ docker compose exec fonrex-api python import_assets.py --file data/stocks.csv
 curl -s -X POST -H "$AUTH" "http://localhost:5000/historical/ingest?ticker=AIR.PA"
 ```
 
-采集过程使用为该上市品种验证过的代码，从 Yahoo Finance 获取十年的日线 K 线（TradingView 作为回退），这些数据已针对拆股和分红复权，并按交易日标注日期。如需采集整个目录：`docker compose exec fonrex-api python scripts/ingest_all.py`。详情：[采集历史数据](../guides/ingest-historical-data.md)。
+采集过程使用为该上市品种验证过的代码，从 Yahoo Finance 获取十年的日线 K 线（TradingView 作为回退），并按交易日标注日期：成交价格已针对拆股调整，`adj_close` 还针对分红进行了调整；发生拆股或分红时，序列保持同一种调整基准。如需采集整个目录：`docker compose exec fonrex-api python scripts/ingest_all.py`。详情：[采集历史数据](../guides/ingest-historical-data.md)。
 
 ## 3. 计算指标
 
@@ -56,7 +56,7 @@ export DATABASE_URL="postgresql://fonrex:<POSTGRES_PASSWORD>@localhost:5432/fonr
 python -m zipline_bundle ingest --start 2020-01-01 --end 2025-12-31 --tickers AIR.PA,BNP.PA --calendar XPAR
 ```
 
-或者通过 `GET /eod/{ticker}` 将价格加载到 pandas 中。请参阅[使用 Zipline 进行回测](../guides/backtesting-zipline.md)。
+或者通过 `GET /eod/{ticker}` 将价格加载到 pandas 中——请参阅 [Python & Jupyter](../guides/python-jupyter.md)，其中附有示例 notebook。请参阅[使用 Zipline 进行回测](../guides/backtesting-zipline.md)。
 
 ## 后续步骤
 

@@ -49,6 +49,7 @@ const sidebars: SidebarsConfig = {
         'guides/ingest-historical-data',
         'guides/configure-realtime',
         'guides/backtesting-zipline',
+        'guides/python-jupyter',
         'guides/adding-providers',
         'guides/google-sheets-connector',
         'guides/openbb-workspace',

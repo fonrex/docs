@@ -28,6 +28,7 @@ Alembic 掌管整个 Schema，包括 TimescaleDB 超表、压缩和连续聚合�
 | 013 | `013_solvency_ratios.py` | 偿债能力比率和债务成本；`macro_rates_cache` |
 | 014 | `014_prices_per_listing.py` | 按上市品种重建 `prices_eod`：键为 `(asset_listing_id, resolution, time)`，各行重新标注为其交易日日期；压缩和聚合按上市品种进行 |
 | 015 | `015_dividend_yield_as_ratio.py` | 已存储的股息率从百分比转换为比率 |
+| 016 | `016_price_series_adjustments.py` | `price_series_adjustments`：每个已存储价格序列的调整方式，以及最后一次整体获取的时间。之前存储的序列会在下一次采集时被完整地重新获取 |
 
 ## 迁移的执行方式
 
@@ -42,7 +43,7 @@ Alembic 掌管整个 Schema，包括 TimescaleDB 超表、压缩和连续聚合�
 alembic revision -m "describe_the_change"
 ```
 
-重命名 `alembic/versions/` 中的新文件，并将其标识符设置在最后一个迁移之后（`revision = "016"`、`down_revision = "015"`，文件名 `016_describe_the_change.py`），然后：
+重命名 `alembic/versions/` 中的新文件，并将其标识符设置在最后一个迁移之后（`revision = "017"`、`down_revision = "016"`，文件名 `017_describe_the_change.py`），然后：
 
 ```bash
 alembic upgrade head

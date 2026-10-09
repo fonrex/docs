@@ -86,7 +86,7 @@ result = run_algorithm(
 
 - **Barres quotidiennes uniquement**, issues de `prices_eod`.
 - **Une cotation par instrument** : la cotation principale, sinon une cotation active ; les autres cotations (autres devises) ne sont pas exposées.
-- **Prix ajustés** : `adj_close` sert de clôture Zipline. Les tables de splits et de dividendes sont écrites vides.
+- **Prix ajustés** : `adj_close` (ajusté des splits et des dividendes) sert de clôture Zipline, et l'ouverture, le plus haut et le plus bas de la barre sont multipliés par le même facteur ; une barre sans `adj_close` (TradingView) garde ses prix. Les tables de splits et de dividendes sont écrites vides.
 - **Alignement sur le calendrier** : les barres en dehors des séances du calendrier sont écartées.
 - **`sid` stables** : attribués dans l'ordre alphabétique des symboles.
 

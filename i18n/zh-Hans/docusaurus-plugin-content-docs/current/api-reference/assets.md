@@ -87,8 +87,18 @@ curl -s -H "X-API-KEY: $FONREX_API_KEY" "http://localhost:5000/assets/by-isin/NL
 | `order` | string | `a` | `a`（最早的在前）或 `d`（最新的在前） |
 | `currency` | string | — | 上市品种的货币，用于多个上市品种共用同一代码时 |
 | `exchange` | string | — | 上市品种的交易所，用于多个上市品种共用同一代码时 |
+| `isin` | string | — | 金融工具的 ISIN，用于多个金融工具共用同一代码时（12 个字符，不区分大小写） |
 
-`weekly` 返回周线，`monthly` 返回月线；其他所有周期都返回日线。未提供 `currency` 或 `exchange` 时，使用主上市品种。
+`weekly` 返回周线，`monthly` 返回月线；其他所有周期都返回日线。
+
+### 选择上市品种 {#choosing-the-listing}
+
+仅凭代码并不总能确定唯一的金融工具：在默认目录中，`NEM` 既是以 USD 计价的 Newmont、其以 AUD 计价的澳大利亚上市线，也是以 EUR 计价的 Nemetschek——共三个 ISIN。Fonrex 在带有该代码的上市品种中，优先选择主上市品种，然后按货币和交易所的字母顺序选择：对于 `NEM`，选中的是以 AUD 计价的澳大利亚上市线。
+
+- `isin` 只保留同一个金融工具的上市品种。即使带后缀的代码不在目录中，也绝不会返回其他金融工具的上市品种（`MRK.DE` 仅在指定的金融工具内回退到 `MRK`）。
+- `currency` 和 `exchange` 在该金融工具的上市品种之间进行选择。
+
+`isin` 与 `currency` 一起使用即可无歧义地指定一个上市品种：`GET /eod/NEM?period=1y&isin=US6516391066&currency=USD`。不是 12 个字符（两个字母，后跟十个字母或数字）的 ISIN 会被拒绝，返回 `400`。
 
 ```bash
 curl -s -H "X-API-KEY: $FONREX_API_KEY" "http://localhost:5000/eod/AIR.PA?period=5d"
@@ -97,6 +107,7 @@ curl -s -H "X-API-KEY: $FONREX_API_KEY" "http://localhost:5000/eod/AIR.PA?period
 ```json
 {
   "ticker": "AIR.PA",
+  "listing": { "ticker": "AIR.PA", "isin": "NL0000235190", "currency": "EUR", "exchange": "XPAR" },
   "period": "5d",
   "format": "json",
   "count": 3,
@@ -109,7 +120,7 @@ curl -s -H "X-API-KEY: $FONREX_API_KEY" "http://localhost:5000/eod/AIR.PA?period
 }
 ```
 
-`Date` 是交易日的日期。价格已存储时 `data_source` 为 `database`，否则为采集来源（`yfinance` 或 `tradingview`）。响应在 Redis 中缓存 24 小时。
+`Open`、`High`、`Low` 和 `Close` 是成交价格，已针对拆股调整；`Adj Close` 是针对拆股和分红调整后的收盘价（来源未提供时即为收盘价）。`listing` 是实际读取的上市品种：请将其 `isin` 与您预期的金融工具进行核对。目录中不知道其交易所时（没有后缀的代码，例如美国股票），其 `exchange` 为 `null`。`Date` 是交易日的日期。价格已存储时 `data_source` 为 `database`，否则为采集来源（`yfinance` 或 `tradingview`）。响应在 Redis 中缓存 24 小时。
 
 使用 `fmt=csv` 时：
 
@@ -123,7 +134,7 @@ Date,Open,High,Low,Close,Adj Close,Volume
 
 | 状态码 | 响应体 | 触发条件 |
 |---|---|---|
-| `400` | `{"error": "Invalid request", "message": "..."}` | 代码、周期、格式、排序或日期无效 |
-| `404` | `{"error": "No data found", "message": "...", "reason": "..."}` | 没有已存储的数据，也无法采集到任何数据。`reason` 说明原因，例如 Yahoo 上没有以该上市品种货币报价的代码 |
+| `400` | `{"error": "Invalid request", "message": "..."}` | 代码、周期、格式、排序、日期或 ISIN 无效 |
+| `404` | `{"error": "No data found", "message": "...", "reason": "..."}` | 没有已存储的数据，也无法采集到任何数据。`reason` 说明原因，例如该代码没有对应该 ISIN 和货币的上市品种（`No listing found for ticker NEM (ISIN DE0006452907, currency USD)`），或 Yahoo 上没有以该上市品种货币报价的代码 |
 
 关于如何为上市品种选择数据源代码，请参阅[采集历史数据](../guides/ingest-historical-data.md)。

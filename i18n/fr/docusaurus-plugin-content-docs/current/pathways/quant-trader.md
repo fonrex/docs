@@ -34,7 +34,7 @@ docker compose exec fonrex-api python import_assets.py --file data/stocks.csv
 curl -s -X POST -H "$AUTH" "http://localhost:5000/historical/ingest?ticker=AIR.PA"
 ```
 
-L'ingestion récupère dix ans de barres quotidiennes depuis Yahoo Finance avec le symbole vérifié de la cotation (TradingView en solution de repli), ajustées des splits et des dividendes et datées par séance. Pour tout le catalogue : `docker compose exec fonrex-api python scripts/ingest_all.py`. Détails : [Ingérer des données historiques](../guides/ingest-historical-data.md).
+L'ingestion récupère dix ans de barres quotidiennes depuis Yahoo Finance avec le symbole vérifié de la cotation (TradingView en solution de repli), datées par séance : les prix négociés ajustés des splits, et un `adj_close` ajusté aussi des dividendes, gardés sur une seule base d'ajustement quand un split ou un dividende survient. Pour tout le catalogue : `docker compose exec fonrex-api python scripts/ingest_all.py`. Détails : [Ingérer des données historiques](../guides/ingest-historical-data.md).
 
 ## 3. Calculer des indicateurs
 
@@ -56,7 +56,7 @@ export DATABASE_URL="postgresql://fonrex:<POSTGRES_PASSWORD>@localhost:5432/fonr
 python -m zipline_bundle ingest --start 2020-01-01 --end 2025-12-31 --tickers AIR.PA,BNP.PA --calendar XPAR
 ```
 
-Ou chargez les prix dans pandas via `GET /eod/{ticker}`. Voir [Backtesting avec Zipline](../guides/backtesting-zipline.md).
+Ou chargez les prix dans pandas via `GET /eod/{ticker}` — voir [Python & Jupyter](../guides/python-jupyter.md), avec un exemple de notebook. Voir [Backtesting avec Zipline](../guides/backtesting-zipline.md).
 
 ## Étapes suivantes
 

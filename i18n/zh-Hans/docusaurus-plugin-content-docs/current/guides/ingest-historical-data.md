@@ -18,13 +18,33 @@ description: "Fonrex 如何按上市品种获取、验证并存储日终价格"
 `HistoricalIngestionService` 依次执行以下步骤：
 
 1. **序列** — ticker 指向一个上市品种：即带有该 ticker 的上市品种（优先选择主上市品种；可用 `currency` 或 `exchange` 选择其他上市品种），否则为该金融工具的首选上市品种。没有上市品种的金融工具无法被采集。
-2. **缺口检测** — 没有任何已存储 K 线时，获取十年数据；如果最后一个已存储的交易日是今天或昨天，该上市品种为 `up_to_date`；否则只获取缺失的天数。如果 `from_date` 早于第一根已存储的 K 线，也会获取更早的部分。
+2. **缺口检测** — 没有任何已存储 K 线时，获取十年数据；如果最后一个已存储的交易日是今天或昨天，该上市品种为 `up_to_date`；否则只获取缺失的天数。如果 `from_date` 早于第一根已存储的 K 线，也会获取更早的部分。使用 `force_refresh` 时，请求的范围和已存储的范围会被一次性整体重新获取。
 3. **来源代码** — 您目录中的 ticker 并不总是 Yahoo 代码（`EUCO` 在 Yahoo 上是 `SYBC.DE`，而单独的 `SPFF` 是一只美国基金）。Fonrex 按 **ISIN** 搜索 Yahoo，保留第一个以**该上市品种的货币**报价且有价格的行情，并将其存储为该上市品种的已验证代码。没有任何匹配的上市品种不会从 Yahoo 获取数据，并且在 24 小时内不会再次搜索。
-4. **获取** — 使用已验证代码从 Yahoo Finance 获取；TradingView 作为回退，仅当其行情以该上市品种的货币报价时才被接受。价格已针对拆股和分红进行复权；每根 K 线以其交易日标注日期。
+4. **获取** — 使用已验证代码从 Yahoo Finance 获取；TradingView 作为回退，仅当其行情以该上市品种的货币报价时才被接受。`open`、`high`、`low` 和 `close` 是成交价格，已针对拆股进行调整；`adj_close` 是针对拆股**和分红**调整后的收盘价（TradingView 的 K 线中为空）。每根 K 线以其交易日标注日期。最后几根已存储的 K 线会与新的 K 线一起被重新获取，以检查调整情况（见下一节）。
 5. **规范化** — 丢弃没有价格的 K 线，修正颠倒的最高价/最低价，将负成交量设为零，丢弃重复日期。
-6. **Upsert** — 每批 1,000 行，`ON CONFLICT (asset_listing_id, resolution, time) DO UPDATE`。使用 `force_refresh` 时，所获取范围内已存储的 K 线会被替换。
+6. **Upsert** — 每批 1,000 行，`ON CONFLICT (asset_listing_id, resolution, time) DO UPDATE`。使用 `force_refresh` 时，或整个序列被重新获取时，所获取范围内已存储的 K 线会被替换。
 7. **缓存** — 删除根据该 ticker 价格计算出的缓存响应（`eod`、`history`、`technical`、`dcf`）。
 8. **日志** — 在 `ingest_log` 中写入一行：状态、来源、新增行数、范围、耗时、错误。
+
+## 拆股与分红：整个序列使用同一种调整 {#splits-and-dividends-one-adjustment-for-the-whole-series}
+
+每次拆股（所有价格）和每次分红（`adj_close`）之后，Yahoo 都会重新调整整段历史。如果只是把新的 K 线追加到已存储的 K 线之后，两部分的调整方式就会不同，并在衔接处出现一个虚假的收益率：分红之后约为负的股息率，四拆一之后为 -75 %。
+
+因此，Fonrex 让每个序列（上市品种和分辨率）保持同一种调整：
+
+- 补全一个序列时，它会获取新的交易日**以及最后五根已存储的 K 线**。如果来源为这些 K 线给出的价格相同，则只写入新的交易日。
+- 如果价格不同（自上次采集以来发生了拆股或分红），则**整个序列会被重新获取**并替换已存储的序列。结果会在 `note` 中说明：`Whole history fetched again: the source adjusted the stored bars again (split or dividend)`。如果这次获取失败，则不写入任何数据，采集失败并给出原因。
+- 表 `price_series_adjustments` 按序列记录其 K 线的调整方式，以及最后一次整体获取的时间。
+
+`close` 用于成交价格（图表、指标、估值），`adj_close` 用于包含分红的收益率（业绩表现、beta、回测）。
+
+:::note 升级到迁移 016 之后
+迁移 016 之前存储的序列在 `close` 中保存的是经分红调整的价格。每个序列会在下一次采集时被完整地重新获取。如需立即为整个目录执行：
+
+```bash
+docker compose exec fonrex-api python scripts/ingest_all.py --force
+```
+:::
 
 ## ticker 没有价格或价格错误时
 
