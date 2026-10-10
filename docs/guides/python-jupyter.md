@@ -41,11 +41,11 @@ Merck & Co Inc,MRK,US58933Y1055,STOCK,USD
 SPDR S&P 500 ETF Trust,SPY,US78462F1030,ETF,USD
 ```
 
-Copy the file into the container and import it:
+Send the file to the container through standard input, then import it. The file is created by the user of the container, which can read it; with `docker compose cp` it would keep the permissions of your machine and the import could fail with `Permission denied`.
 
 ```bash
-docker compose cp us-hedging-listings.csv fonrex-api:/app/data/us-hedging-listings.csv
-docker compose exec fonrex-api python import_assets.py --file data/us-hedging-listings.csv
+docker compose exec -T fonrex-api sh -c 'cat > /tmp/us-hedging-listings.csv' < us-hedging-listings.csv
+docker compose exec fonrex-api python import_assets.py --file /tmp/us-hedging-listings.csv
 ```
 
 See [Importing assets](import-assets.md) for the CSV rules.

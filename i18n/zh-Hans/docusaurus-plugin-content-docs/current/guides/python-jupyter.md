@@ -41,11 +41,11 @@ Merck & Co Inc,MRK,US58933Y1055,STOCK,USD
 SPDR S&P 500 ETF Trust,SPY,US78462F1030,ETF,USD
 ```
 
-将文件复制到容器中并导入：
+通过标准输入将文件发送到容器，然后导入。这样文件由容器的用户创建，该用户可以读取它；如果使用 `docker compose cp`，文件会保留您本机的权限，导入可能会因 `Permission denied` 而失败。
 
 ```bash
-docker compose cp us-hedging-listings.csv fonrex-api:/app/data/us-hedging-listings.csv
-docker compose exec fonrex-api python import_assets.py --file data/us-hedging-listings.csv
+docker compose exec -T fonrex-api sh -c 'cat > /tmp/us-hedging-listings.csv' < us-hedging-listings.csv
+docker compose exec fonrex-api python import_assets.py --file /tmp/us-hedging-listings.csv
 ```
 
 CSV 规则请参阅[导入资产](import-assets.md)。
