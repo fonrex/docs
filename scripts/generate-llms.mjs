@@ -15,7 +15,9 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const SITE = 'https://fonrex.io';
+// Links point to the site as docusaurus.config.ts publishes it.
+const config = readFileSync(join(ROOT, 'docusaurus.config.ts'), 'utf8');
+const SITE = config.match(/^\s*url:\s*'([^']+)'/m)?.[1] ?? 'https://docs.fonrex.io';
 
 // The sidebar is the order a reader follows; read the ids it lists.
 const sidebar = readFileSync(join(ROOT, 'sidebars.ts'), 'utf8');

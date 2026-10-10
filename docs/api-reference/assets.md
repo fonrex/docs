@@ -96,6 +96,7 @@ End-of-day prices of a listing, in JSON or CSV. When nothing is stored for the r
 A ticker alone does not always designate one instrument: in the default catalogue, `NEM` is Newmont in USD, its Australian line in AUD and Nemetschek in EUR — three ISINs. Fonrex takes, among the listings bearing the ticker, the primary one first, then by currency and exchange in alphabetical order: for `NEM`, the Australian line in AUD.
 
 - `isin` keeps the listings of one instrument only. A listing of another instrument is never returned, even when the ticker with its suffix is not in the catalogue (`MRK.DE` falls back to `MRK` only within the named instrument).
+- A Yahoo suffix names an exchange: without a listing `AIR.PA`, Fonrex looks for `AIR` **in Paris only** (exchange `XPAR`, `EPA`, `PAR` or `PA`, or no exchange and quoted in EUR). `AIR` in New York (AAR Corp) is never taken; the answer is `404`. A suffix that names no exchange (`BRK.B`) gives no lookup without it.
 - `currency` and `exchange` choose among the listings of that instrument.
 
 `isin` with `currency` names a listing without ambiguity: `GET /eod/NEM?period=1y&isin=US6516391066&currency=USD`. An ISIN that does not have 12 characters (two letters, then ten letters or digits) is refused with `400`.

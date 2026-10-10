@@ -53,6 +53,8 @@ Une clé en lecture seule (`FONREX_READ_ONLY_API_KEYS`) suffit pour tous les wid
 | `fonrex_etf_details` | table | `GET /openbb/etf/{isin}/details` | `/etf/{isin}/details` |
 | `fonrex_index_constituents` | table | `GET /openbb/index/{index_name}/constituents` | `/index/{index_name}/constituents` |
 
+Le widget macro prend un paramètre `currency` (`USD`, `EUR`, ou vide pour les deux) et affiche une carte par série : le taux américain à 10 ans, le taux AAA de la zone euro à 10 ans, le taux de dépôt de la BCE et l'indice de stress CISS.
+
 Chaque route accepte les paramètres de la route qu'elle adapte (voir la page de référence API correspondante), avec quelques différences : `/openbb/fundamental` n'a pas de `fmt` ; `/openbb/technical/{ticker}/multi` n'a pas de `include_ohlcv` et utilise `sma_20,ema_50,rsi_14` par défaut ; `/openbb/technical/{ticker}/chart` utilise `sma_20,rsi_14` par défaut ; `/openbb/news/feed` renvoie 20 articles par défaut.
 
 `GET /openbb/quote/{ticker}` ne démarre jamais de flux temps réel : la cotation est en temps réel une fois le ticker abonné avec `POST /realtime/subscribe`, et c'est le prix différé de Yahoo Finance sinon.

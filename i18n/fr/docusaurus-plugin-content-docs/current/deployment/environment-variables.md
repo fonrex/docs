@@ -39,7 +39,7 @@ Chaque variable de `.env.example` est lue par le code (`tests/test_env_settings.
 
 | Variable | Défaut | Quand |
 |---|---|---|
-| `FRED_API_KEY` | *(vide)* | Taux sans risque en direct pour le DCF |
+| `FRED_API_KEY` | *(vide)* | Taux sans risque américain en direct pour le DCF (le taux en euros vient de la BCE, sans clé) |
 | `FONREX_PROXY_URL`, `FONREX_PROXY_PROVIDERS` | *(vide)* | Sites qui refusent l'IP de votre serveur |
 | `FONREX_PROVIDER_MAX_CONCURRENCY` | `4` | Moins de requêtes simultanées par site |
 | `OPENBB_ALLOWED_ORIGIN` | `https://pro.openbb.co` | Une autre origine OpenBB (CORS) |

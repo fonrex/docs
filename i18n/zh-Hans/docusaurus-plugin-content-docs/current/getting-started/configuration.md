@@ -75,11 +75,12 @@ Fonrex 从环境变量读取设置。将 `.env.example` 复制为 `.env` 并进�
 |---|---|---|
 | `DCF_CACHE_TTL` | `21600` | DCF 响应在 Redis 中的有效期（6 小时） |
 | `DCF_DEFAULT_PROJECTION_YEARS` | `5` | 预测年数（3 到 10） |
-| `DCF_RISK_FREE_RATE` | `0.04` | FRED 未提供数据时使用的无风险利率 |
+| `DCF_RISK_FREE_RATE` | `0.04` | 无风险利率（比率）：当财务报表货币的来源（USD 为 FRED，EUR 为 ECB）未给出利率时使用，其他货币也使用此值 |
 | `DCF_EQUITY_RISK_PREMIUM` | `0.055` | 股权风险溢价，以比率表示 |
 | `DCF_TERMINAL_GROWTH_RATE` | `0.025` | 永续增长率，以比率表示 |
-| `FRED_API_KEY` | *（空）* | 来自 fred.stlouisfed.org 的免费密钥；未设置时使用已存储的利率或 `DCF_RISK_FREE_RATE` |
-| `MACRO_RATES_CACHE_TTL` | `21600` | 宏观利率在 Redis 中的有效期（6 小时） |
+| `FRED_API_KEY` | *（空）* | 来自 fred.stlouisfed.org 的免费密钥，用于美国利率；没有密钥时使用已存储的利率或 `DCF_RISK_FREE_RATE` |
+| `MACRO_RATES_CACHE_TTL` | `21600` | 宏观利率（FRED 和 ECB）在 Redis 中的有效期（6 小时） |
+| `ECB_API_URL` | `https://data-api.ecb.europa.eu/service/data` | 欧洲央行数据门户（欧元利率，免费，无需密钥）；仅在使用镜像时设置 |
 
 ## 数据提供方监控
 

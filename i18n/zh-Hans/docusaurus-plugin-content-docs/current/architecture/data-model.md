@@ -94,7 +94,7 @@ erDiagram
 | 表 | 说明 |
 |---|---|
 | `fundamentals_highlights` | 金融工具的最新快照（估值、盈利能力、股息、空头头寸、偿债能力）。`dividend_yield` 为比率 |
-| `financial_statements` | 每种报表类型（利润表、资产负债表、现金流量表）、财务期间和频率各一行。一个财年为三行；计算时通过 `financials/fiscal_years.py` 将它们组合起来 |
+| `financial_statements` | 每种报表类型（利润表、资产负债表、现金流量表）、财务期间和频率各一行。一个财年为三行；计算时通过 `financials/fiscal_years.py` 将它们组合起来。 `currency` 是 Yahoo 给出的报表货币（未知时为 `NULL`）；DCF 以该货币进行 |
 | `earnings_history`, `earnings_trend` | 实际与预估每股收益；分析师对 `0q`、`+1q`、`0y`、`+1y` 的预估 |
 | `analyst_ratings` | 一致评级、目标价、评级数量 |
 | `esg_scores` | E/S/G 评分及 15 个争议标志 |
@@ -109,7 +109,7 @@ erDiagram
 | 表 | 说明 |
 |---|---|
 | `news_articles` | 在 `url` 上唯一；为信息流和统计建有索引。旧文章不会自动清除 |
-| `macro_rates_cache` | 从 FRED 读取的序列，在 `(series_id, observation_date)` 上唯一 |
+| `macro_rates_cache` | 从 FRED 和 ECB 读取的序列（`source`），在 `(series_id, observation_date)` 上唯一 |
 | `usage_logs` | 每个 API 请求一行，由后台批量写入；除非 `USAGE_LOG_IP` 要求，否则不保留 IP；在 `USAGE_LOG_RETENTION_DAYS` 之后清除 |
 
 ## 监控

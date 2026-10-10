@@ -53,6 +53,8 @@ description: "为 OpenBB Workspace 组件提供数据的 /openbb 路由和发现
 | `fonrex_etf_details` | table | `GET /openbb/etf/{isin}/details` | `/etf/{isin}/details` |
 | `fonrex_index_constituents` | table | `GET /openbb/index/{index_name}/constituents` | `/index/{index_name}/constituents` |
 
+宏观组件接受 `currency` 参数（`USD`、`EUR`，留空表示两者），每个序列显示一张卡片：美国 10 年期利率、欧元区 AAA 10 年期利率、欧洲央行存款利率以及 CISS 压力指数。
+
 每个路由接受其所适配路由的参数（参见相应的 API 参考页面），但有少数差异：`/openbb/fundamental` 没有 `fmt`；`/openbb/technical/{ticker}/multi` 没有 `include_ohlcv`，默认为 `sma_20,ema_50,rsi_14`；`/openbb/technical/{ticker}/chart` 默认为 `sma_20,rsi_14`；`/openbb/news/feed` 默认返回 20 篇文章。
 
 `GET /openbb/quote/{ticker}` 从不启动实时数据流：当该代码已通过 `POST /realtime/subscribe` 订阅时，报价为实时报价，否则为 Yahoo Finance 的延迟价格。

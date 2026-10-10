@@ -31,7 +31,7 @@ flowchart TD
         TV[TradingView]
         Scraped[13 scraped websites]
         NewsSites[7 news sources]
-        Specialised[SEC EDGAR, JustETF, Wikipedia, FRED]
+        Specialised[SEC EDGAR, JustETF, Wikipedia, FRED, ECB]
     end
 
     Redis[(Redis: cache + Pub/Sub)]
@@ -68,7 +68,7 @@ flowchart TD
 
 `entrypoint.sh` 等待 PostgreSQL 和 Redis 就绪，执行 `alembic upgrade head`，可选地导入 `data/etf.csv`（`SEED_ON_FIRST_RUN`），然后以 `WEB_CONCURRENCY` 个 worker（默认 1 个）启动 Gunicorn。
 
-随后 `main.py` 创建各项服务并将其发布到 `app.state`：数据库和 Redis 客户端、采集、指标、实时 worker（恢复已存储的订阅）、新闻、FRED、DCF、校验层、金丝雀监控及其每日调度器、使用情况记录器。启动过程是容错的：某个服务启动失败时，其路由返回 `503`，而 API 的其余部分照常运行。无法导入的数据提供方会在 `GET /health` 中列出。
+随后 `main.py` 创建各项服务并将其发布到 `app.state`：数据库和 Redis 客户端、采集、指标、实时 worker（恢复已存储的订阅）、新闻、FRED、ECB、DCF、校验层、金丝雀监控及其每日调度器、使用情况记录器。启动过程是容错的：某个服务启动失败时，其路由返回 `503`，而 API 的其余部分照常运行。无法导入的数据提供方会在 `GET /health` 中列出。
 
 `main.py` 从不修改 Schema：它将数据库的修订版本与 Alembic head 进行比较，二者不一致时将数据库标记为不可用。
 

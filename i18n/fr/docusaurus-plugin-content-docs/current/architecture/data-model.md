@@ -94,7 +94,7 @@ La correspondance Yahoo Finance d'une cotation contient son **symbole vérifié*
 | Table | Description |
 |---|---|
 | `fundamentals_highlights` | Dernier instantané d'un instrument (valorisation, rentabilité, dividende, positions vendeuses, solvabilité). `dividend_yield` est un ratio |
-| `financial_statements` | Une ligne par type d'état (compte de résultat, bilan, flux de trésorerie), période fiscale et fréquence. Un exercice correspond à trois lignes ; les calculs les regroupent avec `financials/fiscal_years.py` |
+| `financial_statements` | Une ligne par type d'état (compte de résultat, bilan, flux de trésorerie), période fiscale et fréquence. Un exercice correspond à trois lignes ; les calculs les regroupent avec `financials/fiscal_years.py`. `currency` est la devise des états donnée par Yahoo (`NULL` si inconnue) ; le DCF est fait dans cette devise |
 | `earnings_history`, `earnings_trend` | BPA réel contre estimé ; estimations des analystes pour `0q`, `+1q`, `0y`, `+1y` |
 | `analyst_ratings` | Consensus, objectif de cours, nombre de recommandations |
 | `esg_scores` | Scores E/S/G et 15 indicateurs de controverse |
@@ -109,7 +109,7 @@ Ces tables sont écrites par l'enrichissement approfondi à partir de Yahoo Fina
 | Table | Description |
 |---|---|
 | `news_articles` | Unique sur `url` ; index pour le flux et les statistiques. Les anciens articles ne sont pas purgés automatiquement |
-| `macro_rates_cache` | Séries lues sur FRED, unique sur `(series_id, observation_date)` |
+| `macro_rates_cache` | Séries lues sur FRED et à la BCE (`source`), unique sur `(series_id, observation_date)` |
 | `usage_logs` | Une ligne par requête API, écrite par lots en arrière-plan ; l'IP n'est pas conservée sauf si `USAGE_LOG_IP` le demande ; purgée après `USAGE_LOG_RETENTION_DAYS` |
 
 ## Surveillance

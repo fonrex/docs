@@ -29,6 +29,9 @@ Alembic owns the schema, including the TimescaleDB hypertables, compression and 
 | 014 | `014_prices_per_listing.py` | `prices_eod` rebuilt per listing: key `(asset_listing_id, resolution, time)`, rows re-dated to their session; compression and aggregates per listing |
 | 015 | `015_dividend_yield_as_ratio.py` | Stored dividend yields converted from percentages to ratios |
 | 016 | `016_price_series_adjustments.py` | `price_series_adjustments`: how each stored price series is adjusted and when it was last fetched in one piece. Series stored before are fetched again in full at their next ingestion |
+| 017 | `017_macro_rates_source.py` | `macro_rates_cache` holds series of several sources: longer `series_id`, new `source` column (`fred`, `ecb`) |
+| 018 | `018_statements_currency_unknown.py` | `financial_statements.currency` loses its `USD` default; the stored rows become unknown (`NULL`) until the next deep enrichment records Yahoo's currency |
+| 019 | `019_yahoo_epoch_dates.py` | `dividend_ex_date` and `shares_short_date` equal to 1970-01-01 (Yahoo seconds read as nanoseconds) become `NULL` |
 
 ## How migrations run
 
@@ -43,7 +46,7 @@ Migration 014 first deletes the TimescaleDB jobs of the price tables (waiting fo
 alembic revision -m "describe_the_change"
 ```
 
-Rename the new file of `alembic/versions/` and set its identifiers after the last migration (`revision = "017"`, `down_revision = "016"`, file `017_describe_the_change.py`), then:
+Rename the new file of `alembic/versions/` and set its identifiers after the last migration (`revision = "020"`, `down_revision = "019"`, file `020_describe_the_change.py`), then:
 
 ```bash
 alembic upgrade head

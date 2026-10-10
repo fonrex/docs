@@ -31,7 +31,7 @@ flowchart TD
         TV[TradingView]
         Scraped[13 scraped websites]
         NewsSites[7 news sources]
-        Specialised[SEC EDGAR, JustETF, Wikipedia, FRED]
+        Specialised[SEC EDGAR, JustETF, Wikipedia, FRED, ECB]
     end
 
     Redis[(Redis: cache + Pub/Sub)]
@@ -68,7 +68,7 @@ flowchart TD
 
 `entrypoint.sh` waits for PostgreSQL and Redis, applies `alembic upgrade head`, optionally imports `data/etf.csv` (`SEED_ON_FIRST_RUN`), then starts Gunicorn with `WEB_CONCURRENCY` workers (1 by default).
 
-`main.py` then creates the services and publishes them in `app.state`: database and Redis clients, ingestion, indicators, realtime worker (restores the stored subscriptions), news, FRED, DCF, validation layer, canary monitor and its daily scheduler, usage recorder. The start is tolerant: a service that fails to start leaves its routes answering `503` while the rest of the API runs. A provider that cannot be imported is listed by `GET /health`.
+`main.py` then creates the services and publishes them in `app.state`: database and Redis clients, ingestion, indicators, realtime worker (restores the stored subscriptions), news, FRED, ECB, DCF, validation layer, canary monitor and its daily scheduler, usage recorder. The start is tolerant: a service that fails to start leaves its routes answering `503` while the rest of the API runs. A provider that cannot be imported is listed by `GET /health`.
 
 `main.py` never changes the schema: it compares the database revision with the Alembic head and marks the database unavailable when they differ.
 

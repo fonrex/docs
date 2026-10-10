@@ -97,7 +97,7 @@ Answer layout:
 }
 ```
 
-The figures are fetched from Yahoo Finance with the verified symbol (`meta.symbol`) and stored. Without a verified symbol nothing is fetched: the answer is what the database already holds, `meta.source` is `database` and `meta.note` gives the reason. Complete answers are cached 24 hours; a request receives only the sections it asked for.
+The figures are fetched from Yahoo Finance with the verified symbol (`meta.symbol`) and stored. Without a verified symbol nothing is fetched: the answer is what the database already holds, `meta.source` is `database` and `meta.note` gives the reason. Complete answers are cached 24 hours per instrument; a request receives only the sections it asked for.
 
 ---
 

@@ -94,7 +94,7 @@ The Yahoo Finance mapping of a listing holds its **verified symbol** — found f
 | Table | Description |
 |---|---|
 | `fundamentals_highlights` | Last snapshot of an instrument (valuation, profitability, dividend, short interest, solvency). `dividend_yield` is a ratio |
-| `financial_statements` | One row per statement type (income, balance, cash flow), fiscal period and frequency. A fiscal year is three rows; calculations put them together with `financials/fiscal_years.py` |
+| `financial_statements` | One row per statement type (income, balance, cash flow), fiscal period and frequency. A fiscal year is three rows; calculations put them together with `financials/fiscal_years.py`. `currency` is the currency of the statements given by Yahoo (`NULL` when unknown); the DCF is made in it |
 | `earnings_history`, `earnings_trend` | Actual vs estimated EPS; analyst estimates for `0q`, `+1q`, `0y`, `+1y` |
 | `analyst_ratings` | Consensus, target price, rating counts |
 | `esg_scores` | E/S/G scores and 15 controversy flags |
@@ -109,7 +109,7 @@ These tables are written by the deep enrichment from Yahoo Finance (`/fundamenta
 | Table | Description |
 |---|---|
 | `news_articles` | Unique on `url`; indexes for the feed and the statistics. Old articles are not purged automatically |
-| `macro_rates_cache` | Series read from FRED, unique on `(series_id, observation_date)` |
+| `macro_rates_cache` | Series read from FRED and the ECB (`source`), unique on `(series_id, observation_date)` |
 | `usage_logs` | One row per API request, written in background batches; IP not kept unless `USAGE_LOG_IP` asks for it; purged after `USAGE_LOG_RETENTION_DAYS` |
 
 ## Monitoring

@@ -97,7 +97,7 @@ curl -s -H "X-API-KEY: $FONREX_API_KEY" \
 }
 ```
 
-数据使用已验证的代码（`meta.symbol`）从 Yahoo Finance 获取并存储。没有已验证的代码时不会获取任何数据：响应为数据库中已有的内容，`meta.source` 为 `database`，`meta.note` 给出原因。完整响应缓存 24 小时；每个请求只会收到其所请求的部分。
+数据使用已验证的代码（`meta.symbol`）从 Yahoo Finance 获取并存储。没有已验证的代码时不会获取任何数据：响应为数据库中已有的内容，`meta.source` 为 `database`，`meta.note` 给出原因。完整响应按金融工具缓存 24 小时；每个请求只会收到其所请求的部分。
 
 ---
 

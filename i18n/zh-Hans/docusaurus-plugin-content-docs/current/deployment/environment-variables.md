@@ -39,7 +39,7 @@ description: "部署 Fonrex 时需要关注的配置项，以及 .env 如何传�
 
 | 变量 | 默认值 | 适用场景 |
 |---|---|---|
-| `FRED_API_KEY` | *（空）* | 为 DCF 提供实时无风险利率 |
+| `FRED_API_KEY` | *（空）* | DCF 使用的实时美国无风险利率（欧元利率来自 ECB，无需密钥） |
 | `FONREX_PROXY_URL`, `FONREX_PROXY_PROVIDERS` | *（空）* | 网站拒绝你服务器的 IP |
 | `FONREX_PROVIDER_MAX_CONCURRENCY` | `4` | 减少对每个网站的并发请求数 |
 | `OPENBB_ALLOWED_ORIGIN` | `https://pro.openbb.co` | 使用其他 OpenBB 来源（CORS） |

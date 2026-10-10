@@ -42,7 +42,7 @@ description: "将您自托管的 Fonrex 实例连接到 OpenBB Workspace 的小�
 
 **Fonrex — Screener & Macro** — 发现：
 - *Screener*：技术筛选器（例如 RSI < 30）
-- *Macro Context*：FRED 利率和指数成分股
+- *Macro Context*：FRED 与 ECB 利率（USD 和 EUR）以及指数成分股
 
 可以从 OpenBB 的 Apps 菜单导入它们，也可以将小组件逐个添加到您自己的仪表板。
 
