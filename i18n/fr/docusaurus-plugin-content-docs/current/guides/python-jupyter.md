@@ -149,7 +149,7 @@ Importez les cotations de l'étape 1, définissez `FONREX_API_KEY`, puis ouvrez 
 | Réponse | Cause |
 |---|---|
 | `401` | `FONREX_API_KEY` est absente ou n'est pas une clé de l'instance |
-| `400` avec `L'ISIN ... n'est pas valide` | L'ISIN n'a pas 12 caractères (deux lettres, puis dix lettres ou chiffres) |
+| `400` avec `The ISIN ... is not valid` | L'ISIN n'a pas 12 caractères (deux lettres, puis dix lettres ou chiffres) |
 | `404` avec `No listing found for ticker` | Aucune cotation du catalogue n'a ce ticker avec cet ISIN et cette devise : importez-la, ou vérifiez l'ISIN |
 | `404` avec une autre `reason` | L'ingestion a échoué, par exemple aucun symbole Yahoo coté dans la devise de la cotation |
 | `404` `No data found` sans `reason`, ou moins de lignes que prévu | La base de données contient déjà d'autres dates de la cotation : `/eod` n'ingère qu'une période vide, et l'ingestion complète après la dernière date stockée. Récupérez à nouveau la période avec une clé à accès complet : `POST /historical/ingest?ticker=NEM&isin=US6516391066&currency=USD&from_date=2020-01-01&to_date=2022-12-31&force_refresh=true` |
