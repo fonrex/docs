@@ -32,6 +32,8 @@ Alembic 掌管整个 Schema，包括 TimescaleDB 超表、压缩和连续聚合�
 | 017 | `017_macro_rates_source.py` | `macro_rates_cache` 存放多个来源的序列：`series_id` 更长，新增 `source` 列（`fred`、`ecb`） |
 | 018 | `018_statements_currency_unknown.py` | `financial_statements.currency` 不再默认为 `USD`；已存储的行变为未知（`NULL`），直到下一次深度补全记录 Yahoo 给出的货币 |
 | 019 | `019_yahoo_epoch_dates.py` | 等于 1970-01-01 的 `dividend_ex_date` 和 `shares_short_date`（Yahoo 的秒数被当作纳秒读取）变为 `NULL` |
+| 020 | `020_factor_returns.py` | `factor_returns` 和 `factor_dataset_loads`：Fama/French 因子文件 |
+| 021 | `021_fx_rates.py` | `fx_rates` 和 `fx_rate_loads`：欧洲央行参考汇率 |
 
 ## 迁移的执行方式
 
@@ -46,7 +48,7 @@ Alembic 掌管整个 Schema，包括 TimescaleDB 超表、压缩和连续聚合�
 alembic revision -m "describe_the_change"
 ```
 
-重命名 `alembic/versions/` 中的新文件，并将其标识符设置在最后一个迁移之后（`revision = "020"`、`down_revision = "019"`，文件名 `020_describe_the_change.py`），然后：
+重命名 `alembic/versions/` 中的新文件，并将其标识符设置在最后一个迁移之后（`revision = "022"`、`down_revision = "021"`，文件名 `022_describe_the_change.py`），然后：
 
 ```bash
 alembic upgrade head

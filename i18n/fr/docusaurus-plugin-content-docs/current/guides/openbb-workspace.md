@@ -18,7 +18,7 @@ description: "Connecter votre instance Fonrex auto-hébergée aux widgets et tab
 
 1. Dans OpenBB Workspace, faites un clic droit sur le tableau de bord et sélectionnez **Add data** (ou ouvrez les connexions de backend).
 2. Saisissez l'URL de votre instance, par exemple `http://localhost:5000` ou `https://myfonrex.share.zrok.io`.
-3. OpenBB lit `/widgets.json` et liste les 19 widgets. Ce fichier et `/apps.json` répondent sans clé.
+3. OpenBB lit `/widgets.json` et liste les 21 widgets. Ce fichier et `/apps.json` répondent sans clé.
 
 ## Étape 2 — Ajouter la clé
 
@@ -39,6 +39,7 @@ Toutes les routes `/openbb/...` l'exigent.
 - *Technical* : graphique technique et graphique multi-indicateurs
 - *News* : actualités du ticker et flux global
 - *Watchlist* : cours en lot
+- *Factors* : exposition du ticker aux 5 facteurs Fama/French et rendements des facteurs européens
 
 **Fonrex — Screener & Macro** — découverte :
 - *Screener* : screener technique (par exemple RSI < 30)
@@ -69,6 +70,8 @@ Importez-les depuis le menu Apps d'OpenBB, ou ajoutez les widgets un par un à v
 | `fonrex_dcf_compare` | Fonrex DCF Models Comparison | Valuation | table |
 | `fonrex_dcf_sensitivity` | Fonrex DCF Sensitivity Matrix | Valuation | table |
 | `fonrex_macro_rates` | Fonrex Macro Rates | Macro | metric |
+| `fonrex_factor_exposure` | Fonrex Factor Exposure | Factors | table |
+| `fonrex_factor_returns` | Fonrex Factor Returns | Factors | chart |
 
 Les routes correspondantes sont listées dans la [référence de l'API OpenBB](../api-reference/openbb.md).
 
@@ -77,6 +80,7 @@ Les routes correspondantes sont listées dans la [référence de l'API OpenBB](.
 - **Cours** : le widget de cours ne démarre jamais de flux temps réel. Il affiche le prix en temps réel une fois le ticker abonné (`POST /realtime/subscribe` avec une clé à accès complet), et sinon le prix différé de Yahoo Finance.
 - **Les prix et les indicateurs** ont besoin des prix du ticker en base de données ; le widget EOD les ingère à la première utilisation.
 - **Le DCF** a besoin des données fondamentales détaillées du ticker : ouvrez d'abord le widget de données fondamentales détaillées.
+- **L'exposition aux facteurs** a besoin des prix journaliers du ticker (`POST /historical/ingest`, ou ouvrez d'abord le widget EOD) ; les fichiers de facteurs et les cours de change de la BCE sont téléchargés à la première utilisation.
 
 ## Dépannage
 

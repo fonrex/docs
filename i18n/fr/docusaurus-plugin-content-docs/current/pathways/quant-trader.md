@@ -58,6 +58,14 @@ python -m zipline_bundle ingest --start 2020-01-01 --end 2025-12-31 --tickers AI
 
 Ou chargez les prix dans pandas via `GET /eod/{ticker}` — voir [Python & Jupyter](../guides/python-jupyter.md), avec un exemple de notebook. Voir [Backtesting avec Zipline](../guides/backtesting-zipline.md).
 
+## 5. Mesurer l'exposition aux facteurs {#5-measure-factor-exposure}
+
+```bash
+curl -s -H "$AUTH" "http://localhost:5000/factors/exposure/AIR.PA?model=carhart"
+```
+
+Les prix stockés sont régressés sur les facteurs Fama/French de leur région (en dollars US) : bêtas, t-stats, alpha annualisé, R². Voir [Facteurs Fama/French](../api-reference/factors.md).
+
 ## Étapes suivantes
 
 - [API des prix historiques](../api-reference/historical.md)

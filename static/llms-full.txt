@@ -141,6 +141,14 @@ python -m zipline_bundle ingest --start 2020-01-01 --end 2025-12-31 --tickers AI
 
 Or load the prices into pandas through `GET /eod/{ticker}` — see [Python & Jupyter](../guides/python-jupyter.md), with an example notebook. See [Backtesting with Zipline](../guides/backtesting-zipline.md).
 
+## 5. Measure factor exposure
+
+```bash
+curl -s -H "$AUTH" "http://localhost:5000/factors/exposure/AIR.PA?model=carhart"
+```
+
+The stored prices are regressed on the Fama/French factors of their region (in US dollars): betas, t-stats, annualised alpha, R². See [Fama/French factors](../api-reference/factors.md).
+
 ## Next steps
 
 - [Historical prices API](../api-reference/historical.md)
@@ -199,7 +207,7 @@ curl -s -X POST -H "X-API-KEY: $KEY" -H "Content-Type: application/json" \
   http://localhost:5000/dcf/AIR.PA
 ```
 
-`GET /dcf` computes the FCF model; `/compare` and a `POST` naming several models weigh FCF, EPS and DDM 50/30/20. WACC from CAPM with the 10-year rate of the currency of the statements (FRED for USD, the ECB for EUR). See [Valuation & DCF](../api-reference/valuation-dcf.md).
+`GET /dcf` computes the FCF model; `/compare` and a `POST` naming several models weigh FCF, EPS and DDM 50/30/20. WACC from CAPM with the 10-year rate of the currency of the statements (FRED for USD, the ECB for EUR). `wacc_params.cost_of_equity_model` (`ff3`, `ff5`, `carhart`) replaces the CAPM by a cost of equity from the [Fama/French factors](../api-reference/factors.md). See [Valuation & DCF](../api-reference/valuation-dcf.md).
 
 ## 4. Google Sheets
 
@@ -571,6 +579,14 @@ Clients send a key as `Authorization: Bearer <key>` or `X-API-KEY: <key>`. See [
 | `FRED_API_KEY` | *(empty)* | Free key from fred.stlouisfed.org for the US rate; without it the stored rate or `DCF_RISK_FREE_RATE` is used |
 | `MACRO_RATES_CACHE_TTL` | `21600` | Lifetime of the macro rates (FRED and ECB) in Redis (6 h) |
 | `ECB_API_URL` | `https://data-api.ecb.europa.eu/service/data` | ECB Data Portal (euro rates, free, no key); set only to use a mirror |
+
+## Factors and exchange rates
+
+| Variable | Default | Description |
+|---|---|---|
+| `FACTORS_REFRESH_DAYS` | `7` | Days before a Fama/French factor file is downloaded again (1 to 90) |
+| `FRENCH_LIBRARY_URL` | `https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp` | Kenneth French Data Library (free, no key); set only to use a mirror |
+| `FX_RATES_REFRESH_HOURS` | `12` | Hours before the ECB exchange rates of a currency are asked again (1 to 720) |
 
 ## Provider monitoring
 
@@ -1651,7 +1667,7 @@ Valuation with your own assumptions; never cached. It only computes, so a read-o
 | `models` | list | `["fcf"]` | Among `fcf`, `eps`, `ddm` |
 | `projection_years` | integer | `5` | 3 to 10 |
 | `terminal_growth_rate` | number | `0.025` | Ratio (0.025 = 2.5 %) |
-| `wacc_params` | object | — | `risk_free_rate`, `equity_risk_premium`, `beta_override`, `cost_of_debt_override`, `tax_rate_override` |
+| `wacc_params` | object | — | `risk_free_rate`, `equity_risk_premium`, `beta_override`, `cost_of_debt_override`, `tax_rate_override`, `cost_of_equity_model` (`capm` by default, `ff3`, `ff5`, `carhart`: see below) |
 | `fcf_growth_override`, `eps_growth_override`, `dividend_growth_override` | number | — | Force the initial growth of a model |
 | `model_weights` | object | — | Consensus weights, e.g. `{"fcf": 0.6, "eps": 0.4, "ddm": 0}` |
 
@@ -1663,6 +1679,44 @@ curl -s -X POST -H "X-API-KEY: $FONREX_API_KEY" -H "Content-Type: application/js
 ```
 
 A terminal growth rate within half a point of the discount rate is capped (discount rate − 0.5 %) with a warning. Asking for `ddm` for a company that pays no dividend answers `404`.
+
+### Cost of equity from the Fama/French factors {#factor-cost-of-equity}
+
+By default the cost of equity follows the CAPM: Rf + beta × equity risk premium. With `wacc_params.cost_of_equity_model` set to `ff3`, `ff5` or `carhart`, it becomes:
+
+> Ke = Rf + Σ βₖ × premiumₖ
+
+- **βₖ** is the exposure of the listing to each factor, measured like [`GET /factors/exposure/{ticker}`](./factors.md) on 60 months of returns in US dollars. The daily prices of the listing must be stored (`POST /historical/ingest`); the factor files are downloaded when missing.
+- **premiumₖ** is the long-run premium of the factor in the region of the listing: the mean of all its stored monthly returns, times 12 (US since 1926 or 1963, Europe since 1990).
+- **Rf** stays the risk-free rate of the currency of the statements. The premia are dollar returns over the US Treasury bill: for a valuation in another currency they are an approximation, and `warnings` says so.
+
+```bash
+curl -s -X POST -H "X-API-KEY: $FONREX_API_KEY" -H "Content-Type: application/json" \
+  -d '{"models": ["fcf"], "wacc_params": {"cost_of_equity_model": "ff5"}}' \
+  http://localhost:5000/dcf/AIR.PA
+```
+
+The WACC is computed again with this cost of equity (still kept within 5–20 %). `wacc.beta_used` is the market beta, `wacc.cost_of_equity_model` names the model, and `wacc.factor_cost_of_equity` shows how it was measured:
+
+```json
+"factor_cost_of_equity": {
+  "model": "ff5",
+  "region": "europe",
+  "betas": { "MKT_RF": "1.2100", "SMB": "-0.3500", "HML": "0.4200", "RMW": "0.1800", "CMA": "-0.2700" },
+  "premia": { "MKT_RF": "0.0710", "SMB": "0.0090", "HML": "0.0380", "RMW": "0.0420", "CMA": "0.0150" },
+  "premium": "0.1046",
+  "start": "2021-09-30",
+  "end": "2026-08-31",
+  "periods": 60,
+  "r_squared": 0.58
+}
+```
+
+The figures are illustrative; `premium` is Σ β × premium, added to Rf.
+
+- `beta_override` and `equity_risk_premium` belong to the CAPM: they are not used, and a warning says so. A cost of equity below Rf is also reported in `warnings`.
+- An exposure that cannot be measured (no prices, a history shorter than 24 months, no factor file) answers `404` with the reason.
+- The `GET` routes keep the CAPM. Factor premia are measured with a large error and change with the period chosen: use this cost of equity as a second opinion.
 
 ---
 
@@ -1727,6 +1781,263 @@ curl -s -H "X-API-KEY: $FONREX_API_KEY" "http://localhost:5000/macro/rates?curre
 - A rate is a ratio (`0.0412` = 4.12 %, `unit` = `ratio`), serialised as a string; it may be zero or negative. The CISS is an index (`unit` = `index`).
 - `freshness`: `live` (read from the source for this answer), `cached` (Redis, or stored and read less than 6 hours ago — `MACRO_RATES_CACHE_TTL`), `stale` (an older stored value: the source could not be read). FRED needs `FRED_API_KEY`; the ECB needs no key.
 - A series without any value is left out, and so is a source that did not start (`503` when it is the only one asked).
+
+
+
+<!-- FILE: /docs/api-reference/factors.md -->
+
+---
+id: "factors"
+title: "Fama/French Factors API Reference"
+sidebar_label: "Fama/French Factors"
+description: "Factor returns of the Kenneth French Data Library, factor exposure of a listing, and the ECB exchange rates used to compare it in US dollars"
+---
+
+# Fama/French Factors API Reference
+
+Fonrex stores the factor returns of the [Kenneth R. French Data Library](https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html) (free, no key) and measures how a listing is exposed to them: market, size, value, profitability, investment and momentum.
+
+| Route | What it does |
+|---|---|
+| `GET /factors` | The datasets, and what is stored of each file |
+| `GET /factors/{dataset}` | The factor returns of one dataset |
+| `POST /factors/refresh` | Downloads files of the library |
+| `GET /factors/exposure/{ticker}` | The factor exposure of a listing: betas, alpha, R² |
+
+The factors can also be used for the cost of equity of a valuation: see [`cost_of_equity_model`](./valuation-dcf.md#factor-cost-of-equity).
+
+## Datasets
+
+Nine datasets, each **monthly** and **daily**:
+
+| Dataset | Factors |
+|---|---|
+| `us_3`, `europe_3`, `developed_3` | `MKT_RF`, `SMB`, `HML`, `RF` |
+| `us_5`, `europe_5`, `developed_5` | `MKT_RF`, `SMB`, `HML`, `RMW`, `CMA`, `RF` |
+| `us_mom`, `europe_mom`, `developed_mom` | `MOM` |
+
+- `MKT_RF`: the market return minus the risk-free rate. `SMB`: small minus big (size). `HML`: high minus low book-to-market (value). `RMW`: robust minus weak profitability. `CMA`: conservative minus aggressive investment. `MOM`: winners minus losers of the last year (momentum). `RF`: the US one-month Treasury bill rate.
+- **Every return is in US dollars**, the European and developed datasets included, and `RF` is the US rate for every region.
+- Values are **ratios** (`0.0289` = 2.89 %; the library publishes percentages). A month is dated by its last day.
+- History: the US since 1926 (1963 for the 5 factors), Europe and developed markets since 1990. The monthly files come out with a delay of one or two months.
+
+## Loading the files
+
+A file is downloaded on first use. To load them in advance:
+
+```bash
+docker compose exec fonrex-api python scripts/load_factors.py
+docker compose exec fonrex-api python scripts/load_factors.py --dataset us_5 europe_5 --frequency monthly daily
+```
+
+Without option, the script loads the monthly file of every dataset. A file read less than `FACTORS_REFRESH_DAYS` days ago (7 by default) is not downloaded again; `--force` downloads it anyway. A download that fails keeps the stored values.
+
+---
+
+## <span className="api-method get">GET</span> `/factors`
+
+The nine datasets, with what the database holds of each file. Downloads nothing.
+
+```json
+{
+  "source": "Kenneth R. French Data Library, https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html",
+  "datasets": [
+    {
+      "dataset": "us_3",
+      "region": "us",
+      "label": "US 3 factors",
+      "factors": ["MKT_RF", "SMB", "HML", "RF"],
+      "currency": "USD",
+      "loads": [
+        {
+          "dataset": "us_3",
+          "frequency": "monthly",
+          "status": "fresh",
+          "fetched_at": "2026-10-10T15:25:00Z",
+          "first_period": "1926-07-31",
+          "last_period": "2026-08-31",
+          "periods": 1202,
+          "source_note": "CRSP 202608",
+          "reason": null
+        },
+        { "dataset": "us_3", "frequency": "daily", "status": "missing", "periods": 0, "...": "..." }
+      ]
+    }
+  ]
+}
+```
+
+`status`:
+
+| Value | Meaning |
+|---|---|
+| `fetched` | Downloaded for this answer |
+| `fresh` | Downloaded less than `FACTORS_REFRESH_DAYS` days ago |
+| `stale` | Downloaded before: it will be downloaded again at the next read |
+| `failed` | The last download failed (`reason`); the stored values are kept |
+| `missing` | Never downloaded |
+
+`source_note` is the database the library built the file from (`CRSP 202608`: CRSP data up to August 2026).
+
+---
+
+## <span className="api-method get">GET</span> `/factors/{dataset}`
+
+The returns of one dataset, oldest period first. A file never downloaded, or older than `FACTORS_REFRESH_DAYS` days, is downloaded first.
+
+| Parameter | Default | Description |
+|---|---|---|
+| `frequency` | `monthly` | `monthly` or `daily` |
+| `start`, `end` | — | First and last period included (`YYYY-MM-DD`) |
+
+```bash
+curl -s -H "X-API-KEY: $FONREX_API_KEY" "http://localhost:5000/factors/us_3?start=2026-07-01"
+```
+
+```json
+{
+  "dataset": "us_3",
+  "frequency": "monthly",
+  "region": "us",
+  "label": "US 3 factors",
+  "factors": ["MKT_RF", "SMB", "HML", "RF"],
+  "currency": "USD",
+  "unit": "ratio",
+  "source": "Kenneth R. French Data Library, https://...",
+  "load": { "status": "fresh", "last_period": "2026-08-31", "periods": 1202, "source_note": "CRSP 202608", "...": "..." },
+  "data": [
+    { "date": "2026-07-31", "MKT_RF": -0.0061, "SMB": -0.0192, "HML": 0.0211, "RF": 0.0033 },
+    { "date": "2026-08-31", "MKT_RF": 0.0256, "SMB": 0.0034, "HML": -0.0354, "RF": 0.0029 }
+  ]
+}
+```
+
+The figures are illustrative. When a download fails, the stored values are answered with `load.status` = `failed`.
+
+| Code | When |
+|---|---|
+| `404` | Unknown dataset |
+| `422` | `start` after `end`, or an unknown `frequency` |
+| `503` | Nothing stored and the download failed, or no database |
+
+---
+
+## <span className="api-method post">POST</span> `/factors/refresh`
+
+Downloads files of the library into the database. It changes the database: a **full-access key** is needed.
+
+| Parameter | Default | Description |
+|---|---|---|
+| `dataset` | every dataset | Repeat it for several: `?dataset=us_3&dataset=europe_3` |
+| `frequency` | `monthly` | Repeat it for both: `?frequency=monthly&frequency=daily` |
+| `force` | `false` | Download even a file read recently |
+
+```bash
+curl -s -X POST -H "X-API-KEY: $FONREX_API_KEY" "http://localhost:5000/factors/refresh?dataset=europe_5&frequency=monthly&frequency=daily"
+```
+
+The answer lists one `load` per file, with the same fields as `GET /factors`. A file read less than `FACTORS_REFRESH_DAYS` days ago keeps its `fresh` status and is not downloaded.
+
+---
+
+## <span className="api-method get">GET</span> `/factors/exposure/{ticker}`
+
+Regresses the excess returns of a listing on the factors of its region, by ordinary least squares:
+
+> r − RF = α + Σ βₖ · Fₖ + ε
+
+| Parameter | Default | Description |
+|---|---|---|
+| `model` | `ff3` | `ff3` (MKT_RF, SMB, HML), `ff5` (plus RMW, CMA) or `carhart` (ff3 plus MOM) |
+| `frequency` | `monthly` | `monthly` or `daily` |
+| `window` | 60 months or 252 days | Number of periods regressed (24 to 10 000) |
+| `end` | last period available | Last period of the regression |
+| `region` | from the currency | `us`, `europe` or `developed` |
+| `currency`, `exchange`, `isin` | — | Choose the listing, as on the price routes |
+
+**Prices first.** The regression reads the daily closes stored for the listing (`adj_close`, dividends included). Ingest them before:
+
+```bash
+curl -s -X POST -H "X-API-KEY: $FONREX_API_KEY" "http://localhost:5000/historical/ingest?ticker=AIR.PA"
+curl -s -H "X-API-KEY: $FONREX_API_KEY" "http://localhost:5000/factors/exposure/AIR.PA?model=ff5"
+```
+
+**Region.** A listing in USD takes the US factors; in a European currency (EUR, GBP, CHF, SEK, DKK, NOK…) the European factors; in any other currency the developed-markets factors. `region` chooses another one.
+
+**Returns in US dollars.** The factors are in dollars, so the closes of a listing in another currency are converted with the ECB reference rate of their day (or the last one within a week) before the returns are computed; `converted_from` names the original currency. A close without a rate within a week is left out, with a warning. A price in pence is turned into pounds first. The rates are downloaded when needed: see [Exchange rates](#exchange-rates).
+
+**Periods.** A monthly return goes from the last close of a month to the last close of the next one; a daily return from one close to the next. The regression keeps the last `window` periods that have a return and every factor.
+
+| Periods available | Result |
+|---|---|
+| fewer than 24 months (60 days) | `422` |
+| fewer than 36 months (126 days) | Measured, with a warning: the estimates are imprecise |
+
+```json
+{
+  "ticker": "AIR.PA",
+  "listing": { "ticker": "AIR", "isin": "NL0000235190", "currency": "EUR", "exchange": "XPAR" },
+  "model": "ff5",
+  "region": "europe",
+  "frequency": "monthly",
+  "datasets": ["europe_5"],
+  "return_currency": "USD",
+  "converted_from": "EUR",
+  "start": "2021-09-30",
+  "end": "2026-08-31",
+  "periods": 60,
+  "alpha": { "value": 0.0021, "std_error": 0.0035, "t_stat": 0.6, "annualized": 0.0252 },
+  "betas": {
+    "MKT_RF": { "value": 1.21, "std_error": 0.14, "t_stat": 8.64 },
+    "SMB": { "value": -0.35, "std_error": 0.31, "t_stat": -1.13 },
+    "HML": { "value": 0.42, "std_error": 0.22, "t_stat": 1.91 },
+    "RMW": { "value": 0.18, "std_error": 0.37, "t_stat": 0.49 },
+    "CMA": { "value": -0.27, "std_error": 0.41, "t_stat": -0.66 }
+  },
+  "r_squared": 0.58,
+  "adj_r_squared": 0.54,
+  "residual_volatility": 0.21,
+  "warnings": [],
+  "source": "Kenneth R. French Data Library, https://..."
+}
+```
+
+The figures are illustrative.
+
+- `alpha.value` is per period; `alpha.annualized` multiplies it by 12 (monthly) or 252 (daily).
+- `t_stat` = value / standard error. An absolute value below 2 means the coefficient is not clearly different from zero.
+- `residual_volatility`: the annualised standard deviation of what the factors do not explain (the specific risk of the listing).
+
+| Code | When |
+|---|---|
+| `404` | Unknown listing, or no daily prices stored |
+| `422` | Too few periods, or a parameter out of range |
+| `503` | No factor file or no ECB rate could be downloaded, or no database |
+
+---
+
+## Exchange rates {#exchange-rates}
+
+To convert prices into dollars, Fonrex keeps the **ECB reference rates** of the euro, day by day since 1999 (free, no key), in the `fx_rates` table. The rate between two currencies goes through the euro: dollars per pound = (USD per EUR) / (GBP per EUR). A currency read less than `FX_RATES_REFRESH_HOURS` hours ago (12 by default) is not asked again; a refresh only asks for the new days.
+
+The exposure route downloads the rates it needs. To load them in advance (USD, GBP, CHF, SEK, DKK, NOK, JPY, CAD, AUD and HKD by default):
+
+```bash
+docker compose exec fonrex-api python scripts/load_fx_rates.py
+docker compose exec fonrex-api python scripts/load_fx_rates.py --currency USD GBP CHF --force
+```
+
+## Settings
+
+| Variable | Default | Description |
+|---|---|---|
+| `FACTORS_REFRESH_DAYS` | `7` | Days before a factor file is downloaded again (1 to 90); the library is updated about once a month |
+| `FRENCH_LIBRARY_URL` | `https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp` | Address of the library files; set only to use a mirror |
+| `FX_RATES_REFRESH_HOURS` | `12` | Hours before the ECB rates of a currency are asked again (1 to 720) |
+
+## In OpenBB Workspace
+
+Two widgets show these routes: **Fonrex Factor Exposure** (table) and **Fonrex Factor Returns** (cumulative returns chart). See the [OpenBB reference](./openbb.md).
 
 
 
@@ -2118,7 +2429,7 @@ A read-only key (`FONREX_READ_ONLY_API_KEYS`) is enough for every widget. CORS a
 
 ## Discovery files
 
-- `GET /widgets.json` — the 19 widgets: for each one, its name, category, type, route and parameters (`integrations/openbb/widgets.json`).
+- `GET /widgets.json` — the 21 widgets: for each one, its name, category, type, route and parameters (`integrations/openbb/widgets.json`).
 - `GET /apps.json` — two pre-assembled dashboards, **Fonrex — EU Markets** and **Fonrex — Screener & Macro** (`integrations/openbb/apps.json`).
 
 ## Routes
@@ -2144,10 +2455,14 @@ A read-only key (`FONREX_READ_ONLY_API_KEYS`) is enough for every widget. CORS a
 | `fonrex_insider_transactions` | table | `GET /openbb/insider-transactions/{ticker}` | `/insider-transactions/{ticker}` |
 | `fonrex_etf_details` | table | `GET /openbb/etf/{isin}/details` | `/etf/{isin}/details` |
 | `fonrex_index_constituents` | table | `GET /openbb/index/{index_name}/constituents` | `/index/{index_name}/constituents` |
+| `fonrex_factor_exposure` | table | `GET /openbb/factors/exposure/{ticker}` | `/factors/exposure/{ticker}` |
+| `fonrex_factor_returns` | chart | `GET /openbb/factors/{dataset}/chart` | `/factors/{dataset}` |
 
 The macro widget takes a `currency` parameter (`USD`, `EUR`, or empty for both) and shows one card per series: the US 10-year rate, the euro AAA 10-year rate, the ECB deposit rate and the CISS stress index.
 
 Each route takes the parameters of the route it adapts (see the corresponding API reference page), with a few differences: `/openbb/fundamental` has no `fmt`; `/openbb/technical/{ticker}/multi` has no `include_ohlcv` and defaults to `sma_20,ema_50,rsi_14`; `/openbb/technical/{ticker}/chart` defaults to `sma_20,rsi_14`; `/openbb/news/feed` returns 20 articles by default.
+
+The factor exposure widget takes `model` (`ff3`, `ff5`, `carhart`), `frequency` and `window`. Its rows give the annualised alpha, one beta per factor with its standard error and t-stat, the R², the adjusted R², the annualised residual volatility and the periods, then the currency the prices were converted from and the warnings. The factor returns widget draws the cumulative returns of each factor of a dataset (`RF` left out), in US dollars, over the last 10 years unless `start` is given. See [Fama/French factors](./factors.md).
 
 `GET /openbb/quote/{ticker}` never starts a realtime stream: the quote is real time once the ticker is subscribed with `POST /realtime/subscribe`, and the delayed Yahoo Finance price otherwise.
 
@@ -2986,7 +3301,7 @@ description: "Connect your self-hosted Fonrex instance to OpenBB Workspace widge
 
 1. In OpenBB Workspace, right-click on the dashboard and select **Add data** (or open the backend connections).
 2. Enter the URL of your instance, e.g. `http://localhost:5000` or `https://myfonrex.share.zrok.io`.
-3. OpenBB reads `/widgets.json` and lists the 19 widgets. This file and `/apps.json` answer without a key.
+3. OpenBB reads `/widgets.json` and lists the 21 widgets. This file and `/apps.json` answer without a key.
 
 ## Step 2 — Add the key
 
@@ -3007,6 +3322,7 @@ Every `/openbb/...` route requires it.
 - *Technical*: technical chart and multi-indicator chart
 - *News*: news of the ticker and global feed
 - *Watchlist*: batch quotes
+- *Factors*: Fama/French 5-factor exposure of the ticker and returns of the European factors
 
 **Fonrex — Screener & Macro** — discovery:
 - *Screener*: technical screener (e.g. RSI < 30)
@@ -3037,6 +3353,8 @@ Import them from the Apps menu of OpenBB, or add widgets one by one to your own 
 | `fonrex_dcf_compare` | Fonrex DCF Models Comparison | Valuation | table |
 | `fonrex_dcf_sensitivity` | Fonrex DCF Sensitivity Matrix | Valuation | table |
 | `fonrex_macro_rates` | Fonrex Macro Rates | Macro | metric |
+| `fonrex_factor_exposure` | Fonrex Factor Exposure | Factors | table |
+| `fonrex_factor_returns` | Fonrex Factor Returns | Factors | chart |
 
 The routes behind them are listed in the [OpenBB API reference](../api-reference/openbb.md).
 
@@ -3045,6 +3363,7 @@ The routes behind them are listed in the [OpenBB API reference](../api-reference
 - **Quotes**: the quote widget never starts a realtime stream. It shows the real-time price once the ticker is subscribed (`POST /realtime/subscribe` with a full-access key), the delayed Yahoo Finance price otherwise.
 - **Prices and indicators** need the ticker's prices in the database; the EOD widget ingests them on first use.
 - **DCF** needs the deep fundamentals of the ticker: open the deep fundamentals widget first.
+- **Factor exposure** needs the daily prices of the ticker (`POST /historical/ingest`, or open the EOD widget first); the factor files and the ECB exchange rates are downloaded on first use.
 
 ## Troubleshooting
 
@@ -3336,6 +3655,17 @@ These tables are written by the deep enrichment from Yahoo Finance (`/fundamenta
 | `macro_rates_cache` | Series read from FRED and the ECB (`source`), unique on `(series_id, observation_date)` |
 | `usage_logs` | One row per API request, written in background batches; IP not kept unless `USAGE_LOG_IP` asks for it; purged after `USAGE_LOG_RETENTION_DAYS` |
 
+## Factors and exchange rates
+
+| Table | Description |
+|---|---|
+| `factor_returns` | Returns of the Kenneth French Data Library, as ratios in US dollars. Key `(dataset, frequency, period_end, factor)`; a file is replaced whole at each download |
+| `factor_dataset_loads` | One row per file (dataset and frequency): when it was downloaded, first and last period, number of periods, `source_note` (e.g. `CRSP 202608`) |
+| `fx_rates` | ECB reference rates: `per_eur` units of `currency` for one euro, key `(currency, rate_date)` |
+| `fx_rate_loads` | One row per currency: when it was last asked, first and last day stored |
+
+See [Fama/French factors](../api-reference/factors.md).
+
 ## Monitoring
 
 | Table | Description |
@@ -3382,6 +3712,8 @@ Alembic owns the schema, including the TimescaleDB hypertables, compression and 
 | 017 | `017_macro_rates_source.py` | `macro_rates_cache` holds series of several sources: longer `series_id`, new `source` column (`fred`, `ecb`) |
 | 018 | `018_statements_currency_unknown.py` | `financial_statements.currency` loses its `USD` default; the stored rows become unknown (`NULL`) until the next deep enrichment records Yahoo's currency |
 | 019 | `019_yahoo_epoch_dates.py` | `dividend_ex_date` and `shares_short_date` equal to 1970-01-01 (Yahoo seconds read as nanoseconds) become `NULL` |
+| 020 | `020_factor_returns.py` | `factor_returns` and `factor_dataset_loads`: the Fama/French factor files |
+| 021 | `021_fx_rates.py` | `fx_rates` and `fx_rate_loads`: the ECB reference exchange rates |
 
 ## How migrations run
 
@@ -3396,7 +3728,7 @@ Migration 014 first deletes the TimescaleDB jobs of the price tables (waiting fo
 alembic revision -m "describe_the_change"
 ```
 
-Rename the new file of `alembic/versions/` and set its identifiers after the last migration (`revision = "020"`, `down_revision = "019"`, file `020_describe_the_change.py`), then:
+Rename the new file of `alembic/versions/` and set its identifiers after the last migration (`revision = "022"`, `down_revision = "021"`, file `022_describe_the_change.py`), then:
 
 ```bash
 alembic upgrade head
@@ -4124,6 +4456,7 @@ Restore the backup taken in step 1 with the previous version of the code (see [D
 | 017 — macro rates of several sources | Adds `source` to `macro_rates_cache` (the ECB next to FRED). Nothing to do |
 | 018 — currency of the statements | The stored statements lose their false `USD`. Enrich again the instruments you value (`GET /fundamental/deep?ticker=...&refresh=true`): until then, the DCF takes the currency of the listing |
 | 019 — dates read from Yahoo | Clears the 1970-01-01 ex-dividend and short-interest dates; they come back at the next deep enrichment |
+| 020, 021 — factors and exchange rates | Create empty tables. The files are downloaded on first use, or in advance with `scripts/load_factors.py` and `scripts/load_fx_rates.py` |
 
 The full list is in [Schema migrations](../architecture/migrations.md).
 
@@ -4392,6 +4725,13 @@ description: "Project history, feature additions, schema migrations, and version
 - **`GET /macro/rates?currency=`**: the ECB rates (AAA 10-year, deposit facility rate, CISS) next to the FRED rate; each rate says its `source`, `currency` and `freshness`. The OpenBB macro widget shows one card per series.
 - The enrichment records the **currency of the statements** (migration 018) and reads Yahoo's dates in seconds (migration 019: no more 1970-01-01).
 - **`AIR.PA` is Airbus, never AAR Corp**: a ticker looked up without its suffix designates a listing on the exchange of the suffix only. The `/fundamental/deep` cache is kept per instrument.
+
+### Fama/French factors
+- **Factor returns** of the Kenneth French Data Library: US, Europe and developed markets, 3 factors, 5 factors and momentum, monthly and daily, in US dollars (`GET /factors`, `GET /factors/{dataset}`, `POST /factors/refresh`, `scripts/load_factors.py`; migration 020).
+- **Factor exposure of a listing**: `GET /factors/exposure/{ticker}` regresses its excess returns on the factors of its region (`ff3`, `ff5`, `carhart`): betas, t-stats, annualised alpha, R².
+- **ECB exchange rates** of the euro, day by day since 1999, to compare a listing quoted in another currency in dollars (`fx_rates`, `scripts/load_fx_rates.py`; migration 021).
+- **Cost of equity from the factors** in the DCF: `wacc_params.cost_of_equity_model` = `ff3`, `ff5` or `carhart` on `POST /dcf/{ticker}`. The CAPM stays the default.
+- Two **OpenBB widgets** (21 in all): factor exposure and factor returns, in a new *Factors* tab of the EU Markets app.
 
 ## October 2026 — Secure defaults, per-listing prices, verified provider data
 

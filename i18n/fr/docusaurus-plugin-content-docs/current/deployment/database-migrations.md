@@ -42,6 +42,7 @@ Restaurez la sauvegarde faite à l'étape 1 avec la version précédente du code
 | 017 — taux macro de plusieurs sources | Ajoute `source` à `macro_rates_cache` (la BCE à côté de FRED). Rien à faire |
 | 018 — devise des états financiers | Les états enregistrés perdent leur faux `USD`. Enrichissez à nouveau les instruments que vous valorisez (`GET /fundamental/deep?ticker=...&refresh=true`) : d'ici là, le DCF prend la devise de la cotation |
 | 019 — dates lues chez Yahoo | Efface les dates de détachement et de position courte au 1970-01-01 ; elles reviennent au prochain enrichissement approfondi |
+| 020, 021 — facteurs et taux de change | Créent des tables vides. Les fichiers sont téléchargés à la première utilisation, ou à l'avance avec `scripts/load_factors.py` et `scripts/load_fx_rates.py` |
 
 La liste complète se trouve dans [Migrations du schéma](../architecture/migrations.md).
 

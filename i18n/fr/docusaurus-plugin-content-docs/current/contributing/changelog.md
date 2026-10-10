@@ -21,6 +21,13 @@ description: "Historique du projet, ajouts de fonctionnalités, migrations de sc
 - L'enrichissement enregistre la **devise des états financiers** (migration 018) et lit les dates de Yahoo en secondes (migration 019 : plus de 1970-01-01).
 - **`AIR.PA` est Airbus, jamais AAR Corp** : un ticker cherché sans son suffixe ne désigne qu'une cotation sur la place du suffixe. Le cache de `/fundamental/deep` est tenu par instrument.
 
+### Facteurs Fama/French {#famafrench-factors}
+- **Rendements des facteurs** de la Kenneth French Data Library : États-Unis, Europe et marchés développés, 3 facteurs, 5 facteurs et momentum, mensuels et journaliers, en dollars US (`GET /factors`, `GET /factors/{dataset}`, `POST /factors/refresh`, `scripts/load_factors.py` ; migration 020).
+- **Exposition d'une cotation aux facteurs** : `GET /factors/exposure/{ticker}` régresse ses rendements excédentaires sur les facteurs de sa région (`ff3`, `ff5`, `carhart`) : bêtas, t-stats, alpha annualisé, R².
+- **Cours de change de la BCE** de l'euro, jour par jour depuis 1999, pour comparer en dollars une cotation dans une autre devise (`fx_rates`, `scripts/load_fx_rates.py` ; migration 021).
+- **Coût des fonds propres à partir des facteurs** dans le DCF : `wacc_params.cost_of_equity_model` = `ff3`, `ff5` ou `carhart` sur `POST /dcf/{ticker}`. Le CAPM reste le défaut.
+- Deux **widgets OpenBB** (21 au total) : exposition aux facteurs et rendements des facteurs, dans un nouvel onglet *Factors* de l'app EU Markets.
+
 ## Octobre 2026 — Sécurité par défaut, prix par cotation, données fournisseurs vérifiées
 
 Fusionné sur `main` le 8 octobre 2026 (pull request #15).

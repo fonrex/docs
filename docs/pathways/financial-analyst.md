@@ -46,7 +46,7 @@ curl -s -X POST -H "X-API-KEY: $KEY" -H "Content-Type: application/json" \
   http://localhost:5000/dcf/AIR.PA
 ```
 
-`GET /dcf` computes the FCF model; `/compare` and a `POST` naming several models weigh FCF, EPS and DDM 50/30/20. WACC from CAPM with the 10-year rate of the currency of the statements (FRED for USD, the ECB for EUR). See [Valuation & DCF](../api-reference/valuation-dcf.md).
+`GET /dcf` computes the FCF model; `/compare` and a `POST` naming several models weigh FCF, EPS and DDM 50/30/20. WACC from CAPM with the 10-year rate of the currency of the statements (FRED for USD, the ECB for EUR). `wacc_params.cost_of_equity_model` (`ff3`, `ff5`, `carhart`) replaces the CAPM by a cost of equity from the [Fama/French factors](../api-reference/factors.md). See [Valuation & DCF](../api-reference/valuation-dcf.md).
 
 ## 4. Google Sheets
 

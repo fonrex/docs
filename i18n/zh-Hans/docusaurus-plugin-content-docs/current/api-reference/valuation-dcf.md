@@ -90,7 +90,7 @@ curl -s -H "X-API-KEY: $FONREX_API_KEY" "http://localhost:5000/dcf/AIR.PA"
 | `models` | list | `["fcf"]` | 从 `fcf`、`eps`、`ddm` 中选择 |
 | `projection_years` | integer | `5` | 3 到 10 |
 | `terminal_growth_rate` | number | `0.025` | 比率（0.025 = 2.5 %） |
-| `wacc_params` | object | — | `risk_free_rate`、`equity_risk_premium`、`beta_override`、`cost_of_debt_override`、`tax_rate_override` |
+| `wacc_params` | object | — | `risk_free_rate`、`equity_risk_premium`、`beta_override`、`cost_of_debt_override`、`tax_rate_override`、`cost_of_equity_model`（默认 `capm`，可选 `ff3`、`ff5`、`carhart`：见下文） |
 | `fcf_growth_override`, `eps_growth_override`, `dividend_growth_override` | number | — | 强制指定某个模型的初始增长率 |
 | `model_weights` | object | — | 一致估值的权重，例如 `{"fcf": 0.6, "eps": 0.4, "ddm": 0}` |
 
@@ -102,6 +102,44 @@ curl -s -X POST -H "X-API-KEY: $FONREX_API_KEY" -H "Content-Type: application/js
 ```
 
 终值增长率与贴现率之差在半个百分点以内时，会被限定（贴现率 − 0.5 %）并附带一条警告。对不派发股息的公司请求 `ddm` 会返回 `404`。
+
+### 基于 Fama/French 因子的股权成本 {#factor-cost-of-equity}
+
+默认情况下，股权成本采用 CAPM：Rf + 贝塔 × 股权风险溢价。将 `wacc_params.cost_of_equity_model` 设为 `ff3`、`ff5` 或 `carhart` 后，它变为：
+
+> Ke = Rf + Σ βₖ × 溢价ₖ
+
+- **βₖ** 是该上市品种对每个因子的暴露，计算方式与 [`GET /factors/exposure/{ticker}`](./factors.md) 相同，基于 60 个月以美元计的收益。必须已存储该上市品种的日度价格（`POST /historical/ingest`）；缺少的因子文件会被下载。
+- **溢价ₖ** 是该因子在上市品种所在地区的长期溢价：其所有已存储月度收益的平均值乘以 12（美国自 1926 年或 1963 年起，欧洲自 1990 年起）。
+- **Rf** 仍是财务报表货币的无风险利率。溢价是以美元计、高于美国国库券的收益：对以其他货币进行的估值而言，它们只是近似值，`warnings` 会对此说明。
+
+```bash
+curl -s -X POST -H "X-API-KEY: $FONREX_API_KEY" -H "Content-Type: application/json" \
+  -d '{"models": ["fcf"], "wacc_params": {"cost_of_equity_model": "ff5"}}' \
+  http://localhost:5000/dcf/AIR.PA
+```
+
+WACC 会用这个股权成本重新计算（仍限定在 5–20 % 之间）。`wacc.beta_used` 为市场贝塔，`wacc.cost_of_equity_model` 给出模型名称，`wacc.factor_cost_of_equity` 说明其计算方式：
+
+```json
+"factor_cost_of_equity": {
+  "model": "ff5",
+  "region": "europe",
+  "betas": { "MKT_RF": "1.2100", "SMB": "-0.3500", "HML": "0.4200", "RMW": "0.1800", "CMA": "-0.2700" },
+  "premia": { "MKT_RF": "0.0710", "SMB": "0.0090", "HML": "0.0380", "RMW": "0.0420", "CMA": "0.0150" },
+  "premium": "0.1046",
+  "start": "2021-09-30",
+  "end": "2026-08-31",
+  "periods": 60,
+  "r_squared": 0.58
+}
+```
+
+以上数字仅为示例；`premium` 为 Σ β × 溢价，加到 Rf 上。
+
+- `beta_override` 和 `equity_risk_premium` 属于 CAPM：它们不会被使用，并会有一条警告说明。低于 Rf 的股权成本也会在 `warnings` 中提示。
+- 无法计算暴露时（没有价格、历史少于 24 个月、没有因子文件）返回 `404` 并说明原因。
+- `GET` 路由仍使用 CAPM。因子溢价的估计误差很大，并随所选期间而变化：请将这个股权成本作为第二意见。
 
 ---
 

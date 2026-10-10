@@ -112,6 +112,17 @@ Ces tables sont écrites par l'enrichissement approfondi à partir de Yahoo Fina
 | `macro_rates_cache` | Séries lues sur FRED et à la BCE (`source`), unique sur `(series_id, observation_date)` |
 | `usage_logs` | Une ligne par requête API, écrite par lots en arrière-plan ; l'IP n'est pas conservée sauf si `USAGE_LOG_IP` le demande ; purgée après `USAGE_LOG_RETENTION_DAYS` |
 
+## Facteurs et taux de change {#factors-and-exchange-rates}
+
+| Table | Description |
+|---|---|
+| `factor_returns` | Rendements de la Kenneth French Data Library, en ratios et en dollars US. Clé `(dataset, frequency, period_end, factor)` ; un fichier est remplacé en entier à chaque téléchargement |
+| `factor_dataset_loads` | Une ligne par fichier (jeu de données et fréquence) : date du téléchargement, première et dernière période, nombre de périodes, `source_note` (par ex. `CRSP 202608`) |
+| `fx_rates` | Cours de référence de la BCE : `per_eur` unités de `currency` pour un euro, clé `(currency, rate_date)` |
+| `fx_rate_loads` | Une ligne par devise : date de la dernière demande, premier et dernier jour stockés |
+
+Voir [Facteurs Fama/French](../api-reference/factors.md).
+
 ## Surveillance
 
 | Table | Description |

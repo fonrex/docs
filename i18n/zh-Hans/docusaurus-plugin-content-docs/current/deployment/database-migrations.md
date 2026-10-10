@@ -42,6 +42,7 @@ API 容器每次启动时都会执行 `alembic upgrade head`。因此，升级 F
 | 017 — 多来源宏观利率 | 为 `macro_rates_cache` 增加 `source`（ECB 与 FRED 并存）。无需操作 |
 | 018 — 财务报表货币 | 已存储的报表不再带有错误的 `USD`。请重新补全你要估值的金融工具（`GET /fundamental/deep?ticker=...&refresh=true`）：在此之前，DCF 使用上市品种的货币 |
 | 019 — 从 Yahoo 读取的日期 | 清除 1970-01-01 的除息日和空头日期；下一次深度补全时会恢复 |
+| 020、021 — 因子与汇率 | 创建空表。文件在首次使用时下载，或用 `scripts/load_factors.py` 和 `scripts/load_fx_rates.py` 提前加载 |
 
 完整列表见 [Schema 迁移](../architecture/migrations.md)。
 

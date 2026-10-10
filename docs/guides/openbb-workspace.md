@@ -18,7 +18,7 @@ description: "Connect your self-hosted Fonrex instance to OpenBB Workspace widge
 
 1. In OpenBB Workspace, right-click on the dashboard and select **Add data** (or open the backend connections).
 2. Enter the URL of your instance, e.g. `http://localhost:5000` or `https://myfonrex.share.zrok.io`.
-3. OpenBB reads `/widgets.json` and lists the 19 widgets. This file and `/apps.json` answer without a key.
+3. OpenBB reads `/widgets.json` and lists the 21 widgets. This file and `/apps.json` answer without a key.
 
 ## Step 2 — Add the key
 
@@ -39,6 +39,7 @@ Every `/openbb/...` route requires it.
 - *Technical*: technical chart and multi-indicator chart
 - *News*: news of the ticker and global feed
 - *Watchlist*: batch quotes
+- *Factors*: Fama/French 5-factor exposure of the ticker and returns of the European factors
 
 **Fonrex — Screener & Macro** — discovery:
 - *Screener*: technical screener (e.g. RSI < 30)
@@ -69,6 +70,8 @@ Import them from the Apps menu of OpenBB, or add widgets one by one to your own 
 | `fonrex_dcf_compare` | Fonrex DCF Models Comparison | Valuation | table |
 | `fonrex_dcf_sensitivity` | Fonrex DCF Sensitivity Matrix | Valuation | table |
 | `fonrex_macro_rates` | Fonrex Macro Rates | Macro | metric |
+| `fonrex_factor_exposure` | Fonrex Factor Exposure | Factors | table |
+| `fonrex_factor_returns` | Fonrex Factor Returns | Factors | chart |
 
 The routes behind them are listed in the [OpenBB API reference](../api-reference/openbb.md).
 
@@ -77,6 +80,7 @@ The routes behind them are listed in the [OpenBB API reference](../api-reference
 - **Quotes**: the quote widget never starts a realtime stream. It shows the real-time price once the ticker is subscribed (`POST /realtime/subscribe` with a full-access key), the delayed Yahoo Finance price otherwise.
 - **Prices and indicators** need the ticker's prices in the database; the EOD widget ingests them on first use.
 - **DCF** needs the deep fundamentals of the ticker: open the deep fundamentals widget first.
+- **Factor exposure** needs the daily prices of the ticker (`POST /historical/ingest`, or open the EOD widget first); the factor files and the ECB exchange rates are downloaded on first use.
 
 ## Troubleshooting
 

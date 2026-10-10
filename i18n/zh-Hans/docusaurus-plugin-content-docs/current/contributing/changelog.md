@@ -21,6 +21,13 @@ description: "项目历史、功能新增、Schema 迁移和版本更新"
 - 补全会记录**财务报表货币**（迁移 018），并以秒读取 Yahoo 的日期（迁移 019：不再出现 1970-01-01）。
 - **`AIR.PA` 是 Airbus，绝不是 AAR Corp**：去掉后缀查找的代码只指向后缀所代表交易所的上市品种。`/fundamental/deep` 的缓存按金融工具保存。
 
+### Fama/French 因子 {#famafrench-factors}
+- Kenneth French Data Library 的**因子收益**：美国、欧洲和发达市场，3 因子、5 因子和动量，月度和日度，以美元计（`GET /factors`、`GET /factors/{dataset}`、`POST /factors/refresh`、`scripts/load_factors.py`；迁移 020）。
+- **上市品种的因子暴露**：`GET /factors/exposure/{ticker}` 将其超额收益对所在地区的因子进行回归（`ff3`、`ff5`、`carhart`）：贝塔、t 统计量、年化阿尔法、R²。
+- 自 1999 年起按日的欧元**欧洲央行汇率**，用于以美元比较以其他货币计价的上市品种（`fx_rates`、`scripts/load_fx_rates.py`；迁移 021）。
+- DCF 中**基于因子的股权成本**：在 `POST /dcf/{ticker}` 中设置 `wacc_params.cost_of_equity_model` = `ff3`、`ff5` 或 `carhart`。默认仍为 CAPM。
+- 两个 **OpenBB 小组件**（共 21 个）：因子暴露和因子收益，位于 EU Markets 应用新的 *Factors* 标签页。
+
 ## 2026 年 10 月——默认安全、按上市品种存储价格、经过验证的数据提供方数据
 
 于 2026 年 10 月 8 日合并到 `main`（pull request #15）。
