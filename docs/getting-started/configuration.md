@@ -82,6 +82,14 @@ Clients send a key as `Authorization: Bearer <key>` or `X-API-KEY: <key>`. See [
 | `MACRO_RATES_CACHE_TTL` | `21600` | Lifetime of the macro rates (FRED and ECB) in Redis (6 h) |
 | `ECB_API_URL` | `https://data-api.ecb.europa.eu/service/data` | ECB Data Portal (euro rates, free, no key); set only to use a mirror |
 
+## Factors and exchange rates
+
+| Variable | Default | Description |
+|---|---|---|
+| `FACTORS_REFRESH_DAYS` | `7` | Days before a Fama/French factor file is downloaded again (1 to 90) |
+| `FRENCH_LIBRARY_URL` | `https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp` | Kenneth French Data Library (free, no key); set only to use a mirror |
+| `FX_RATES_REFRESH_HOURS` | `12` | Hours before the ECB exchange rates of a currency are asked again (1 to 720) |
+
 ## Provider monitoring
 
 | Variable | Default | Description |

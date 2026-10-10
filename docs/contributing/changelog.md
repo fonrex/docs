@@ -21,6 +21,13 @@ description: "Project history, feature additions, schema migrations, and version
 - The enrichment records the **currency of the statements** (migration 018) and reads Yahoo's dates in seconds (migration 019: no more 1970-01-01).
 - **`AIR.PA` is Airbus, never AAR Corp**: a ticker looked up without its suffix designates a listing on the exchange of the suffix only. The `/fundamental/deep` cache is kept per instrument.
 
+### Fama/French factors
+- **Factor returns** of the Kenneth French Data Library: US, Europe and developed markets, 3 factors, 5 factors and momentum, monthly and daily, in US dollars (`GET /factors`, `GET /factors/{dataset}`, `POST /factors/refresh`, `scripts/load_factors.py`; migration 020).
+- **Factor exposure of a listing**: `GET /factors/exposure/{ticker}` regresses its excess returns on the factors of its region (`ff3`, `ff5`, `carhart`): betas, t-stats, annualised alpha, R².
+- **ECB exchange rates** of the euro, day by day since 1999, to compare a listing quoted in another currency in dollars (`fx_rates`, `scripts/load_fx_rates.py`; migration 021).
+- **Cost of equity from the factors** in the DCF: `wacc_params.cost_of_equity_model` = `ff3`, `ff5` or `carhart` on `POST /dcf/{ticker}`. The CAPM stays the default.
+- Two **OpenBB widgets** (21 in all): factor exposure and factor returns, in a new *Factors* tab of the EU Markets app.
+
 ## October 2026 — Secure defaults, per-listing prices, verified provider data
 
 Merged on `main` on 8 October 2026 (pull request #15).

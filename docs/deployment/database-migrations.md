@@ -42,6 +42,7 @@ Restore the backup taken in step 1 with the previous version of the code (see [D
 | 017 — macro rates of several sources | Adds `source` to `macro_rates_cache` (the ECB next to FRED). Nothing to do |
 | 018 — currency of the statements | The stored statements lose their false `USD`. Enrich again the instruments you value (`GET /fundamental/deep?ticker=...&refresh=true`): until then, the DCF takes the currency of the listing |
 | 019 — dates read from Yahoo | Clears the 1970-01-01 ex-dividend and short-interest dates; they come back at the next deep enrichment |
+| 020, 021 — factors and exchange rates | Create empty tables. The files are downloaded on first use, or in advance with `scripts/load_factors.py` and `scripts/load_fx_rates.py` |
 
 The full list is in [Schema migrations](../architecture/migrations.md).
 

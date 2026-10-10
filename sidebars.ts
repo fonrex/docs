@@ -35,6 +35,7 @@ const sidebars: SidebarsConfig = {
         'api-reference/realtime',
         'api-reference/technical-indicators',
         'api-reference/valuation-dcf',
+        'api-reference/factors',
         'api-reference/news',
         'api-reference/monitoring',
         'api-reference/specialized',

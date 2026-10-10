@@ -112,6 +112,17 @@ erDiagram
 | `macro_rates_cache` | 从 FRED 和 ECB 读取的序列（`source`），在 `(series_id, observation_date)` 上唯一 |
 | `usage_logs` | 每个 API 请求一行，由后台批量写入；除非 `USAGE_LOG_IP` 要求，否则不保留 IP；在 `USAGE_LOG_RETENTION_DAYS` 之后清除 |
 
+## 因子与汇率 {#factors-and-exchange-rates}
+
+| 表 | 说明 |
+|---|---|
+| `factor_returns` | Kenneth French Data Library 的收益，以比率和美元计。键为 `(dataset, frequency, period_end, factor)`；每次下载时整个文件被替换 |
+| `factor_dataset_loads` | 每个文件（数据集和频率）一行：下载时间、第一个和最后一个周期、周期数、`source_note`（例如 `CRSP 202608`） |
+| `fx_rates` | 欧洲央行参考汇率：一欧元可兑换的 `currency` 单位数 `per_eur`，键为 `(currency, rate_date)` |
+| `fx_rate_loads` | 每种货币一行：最近一次请求的时间、已存储的第一天和最后一天 |
+
+请参阅 [Fama/French 因子](../api-reference/factors.md)。
+
 ## 监控
 
 | 表 | 说明 |

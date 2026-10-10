@@ -26,7 +26,7 @@ A read-only key (`FONREX_READ_ONLY_API_KEYS`) is enough for every widget. CORS a
 
 ## Discovery files
 
-- `GET /widgets.json` — the 19 widgets: for each one, its name, category, type, route and parameters (`integrations/openbb/widgets.json`).
+- `GET /widgets.json` — the 21 widgets: for each one, its name, category, type, route and parameters (`integrations/openbb/widgets.json`).
 - `GET /apps.json` — two pre-assembled dashboards, **Fonrex — EU Markets** and **Fonrex — Screener & Macro** (`integrations/openbb/apps.json`).
 
 ## Routes
@@ -52,10 +52,14 @@ A read-only key (`FONREX_READ_ONLY_API_KEYS`) is enough for every widget. CORS a
 | `fonrex_insider_transactions` | table | `GET /openbb/insider-transactions/{ticker}` | `/insider-transactions/{ticker}` |
 | `fonrex_etf_details` | table | `GET /openbb/etf/{isin}/details` | `/etf/{isin}/details` |
 | `fonrex_index_constituents` | table | `GET /openbb/index/{index_name}/constituents` | `/index/{index_name}/constituents` |
+| `fonrex_factor_exposure` | table | `GET /openbb/factors/exposure/{ticker}` | `/factors/exposure/{ticker}` |
+| `fonrex_factor_returns` | chart | `GET /openbb/factors/{dataset}/chart` | `/factors/{dataset}` |
 
 The macro widget takes a `currency` parameter (`USD`, `EUR`, or empty for both) and shows one card per series: the US 10-year rate, the euro AAA 10-year rate, the ECB deposit rate and the CISS stress index.
 
 Each route takes the parameters of the route it adapts (see the corresponding API reference page), with a few differences: `/openbb/fundamental` has no `fmt`; `/openbb/technical/{ticker}/multi` has no `include_ohlcv` and defaults to `sma_20,ema_50,rsi_14`; `/openbb/technical/{ticker}/chart` defaults to `sma_20,rsi_14`; `/openbb/news/feed` returns 20 articles by default.
+
+The factor exposure widget takes `model` (`ff3`, `ff5`, `carhart`), `frequency` and `window`. Its rows give the annualised alpha, one beta per factor with its standard error and t-stat, the R², the adjusted R², the annualised residual volatility and the periods, then the currency the prices were converted from and the warnings. The factor returns widget draws the cumulative returns of each factor of a dataset (`RF` left out), in US dollars, over the last 10 years unless `start` is given. See [Fama/French factors](./factors.md).
 
 `GET /openbb/quote/{ticker}` never starts a realtime stream: the quote is real time once the ticker is subscribed with `POST /realtime/subscribe`, and the delayed Yahoo Finance price otherwise.
 

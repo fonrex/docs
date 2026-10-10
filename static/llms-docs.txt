@@ -141,6 +141,14 @@ python -m zipline_bundle ingest --start 2020-01-01 --end 2025-12-31 --tickers AI
 
 Or load the prices into pandas through `GET /eod/{ticker}` — see [Python & Jupyter](../guides/python-jupyter.md), with an example notebook. See [Backtesting with Zipline](../guides/backtesting-zipline.md).
 
+## 5. Measure factor exposure
+
+```bash
+curl -s -H "$AUTH" "http://localhost:5000/factors/exposure/AIR.PA?model=carhart"
+```
+
+The stored prices are regressed on the Fama/French factors of their region (in US dollars): betas, t-stats, annualised alpha, R². See [Fama/French factors](../api-reference/factors.md).
+
 ## Next steps
 
 - [Historical prices API](../api-reference/historical.md)
@@ -199,7 +207,7 @@ curl -s -X POST -H "X-API-KEY: $KEY" -H "Content-Type: application/json" \
   http://localhost:5000/dcf/AIR.PA
 ```
 
-`GET /dcf` computes the FCF model; `/compare` and a `POST` naming several models weigh FCF, EPS and DDM 50/30/20. WACC from CAPM with the 10-year rate of the currency of the statements (FRED for USD, the ECB for EUR). See [Valuation & DCF](../api-reference/valuation-dcf.md).
+`GET /dcf` computes the FCF model; `/compare` and a `POST` naming several models weigh FCF, EPS and DDM 50/30/20. WACC from CAPM with the 10-year rate of the currency of the statements (FRED for USD, the ECB for EUR). `wacc_params.cost_of_equity_model` (`ff3`, `ff5`, `carhart`) replaces the CAPM by a cost of equity from the [Fama/French factors](../api-reference/factors.md). See [Valuation & DCF](../api-reference/valuation-dcf.md).
 
 ## 4. Google Sheets
 
@@ -571,6 +579,14 @@ Clients send a key as `Authorization: Bearer <key>` or `X-API-KEY: <key>`. See [
 | `FRED_API_KEY` | *(empty)* | Free key from fred.stlouisfed.org for the US rate; without it the stored rate or `DCF_RISK_FREE_RATE` is used |
 | `MACRO_RATES_CACHE_TTL` | `21600` | Lifetime of the macro rates (FRED and ECB) in Redis (6 h) |
 | `ECB_API_URL` | `https://data-api.ecb.europa.eu/service/data` | ECB Data Portal (euro rates, free, no key); set only to use a mirror |
+
+## Factors and exchange rates
+
+| Variable | Default | Description |
+|---|---|---|
+| `FACTORS_REFRESH_DAYS` | `7` | Days before a Fama/French factor file is downloaded again (1 to 90) |
+| `FRENCH_LIBRARY_URL` | `https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp` | Kenneth French Data Library (free, no key); set only to use a mirror |
+| `FX_RATES_REFRESH_HOURS` | `12` | Hours before the ECB exchange rates of a currency are asked again (1 to 720) |
 
 ## Provider monitoring
 
@@ -1669,7 +1685,7 @@ description: "Connect your self-hosted Fonrex instance to OpenBB Workspace widge
 
 1. In OpenBB Workspace, right-click on the dashboard and select **Add data** (or open the backend connections).
 2. Enter the URL of your instance, e.g. `http://localhost:5000` or `https://myfonrex.share.zrok.io`.
-3. OpenBB reads `/widgets.json` and lists the 19 widgets. This file and `/apps.json` answer without a key.
+3. OpenBB reads `/widgets.json` and lists the 21 widgets. This file and `/apps.json` answer without a key.
 
 ## Step 2 — Add the key
 
@@ -1690,6 +1706,7 @@ Every `/openbb/...` route requires it.
 - *Technical*: technical chart and multi-indicator chart
 - *News*: news of the ticker and global feed
 - *Watchlist*: batch quotes
+- *Factors*: Fama/French 5-factor exposure of the ticker and returns of the European factors
 
 **Fonrex — Screener & Macro** — discovery:
 - *Screener*: technical screener (e.g. RSI < 30)
@@ -1720,6 +1737,8 @@ Import them from the Apps menu of OpenBB, or add widgets one by one to your own 
 | `fonrex_dcf_compare` | Fonrex DCF Models Comparison | Valuation | table |
 | `fonrex_dcf_sensitivity` | Fonrex DCF Sensitivity Matrix | Valuation | table |
 | `fonrex_macro_rates` | Fonrex Macro Rates | Macro | metric |
+| `fonrex_factor_exposure` | Fonrex Factor Exposure | Factors | table |
+| `fonrex_factor_returns` | Fonrex Factor Returns | Factors | chart |
 
 The routes behind them are listed in the [OpenBB API reference](../api-reference/openbb.md).
 
@@ -1728,6 +1747,7 @@ The routes behind them are listed in the [OpenBB API reference](../api-reference
 - **Quotes**: the quote widget never starts a realtime stream. It shows the real-time price once the ticker is subscribed (`POST /realtime/subscribe` with a full-access key), the delayed Yahoo Finance price otherwise.
 - **Prices and indicators** need the ticker's prices in the database; the EOD widget ingests them on first use.
 - **DCF** needs the deep fundamentals of the ticker: open the deep fundamentals widget first.
+- **Factor exposure** needs the daily prices of the ticker (`POST /historical/ingest`, or open the EOD widget first); the factor files and the ECB exchange rates are downloaded on first use.
 
 ## Troubleshooting
 
@@ -2019,6 +2039,17 @@ These tables are written by the deep enrichment from Yahoo Finance (`/fundamenta
 | `macro_rates_cache` | Series read from FRED and the ECB (`source`), unique on `(series_id, observation_date)` |
 | `usage_logs` | One row per API request, written in background batches; IP not kept unless `USAGE_LOG_IP` asks for it; purged after `USAGE_LOG_RETENTION_DAYS` |
 
+## Factors and exchange rates
+
+| Table | Description |
+|---|---|
+| `factor_returns` | Returns of the Kenneth French Data Library, as ratios in US dollars. Key `(dataset, frequency, period_end, factor)`; a file is replaced whole at each download |
+| `factor_dataset_loads` | One row per file (dataset and frequency): when it was downloaded, first and last period, number of periods, `source_note` (e.g. `CRSP 202608`) |
+| `fx_rates` | ECB reference rates: `per_eur` units of `currency` for one euro, key `(currency, rate_date)` |
+| `fx_rate_loads` | One row per currency: when it was last asked, first and last day stored |
+
+See [Fama/French factors](../api-reference/factors.md).
+
 ## Monitoring
 
 | Table | Description |
@@ -2065,6 +2096,8 @@ Alembic owns the schema, including the TimescaleDB hypertables, compression and 
 | 017 | `017_macro_rates_source.py` | `macro_rates_cache` holds series of several sources: longer `series_id`, new `source` column (`fred`, `ecb`) |
 | 018 | `018_statements_currency_unknown.py` | `financial_statements.currency` loses its `USD` default; the stored rows become unknown (`NULL`) until the next deep enrichment records Yahoo's currency |
 | 019 | `019_yahoo_epoch_dates.py` | `dividend_ex_date` and `shares_short_date` equal to 1970-01-01 (Yahoo seconds read as nanoseconds) become `NULL` |
+| 020 | `020_factor_returns.py` | `factor_returns` and `factor_dataset_loads`: the Fama/French factor files |
+| 021 | `021_fx_rates.py` | `fx_rates` and `fx_rate_loads`: the ECB reference exchange rates |
 
 ## How migrations run
 
@@ -2079,7 +2112,7 @@ Migration 014 first deletes the TimescaleDB jobs of the price tables (waiting fo
 alembic revision -m "describe_the_change"
 ```
 
-Rename the new file of `alembic/versions/` and set its identifiers after the last migration (`revision = "020"`, `down_revision = "019"`, file `020_describe_the_change.py`), then:
+Rename the new file of `alembic/versions/` and set its identifiers after the last migration (`revision = "022"`, `down_revision = "021"`, file `022_describe_the_change.py`), then:
 
 ```bash
 alembic upgrade head
@@ -2807,6 +2840,7 @@ Restore the backup taken in step 1 with the previous version of the code (see [D
 | 017 — macro rates of several sources | Adds `source` to `macro_rates_cache` (the ECB next to FRED). Nothing to do |
 | 018 — currency of the statements | The stored statements lose their false `USD`. Enrich again the instruments you value (`GET /fundamental/deep?ticker=...&refresh=true`): until then, the DCF takes the currency of the listing |
 | 019 — dates read from Yahoo | Clears the 1970-01-01 ex-dividend and short-interest dates; they come back at the next deep enrichment |
+| 020, 021 — factors and exchange rates | Create empty tables. The files are downloaded on first use, or in advance with `scripts/load_factors.py` and `scripts/load_fx_rates.py` |
 
 The full list is in [Schema migrations](../architecture/migrations.md).
 
@@ -3075,6 +3109,13 @@ description: "Project history, feature additions, schema migrations, and version
 - **`GET /macro/rates?currency=`**: the ECB rates (AAA 10-year, deposit facility rate, CISS) next to the FRED rate; each rate says its `source`, `currency` and `freshness`. The OpenBB macro widget shows one card per series.
 - The enrichment records the **currency of the statements** (migration 018) and reads Yahoo's dates in seconds (migration 019: no more 1970-01-01).
 - **`AIR.PA` is Airbus, never AAR Corp**: a ticker looked up without its suffix designates a listing on the exchange of the suffix only. The `/fundamental/deep` cache is kept per instrument.
+
+### Fama/French factors
+- **Factor returns** of the Kenneth French Data Library: US, Europe and developed markets, 3 factors, 5 factors and momentum, monthly and daily, in US dollars (`GET /factors`, `GET /factors/{dataset}`, `POST /factors/refresh`, `scripts/load_factors.py`; migration 020).
+- **Factor exposure of a listing**: `GET /factors/exposure/{ticker}` regresses its excess returns on the factors of its region (`ff3`, `ff5`, `carhart`): betas, t-stats, annualised alpha, R².
+- **ECB exchange rates** of the euro, day by day since 1999, to compare a listing quoted in another currency in dollars (`fx_rates`, `scripts/load_fx_rates.py`; migration 021).
+- **Cost of equity from the factors** in the DCF: `wacc_params.cost_of_equity_model` = `ff3`, `ff5` or `carhart` on `POST /dcf/{ticker}`. The CAPM stays the default.
+- Two **OpenBB widgets** (21 in all): factor exposure and factor returns, in a new *Factors* tab of the EU Markets app.
 
 ## October 2026 — Secure defaults, per-listing prices, verified provider data
 

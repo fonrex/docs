@@ -112,6 +112,17 @@ These tables are written by the deep enrichment from Yahoo Finance (`/fundamenta
 | `macro_rates_cache` | Series read from FRED and the ECB (`source`), unique on `(series_id, observation_date)` |
 | `usage_logs` | One row per API request, written in background batches; IP not kept unless `USAGE_LOG_IP` asks for it; purged after `USAGE_LOG_RETENTION_DAYS` |
 
+## Factors and exchange rates
+
+| Table | Description |
+|---|---|
+| `factor_returns` | Returns of the Kenneth French Data Library, as ratios in US dollars. Key `(dataset, frequency, period_end, factor)`; a file is replaced whole at each download |
+| `factor_dataset_loads` | One row per file (dataset and frequency): when it was downloaded, first and last period, number of periods, `source_note` (e.g. `CRSP 202608`) |
+| `fx_rates` | ECB reference rates: `per_eur` units of `currency` for one euro, key `(currency, rate_date)` |
+| `fx_rate_loads` | One row per currency: when it was last asked, first and last day stored |
+
+See [Fama/French factors](../api-reference/factors.md).
+
 ## Monitoring
 
 | Table | Description |

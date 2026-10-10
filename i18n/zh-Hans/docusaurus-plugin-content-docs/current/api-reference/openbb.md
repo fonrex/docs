@@ -26,7 +26,7 @@ description: "为 OpenBB Workspace 组件提供数据的 /openbb 路由和发现
 
 ## 发现文件
 
-- `GET /widgets.json`——19 个组件：每个组件的名称、类别、类型、路由和参数（`integrations/openbb/widgets.json`）。
+- `GET /widgets.json`——21 个组件：每个组件的名称、类别、类型、路由和参数（`integrations/openbb/widgets.json`）。
 - `GET /apps.json`——两个预先组装好的仪表板：**Fonrex — EU Markets** 和 **Fonrex — Screener & Macro**（`integrations/openbb/apps.json`）。
 
 ## 路由
@@ -52,10 +52,14 @@ description: "为 OpenBB Workspace 组件提供数据的 /openbb 路由和发现
 | `fonrex_insider_transactions` | table | `GET /openbb/insider-transactions/{ticker}` | `/insider-transactions/{ticker}` |
 | `fonrex_etf_details` | table | `GET /openbb/etf/{isin}/details` | `/etf/{isin}/details` |
 | `fonrex_index_constituents` | table | `GET /openbb/index/{index_name}/constituents` | `/index/{index_name}/constituents` |
+| `fonrex_factor_exposure` | table | `GET /openbb/factors/exposure/{ticker}` | `/factors/exposure/{ticker}` |
+| `fonrex_factor_returns` | chart | `GET /openbb/factors/{dataset}/chart` | `/factors/{dataset}` |
 
 宏观组件接受 `currency` 参数（`USD`、`EUR`，留空表示两者），每个序列显示一张卡片：美国 10 年期利率、欧元区 AAA 10 年期利率、欧洲央行存款利率以及 CISS 压力指数。
 
 每个路由接受其所适配路由的参数（参见相应的 API 参考页面），但有少数差异：`/openbb/fundamental` 没有 `fmt`；`/openbb/technical/{ticker}/multi` 没有 `include_ohlcv`，默认为 `sma_20,ema_50,rsi_14`；`/openbb/technical/{ticker}/chart` 默认为 `sma_20,rsi_14`；`/openbb/news/feed` 默认返回 20 篇文章。
+
+因子暴露组件接受 `model`（`ff3`、`ff5`、`carhart`）、`frequency` 和 `window`。其各行给出年化阿尔法、每个因子的贝塔及其标准误和 t 统计量、R²、调整后 R²、年化残差波动率和周期数，然后是价格换算前的原始货币以及警告。因子收益组件绘制一个数据集中每个因子（不含 `RF`）以美元计的累计收益，默认显示最近 10 年，除非指定 `start`。请参阅 [Fama/French 因子](./factors.md)。
 
 `GET /openbb/quote/{ticker}` 从不启动实时数据流：当该代码已通过 `POST /realtime/subscribe` 订阅时，报价为实时报价，否则为 Yahoo Finance 的延迟价格。
 
