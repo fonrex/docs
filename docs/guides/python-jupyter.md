@@ -149,7 +149,7 @@ Import the listings of step 1, set `FONREX_API_KEY`, then open the notebook in J
 | Answer | Cause |
 |---|---|
 | `401` | `FONREX_API_KEY` is missing or not a key of the instance |
-| `400` with `L'ISIN ... n'est pas valide` | The ISIN does not have 12 characters (two letters, then ten letters or digits) |
+| `400` with `The ISIN ... is not valid` | The ISIN does not have 12 characters (two letters, then ten letters or digits) |
 | `404` with `No listing found for ticker` | No listing of the catalogue has this ticker with this ISIN and currency: import it, or check the ISIN |
 | `404` with another `reason` | The ingestion failed, e.g. no Yahoo symbol quoted in the currency of the listing |
 | `404` `No data found` without `reason`, or fewer rows than expected | The database already holds other dates of the listing: `/eod` ingests only an empty window, and the ingestion completes after the last stored date. Fetch the window again with a full-access key: `POST /historical/ingest?ticker=NEM&isin=US6516391066&currency=USD&from_date=2020-01-01&to_date=2022-12-31&force_refresh=true` |

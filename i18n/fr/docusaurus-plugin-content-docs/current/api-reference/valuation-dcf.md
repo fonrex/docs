@@ -90,7 +90,7 @@ Valorisation avec vos propres hypothèses ; jamais mise en cache. Elle ne fait q
 | `models` | list | `["fcf"]` | Parmi `fcf`, `eps`, `ddm` |
 | `projection_years` | integer | `5` | De 3 à 10 |
 | `terminal_growth_rate` | number | `0.025` | Ratio (0.025 = 2,5 %) |
-| `wacc_params` | object | — | `risk_free_rate`, `equity_risk_premium`, `beta_override`, `cost_of_debt_override`, `tax_rate_override` |
+| `wacc_params` | object | — | `risk_free_rate`, `equity_risk_premium`, `beta_override`, `cost_of_debt_override`, `tax_rate_override`, `cost_of_equity_model` (`capm` par défaut, `ff3`, `ff5`, `carhart` : voir ci-dessous) |
 | `fcf_growth_override`, `eps_growth_override`, `dividend_growth_override` | number | — | Imposer la croissance initiale d'un modèle |
 | `model_weights` | object | — | Poids du consensus, par ex. `{"fcf": 0.6, "eps": 0.4, "ddm": 0}` |
 
@@ -102,6 +102,44 @@ curl -s -X POST -H "X-API-KEY: $FONREX_API_KEY" -H "Content-Type: application/js
 ```
 
 Un taux de croissance terminal à moins d'un demi-point du taux d'actualisation est plafonné (taux d'actualisation − 0,5 %) avec un avertissement. Demander `ddm` pour une société qui ne verse pas de dividende répond `404`.
+
+### Coût des fonds propres à partir des facteurs Fama/French {#factor-cost-of-equity}
+
+Par défaut, le coût des fonds propres suit le CAPM : Rf + bêta × prime de risque actions. Avec `wacc_params.cost_of_equity_model` à `ff3`, `ff5` ou `carhart`, il devient :
+
+> Ke = Rf + Σ βₖ × primeₖ
+
+- **βₖ** est l'exposition de la cotation à chaque facteur, mesurée comme [`GET /factors/exposure/{ticker}`](./factors.md) sur 60 mois de rendements en dollars US. Les prix journaliers de la cotation doivent être stockés (`POST /historical/ingest`) ; les fichiers de facteurs sont téléchargés s'ils manquent.
+- **primeₖ** est la prime de long terme du facteur dans la région de la cotation : la moyenne de tous ses rendements mensuels stockés, multipliée par 12 (les États-Unis depuis 1926 ou 1963, l'Europe depuis 1990).
+- **Rf** reste le taux sans risque de la devise des états financiers. Les primes sont des rendements en dollars au-dessus du bon du Trésor américain : pour une valorisation dans une autre devise, elles sont une approximation, et `warnings` le signale.
+
+```bash
+curl -s -X POST -H "X-API-KEY: $FONREX_API_KEY" -H "Content-Type: application/json" \
+  -d '{"models": ["fcf"], "wacc_params": {"cost_of_equity_model": "ff5"}}' \
+  http://localhost:5000/dcf/AIR.PA
+```
+
+Le WACC est recalculé avec ce coût des fonds propres (toujours borné entre 5 et 20 %). `wacc.beta_used` est le bêta de marché, `wacc.cost_of_equity_model` nomme le modèle, et `wacc.factor_cost_of_equity` montre comment il a été mesuré :
+
+```json
+"factor_cost_of_equity": {
+  "model": "ff5",
+  "region": "europe",
+  "betas": { "MKT_RF": "1.2100", "SMB": "-0.3500", "HML": "0.4200", "RMW": "0.1800", "CMA": "-0.2700" },
+  "premia": { "MKT_RF": "0.0710", "SMB": "0.0090", "HML": "0.0380", "RMW": "0.0420", "CMA": "0.0150" },
+  "premium": "0.1046",
+  "start": "2021-09-30",
+  "end": "2026-08-31",
+  "periods": 60,
+  "r_squared": 0.58
+}
+```
+
+Les chiffres sont donnés à titre d'exemple ; `premium` est Σ β × prime, ajouté à Rf.
+
+- `beta_override` et `equity_risk_premium` appartiennent au CAPM : ils ne sont pas utilisés, et un avertissement le dit. Un coût des fonds propres inférieur à Rf est aussi signalé dans `warnings`.
+- Une exposition impossible à mesurer (pas de prix, historique de moins de 24 mois, pas de fichier de facteurs) répond `404` avec la raison.
+- Les routes `GET` gardent le CAPM. Les primes de facteurs sont estimées avec une grande erreur et changent selon la période choisie : utilisez ce coût des fonds propres comme un second avis.
 
 ---
 

@@ -26,7 +26,7 @@ Une clé en lecture seule (`FONREX_READ_ONLY_API_KEYS`) suffit pour tous les wid
 
 ## Fichiers de découverte
 
-- `GET /widgets.json` : les 19 widgets, avec pour chacun son nom, sa catégorie, son type, sa route et ses paramètres (`integrations/openbb/widgets.json`).
+- `GET /widgets.json` : les 21 widgets, avec pour chacun son nom, sa catégorie, son type, sa route et ses paramètres (`integrations/openbb/widgets.json`).
 - `GET /apps.json` : deux tableaux de bord pré-assemblés, **Fonrex — EU Markets** et **Fonrex — Screener & Macro** (`integrations/openbb/apps.json`).
 
 ## Routes
@@ -52,10 +52,14 @@ Une clé en lecture seule (`FONREX_READ_ONLY_API_KEYS`) suffit pour tous les wid
 | `fonrex_insider_transactions` | table | `GET /openbb/insider-transactions/{ticker}` | `/insider-transactions/{ticker}` |
 | `fonrex_etf_details` | table | `GET /openbb/etf/{isin}/details` | `/etf/{isin}/details` |
 | `fonrex_index_constituents` | table | `GET /openbb/index/{index_name}/constituents` | `/index/{index_name}/constituents` |
+| `fonrex_factor_exposure` | table | `GET /openbb/factors/exposure/{ticker}` | `/factors/exposure/{ticker}` |
+| `fonrex_factor_returns` | chart | `GET /openbb/factors/{dataset}/chart` | `/factors/{dataset}` |
 
 Le widget macro prend un paramètre `currency` (`USD`, `EUR`, ou vide pour les deux) et affiche une carte par série : le taux américain à 10 ans, le taux AAA de la zone euro à 10 ans, le taux de dépôt de la BCE et l'indice de stress CISS.
 
 Chaque route accepte les paramètres de la route qu'elle adapte (voir la page de référence API correspondante), avec quelques différences : `/openbb/fundamental` n'a pas de `fmt` ; `/openbb/technical/{ticker}/multi` n'a pas de `include_ohlcv` et utilise `sma_20,ema_50,rsi_14` par défaut ; `/openbb/technical/{ticker}/chart` utilise `sma_20,rsi_14` par défaut ; `/openbb/news/feed` renvoie 20 articles par défaut.
+
+Le widget d'exposition aux facteurs prend `model` (`ff3`, `ff5`, `carhart`), `frequency` et `window`. Ses lignes donnent l'alpha annualisé, un bêta par facteur avec son erreur type et son t-stat, le R², le R² ajusté, la volatilité résiduelle annualisée et les périodes, puis la devise d'origine des prix convertis et les avertissements. Le widget des rendements des facteurs trace les rendements cumulés de chaque facteur d'un jeu de données (sans `RF`), en dollars US, sur les 10 dernières années sauf si `start` est donné. Voir [Facteurs Fama/French](./factors.md).
 
 `GET /openbb/quote/{ticker}` ne démarre jamais de flux temps réel : la cotation est en temps réel une fois le ticker abonné avec `POST /realtime/subscribe`, et c'est le prix différé de Yahoo Finance sinon.
 

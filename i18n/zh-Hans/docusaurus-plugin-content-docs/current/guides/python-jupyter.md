@@ -149,7 +149,7 @@ portfolio_returns = data.pct_change().dropna().sum(axis=1)
 | 响应 | 原因 |
 |---|---|
 | `401` | 缺少 `FONREX_API_KEY`，或它不是该实例的密钥 |
-| `400`，附带 `L'ISIN ... n'est pas valide` | 该 ISIN 不是 12 个字符（两个字母，后跟十个字母或数字） |
+| `400`，附带 `The ISIN ... is not valid` | 该 ISIN 不是 12 个字符（两个字母，后跟十个字母或数字） |
 | `404`，附带 `No listing found for ticker` | 目录中没有具有该 ticker、该 ISIN 和该货币的上市品种：请导入它，或检查 ISIN |
 | `404`，附带其他 `reason` | 采集失败，例如没有以该上市品种货币报价的 Yahoo 代码 |
 | `404` `No data found` 且没有 `reason`，或行数少于预期 | 数据库中已存有该上市品种的其他日期：`/eod` 只会采集空窗口，且采集从最后一个已存储日期之后继续。请使用完全访问密钥重新获取该窗口：`POST /historical/ingest?ticker=NEM&isin=US6516391066&currency=USD&from_date=2020-01-01&to_date=2022-12-31&force_refresh=true` |

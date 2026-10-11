@@ -18,7 +18,7 @@ description: "将您自托管的 Fonrex 实例连接到 OpenBB Workspace 的小�
 
 1. 在 OpenBB Workspace 中，右键单击仪表板并选择 **Add data**（或打开后端连接）。
 2. 输入您实例的 URL，例如 `http://localhost:5000` 或 `https://myfonrex.share.zrok.io`。
-3. OpenBB 读取 `/widgets.json` 并列出 19 个小组件。该文件和 `/apps.json` 无需密钥即可响应。
+3. OpenBB 读取 `/widgets.json` 并列出 21 个小组件。该文件和 `/apps.json` 无需密钥即可响应。
 
 ## 第 2 步 — 添加密钥
 
@@ -39,6 +39,7 @@ description: "将您自托管的 Fonrex 实例连接到 OpenBB Workspace 的小�
 - *Technical*：技术图表和多指标图表
 - *News*：该 ticker 的新闻和全局资讯流
 - *Watchlist*：批量报价
+- *Factors*：该代码对 Fama/French 5 因子的暴露，以及欧洲因子的收益
 
 **Fonrex — Screener & Macro** — 发现：
 - *Screener*：技术筛选器（例如 RSI < 30）
@@ -69,6 +70,8 @@ description: "将您自托管的 Fonrex 实例连接到 OpenBB Workspace 的小�
 | `fonrex_dcf_compare` | Fonrex DCF Models Comparison | Valuation | table |
 | `fonrex_dcf_sensitivity` | Fonrex DCF Sensitivity Matrix | Valuation | table |
 | `fonrex_macro_rates` | Fonrex Macro Rates | Macro | metric |
+| `fonrex_factor_exposure` | Fonrex Factor Exposure | Factors | table |
+| `fonrex_factor_returns` | Fonrex Factor Returns | Factors | chart |
 
 它们背后的路由列在 [OpenBB API 参考](../api-reference/openbb.md)中。
 
@@ -77,6 +80,7 @@ description: "将您自托管的 Fonrex 实例连接到 OpenBB Workspace 的小�
 - **报价**：报价小组件永远不会启动实时流。该 ticker 被订阅后（使用完全访问密钥调用 `POST /realtime/subscribe`），它显示实时价格；否则显示 Yahoo Finance 的延迟价格。
 - **价格和指标**需要数据库中有该 ticker 的价格；EOD 小组件在首次使用时会采集这些价格。
 - **DCF** 需要该 ticker 的深度基本面数据：请先打开深度基本面小组件。
+- **因子暴露**需要该代码的日度价格（`POST /historical/ingest`，或先打开 EOD 小组件）；因子文件和欧洲央行汇率会在首次使用时下载。
 
 ## 故障排查
 

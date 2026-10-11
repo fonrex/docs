@@ -82,6 +82,14 @@ Fonrex 从环境变量读取设置。将 `.env.example` 复制为 `.env` 并进�
 | `MACRO_RATES_CACHE_TTL` | `21600` | 宏观利率（FRED 和 ECB）在 Redis 中的有效期（6 小时） |
 | `ECB_API_URL` | `https://data-api.ecb.europa.eu/service/data` | 欧洲央行数据门户（欧元利率，免费，无需密钥）；仅在使用镜像时设置 |
 
+## 因子与汇率 {#factors-and-exchange-rates}
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `FACTORS_REFRESH_DAYS` | `7` | Fama/French 因子文件重新下载前的天数（1 到 90） |
+| `FRENCH_LIBRARY_URL` | `https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp` | Kenneth French Data Library（免费，无需密钥）；仅在使用镜像时设置 |
+| `FX_RATES_REFRESH_HOURS` | `12` | 再次请求某货币欧洲央行汇率前的小时数（1 到 720） |
+
 ## 数据提供方监控
 
 | 变量 | 默认值 | 说明 |

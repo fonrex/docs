@@ -90,7 +90,7 @@ Valuation with your own assumptions; never cached. It only computes, so a read-o
 | `models` | list | `["fcf"]` | Among `fcf`, `eps`, `ddm` |
 | `projection_years` | integer | `5` | 3 to 10 |
 | `terminal_growth_rate` | number | `0.025` | Ratio (0.025 = 2.5 %) |
-| `wacc_params` | object | — | `risk_free_rate`, `equity_risk_premium`, `beta_override`, `cost_of_debt_override`, `tax_rate_override` |
+| `wacc_params` | object | — | `risk_free_rate`, `equity_risk_premium`, `beta_override`, `cost_of_debt_override`, `tax_rate_override`, `cost_of_equity_model` (`capm` by default, `ff3`, `ff5`, `carhart`: see below) |
 | `fcf_growth_override`, `eps_growth_override`, `dividend_growth_override` | number | — | Force the initial growth of a model |
 | `model_weights` | object | — | Consensus weights, e.g. `{"fcf": 0.6, "eps": 0.4, "ddm": 0}` |
 
@@ -102,6 +102,44 @@ curl -s -X POST -H "X-API-KEY: $FONREX_API_KEY" -H "Content-Type: application/js
 ```
 
 A terminal growth rate within half a point of the discount rate is capped (discount rate − 0.5 %) with a warning. Asking for `ddm` for a company that pays no dividend answers `404`.
+
+### Cost of equity from the Fama/French factors {#factor-cost-of-equity}
+
+By default the cost of equity follows the CAPM: Rf + beta × equity risk premium. With `wacc_params.cost_of_equity_model` set to `ff3`, `ff5` or `carhart`, it becomes:
+
+> Ke = Rf + Σ βₖ × premiumₖ
+
+- **βₖ** is the exposure of the listing to each factor, measured like [`GET /factors/exposure/{ticker}`](./factors.md) on 60 months of returns in US dollars. The daily prices of the listing must be stored (`POST /historical/ingest`); the factor files are downloaded when missing.
+- **premiumₖ** is the long-run premium of the factor in the region of the listing: the mean of all its stored monthly returns, times 12 (US since 1926 or 1963, Europe since 1990).
+- **Rf** stays the risk-free rate of the currency of the statements. The premia are dollar returns over the US Treasury bill: for a valuation in another currency they are an approximation, and `warnings` says so.
+
+```bash
+curl -s -X POST -H "X-API-KEY: $FONREX_API_KEY" -H "Content-Type: application/json" \
+  -d '{"models": ["fcf"], "wacc_params": {"cost_of_equity_model": "ff5"}}' \
+  http://localhost:5000/dcf/AIR.PA
+```
+
+The WACC is computed again with this cost of equity (still kept within 5–20 %). `wacc.beta_used` is the market beta, `wacc.cost_of_equity_model` names the model, and `wacc.factor_cost_of_equity` shows how it was measured:
+
+```json
+"factor_cost_of_equity": {
+  "model": "ff5",
+  "region": "europe",
+  "betas": { "MKT_RF": "1.2100", "SMB": "-0.3500", "HML": "0.4200", "RMW": "0.1800", "CMA": "-0.2700" },
+  "premia": { "MKT_RF": "0.0710", "SMB": "0.0090", "HML": "0.0380", "RMW": "0.0420", "CMA": "0.0150" },
+  "premium": "0.1046",
+  "start": "2021-09-30",
+  "end": "2026-08-31",
+  "periods": 60,
+  "r_squared": 0.58
+}
+```
+
+The figures are illustrative; `premium` is Σ β × premium, added to Rf.
+
+- `beta_override` and `equity_risk_premium` belong to the CAPM: they are not used, and a warning says so. A cost of equity below Rf is also reported in `warnings`.
+- An exposure that cannot be measured (no prices, a history shorter than 24 months, no factor file) answers `404` with the reason.
+- The `GET` routes keep the CAPM. Factor premia are measured with a large error and change with the period chosen: use this cost of equity as a second opinion.
 
 ---
 

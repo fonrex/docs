@@ -58,6 +58,14 @@ python -m zipline_bundle ingest --start 2020-01-01 --end 2025-12-31 --tickers AI
 
 Or load the prices into pandas through `GET /eod/{ticker}` — see [Python & Jupyter](../guides/python-jupyter.md), with an example notebook. See [Backtesting with Zipline](../guides/backtesting-zipline.md).
 
+## 5. Measure factor exposure
+
+```bash
+curl -s -H "$AUTH" "http://localhost:5000/factors/exposure/AIR.PA?model=carhart"
+```
+
+The stored prices are regressed on the Fama/French factors of their region (in US dollars): betas, t-stats, annualised alpha, R². See [Fama/French factors](../api-reference/factors.md).
+
 ## Next steps
 
 - [Historical prices API](../api-reference/historical.md)

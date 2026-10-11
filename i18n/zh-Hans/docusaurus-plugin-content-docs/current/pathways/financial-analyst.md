@@ -46,7 +46,7 @@ curl -s -X POST -H "X-API-KEY: $KEY" -H "Content-Type: application/json" \
   http://localhost:5000/dcf/AIR.PA
 ```
 
-`GET /dcf` 计算 FCF 模型；`/compare` 以及指定多个模型的 `POST` 请求会将 FCF、EPS 和 DDM 按 50/30/20 加权。WACC 基于 CAPM，并使用财务报表货币的 10 年期利率（USD 为 FRED，EUR 为 ECB）。请参阅[估值与 DCF](../api-reference/valuation-dcf.md)。
+`GET /dcf` 计算 FCF 模型；`/compare` 以及指定多个模型的 `POST` 请求会将 FCF、EPS 和 DDM 按 50/30/20 加权。WACC 基于 CAPM，并使用财务报表货币的 10 年期利率（USD 为 FRED，EUR 为 ECB）。`wacc_params.cost_of_equity_model`（`ff3`、`ff5`、`carhart`）会用基于 [Fama/French 因子](../api-reference/factors.md)的股权成本取代 CAPM。请参阅[估值与 DCF](../api-reference/valuation-dcf.md)。
 
 ## 4. Google Sheets
 

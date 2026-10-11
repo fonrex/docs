@@ -58,6 +58,14 @@ python -m zipline_bundle ingest --start 2020-01-01 --end 2025-12-31 --tickers AI
 
 或者通过 `GET /eod/{ticker}` 将价格加载到 pandas 中——请参阅 [Python & Jupyter](../guides/python-jupyter.md)，其中附有示例 notebook。请参阅[使用 Zipline 进行回测](../guides/backtesting-zipline.md)。
 
+## 5. 衡量因子暴露 {#5-measure-factor-exposure}
+
+```bash
+curl -s -H "$AUTH" "http://localhost:5000/factors/exposure/AIR.PA?model=carhart"
+```
+
+已存储的价格会对其所在地区的 Fama/French 因子（以美元计）进行回归：贝塔、t 统计量、年化阿尔法、R²。请参阅 [Fama/French 因子](../api-reference/factors.md)。
+
 ## 后续步骤
 
 - [历史价格 API](../api-reference/historical.md)

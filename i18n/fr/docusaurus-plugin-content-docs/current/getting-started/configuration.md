@@ -82,6 +82,14 @@ Les clients envoient une clé sous la forme `Authorization: Bearer <key>` ou `X-
 | `MACRO_RATES_CACHE_TTL` | `21600` | Durée de vie des taux macroéconomiques (FRED et BCE) dans Redis (6 h) |
 | `ECB_API_URL` | `https://data-api.ecb.europa.eu/service/data` | Portail de données de la BCE (taux en euros, gratuit, sans clé) ; à définir seulement pour utiliser un miroir |
 
+## Facteurs et taux de change {#factors-and-exchange-rates}
+
+| Variable | Défaut | Description |
+|---|---|---|
+| `FACTORS_REFRESH_DAYS` | `7` | Jours avant qu'un fichier de facteurs Fama/French soit retéléchargé (1 à 90) |
+| `FRENCH_LIBRARY_URL` | `https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp` | Kenneth French Data Library (gratuite, sans clé) ; à définir seulement pour utiliser un miroir |
+| `FX_RATES_REFRESH_HOURS` | `12` | Heures avant que les cours de change BCE d'une devise soient redemandés (1 à 720) |
+
 ## Surveillance des fournisseurs
 
 | Variable | Défaut | Description |
