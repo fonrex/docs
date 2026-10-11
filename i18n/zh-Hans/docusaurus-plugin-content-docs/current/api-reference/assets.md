@@ -96,6 +96,7 @@ curl -s -H "X-API-KEY: $FONREX_API_KEY" "http://localhost:5000/assets/by-isin/NL
 仅凭代码并不总能确定唯一的金融工具：在默认目录中，`NEM` 既是以 USD 计价的 Newmont、其以 AUD 计价的澳大利亚上市线，也是以 EUR 计价的 Nemetschek——共三个 ISIN。Fonrex 在带有该代码的上市品种中，优先选择主上市品种，然后按货币和交易所的字母顺序选择：对于 `NEM`，选中的是以 AUD 计价的澳大利亚上市线。
 
 - `isin` 只保留同一个金融工具的上市品种。即使带后缀的代码不在目录中，也绝不会返回其他金融工具的上市品种（`MRK.DE` 仅在指定的金融工具内回退到 `MRK`）。
+- Yahoo 后缀代表一个交易所：没有 `AIR.PA` 上市品种时，Fonrex **只在巴黎**查找 `AIR`（交易所为 `XPAR`、`EPA`、`PAR` 或 `PA`，或没有交易所且以 EUR 计价）。绝不会选中纽约的 `AIR`（AAR Corp）；此时返回 `404`。不代表交易所的后缀（`BRK.B`）不会去掉后缀再查找。
 - `currency` 和 `exchange` 在该金融工具的上市品种之间进行选择。
 
 `isin` 与 `currency` 一起使用即可无歧义地指定一个上市品种：`GET /eod/NEM?period=1y&isin=US6516391066&currency=USD`。不是 12 个字符（两个字母，后跟十个字母或数字）的 ISIN 会被拒绝，返回 `400`。

@@ -97,7 +97,7 @@ Structure de la réponse :
 }
 ```
 
-Les chiffres sont récupérés chez Yahoo Finance avec le symbole vérifié (`meta.symbol`) puis enregistrés. Sans symbole vérifié, rien n'est récupéré : la réponse contient ce que la base détient déjà, `meta.source` vaut `database` et `meta.note` donne la raison. Les réponses complètes sont mises en cache 24 heures ; une requête ne reçoit que les sections demandées.
+Les chiffres sont récupérés chez Yahoo Finance avec le symbole vérifié (`meta.symbol`) puis enregistrés. Sans symbole vérifié, rien n'est récupéré : la réponse contient ce que la base détient déjà, `meta.source` vaut `database` et `meta.note` donne la raison. Les réponses complètes sont mises en cache 24 heures par instrument ; une requête ne reçoit que les sections demandées.
 
 ---
 

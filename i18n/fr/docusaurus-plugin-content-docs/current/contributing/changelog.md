@@ -14,6 +14,13 @@ description: "Historique du projet, ajouts de fonctionnalités, migrations de sc
 - **Un seul ajustement par série.** Un split ou un dividende après la dernière ingestion laissait un faux rendement là où les barres enregistrées et les nouvelles se rejoignaient (environ moins le rendement du dividende, -75 % après un split de 4 pour 1). L'ingestion compare maintenant les dernières barres enregistrées avec la source et récupère de nouveau toute la série quand elles diffèrent. La migration 016 ajoute `price_series_adjustments` ; les séries enregistrées avant sont récupérées de nouveau à leur prochaine ingestion (`scripts/ingest_all.py --force` pour toutes d'un coup).
 - **Paramètre `isin`** sur `GET /eod/{ticker}`, `GET /ticker/{symbol}/history` et `POST /historical/ingest` : désigne l'instrument quand plusieurs partagent un ticker. Les réponses donnent la `listing` qu'elles ont lue.
 
+### Taux en euros et devise de la valorisation {#euro-rates-and-currency-of-the-valuation}
+- **Le DCF actualise avec le taux sans risque de la devise des états financiers** : FRED pour l'USD, le taux AAA de la zone euro de la BCE pour l'EUR, `DCF_RISK_FREE_RATE` sinon. Une société en euros n'est plus actualisée avec le taux américain. La réponse donne `price_currency`, `warnings` et `wacc.risk_free_rate_currency`.
+- **Un cours dans une autre devise ne donne aucun potentiel** au lieu d'un potentiel faux ; un cours en pence est converti en livres. Chaque modèle donne maintenant son propre `upside_pct` (il valait toujours 0).
+- **`GET /macro/rates?currency=`** : les taux de la BCE (AAA 10 ans, taux de dépôt, CISS) à côté du taux FRED ; chaque taux indique sa `source`, sa `currency` et sa `freshness`. Le widget macro d'OpenBB affiche une carte par série.
+- L'enrichissement enregistre la **devise des états financiers** (migration 018) et lit les dates de Yahoo en secondes (migration 019 : plus de 1970-01-01).
+- **`AIR.PA` est Airbus, jamais AAR Corp** : un ticker cherché sans son suffixe ne désigne qu'une cotation sur la place du suffixe. Le cache de `/fundamental/deep` est tenu par instrument.
+
 ## Octobre 2026 — Sécurité par défaut, prix par cotation, données fournisseurs vérifiées
 
 Fusionné sur `main` le 8 octobre 2026 (pull request #15).

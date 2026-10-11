@@ -96,6 +96,7 @@ Les cours de clôture d'une cotation, en JSON ou en CSV. Lorsque rien n'est enre
 Un ticker seul ne désigne pas toujours un seul instrument : dans le catalogue par défaut, `NEM` est Newmont en USD, sa ligne australienne en AUD et Nemetschek en EUR — trois ISIN. Fonrex prend, parmi les cotations qui portent le ticker, d'abord la cotation principale, puis par devise et par place dans l'ordre alphabétique : pour `NEM`, la ligne australienne en AUD.
 
 - `isin` ne garde que les cotations d'un seul instrument. Une cotation d'un autre instrument n'est jamais renvoyée, même lorsque le ticker avec son suffixe n'est pas dans le catalogue (`MRK.DE` se replie sur `MRK` uniquement au sein de l'instrument indiqué).
+- Un suffixe Yahoo désigne une place : sans cotation `AIR.PA`, Fonrex cherche `AIR` **à Paris uniquement** (place `XPAR`, `EPA`, `PAR` ou `PA`, ou sans place et cotée en EUR). `AIR` à New York (AAR Corp) n'est jamais pris ; la réponse est `404`. Un suffixe qui ne désigne aucune place (`BRK.B`) ne donne pas de recherche sans suffixe.
 - `currency` et `exchange` choisissent parmi les cotations de cet instrument.
 
 `isin` avec `currency` désigne une cotation sans ambiguïté : `GET /eod/NEM?period=1y&isin=US6516391066&currency=USD`. Un ISIN qui n'a pas 12 caractères (deux lettres, puis dix lettres ou chiffres) est refusé avec `400`.

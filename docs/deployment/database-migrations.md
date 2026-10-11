@@ -39,6 +39,9 @@ Restore the backup taken in step 1 with the previous version of the code (see [D
 | 014 — prices per listing | Rebuilds `prices_eod` with one series per listing and re-dates the existing bars to their trading session. Runs by itself; nothing is downloaded again. If a series looks wrong afterwards: `POST /historical/ingest?ticker=<ticker>&force_refresh=true` |
 | 015 — dividend yields as ratios | Converts stored dividend yields from percentages to ratios |
 | 016 — adjustment of price series | Creates `price_series_adjustments`. Prices are not touched: each series stored before is fetched again in full at its next ingestion, with the traded close in `close` and the dividend-adjusted close in `adj_close`. To do it at once: `docker compose exec fonrex-api python scripts/ingest_all.py --force` |
+| 017 — macro rates of several sources | Adds `source` to `macro_rates_cache` (the ECB next to FRED). Nothing to do |
+| 018 — currency of the statements | The stored statements lose their false `USD`. Enrich again the instruments you value (`GET /fundamental/deep?ticker=...&refresh=true`): until then, the DCF takes the currency of the listing |
+| 019 — dates read from Yahoo | Clears the 1970-01-01 ex-dividend and short-interest dates; they come back at the next deep enrichment |
 
 The full list is in [Schema migrations](../architecture/migrations.md).
 

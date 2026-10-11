@@ -19,7 +19,9 @@ The weights are shared among the models computed by the request: with `fcf` and 
 
 **Inputs come from the database only.** The service reads the highlights, the annual statements (grouped by fiscal year, five years), the earnings trend and the analyst ratings stored by the deep enrichment, and the last daily close of the main listing. Run `GET /fundamental/deep?ticker=...` first: a ticker that was never enriched answers `404` with the name of the missing data.
 
-**WACC.** Cost of equity by CAPM (risk-free rate + beta × equity risk premium), cost of debt from interest and debt, weights from market capitalisation and debt; the WACC is kept within 5–20 %. The risk-free rate is the US 10-year Treasury yield from FRED (see `GET /macro/rates`), otherwise `DCF_RISK_FREE_RATE`. Missing inputs use documented defaults (beta 1, tax rate 25 %, cost of debt = risk-free rate + 2 points) and add a warning.
+**WACC.** Cost of equity by CAPM (risk-free rate + beta × equity risk premium), cost of debt from interest and debt, weights from market capitalisation and debt; the WACC is kept within 5–20 %. The risk-free rate is the 10-year rate of the **currency of the statements**: the US Treasury yield from FRED for USD, the AAA euro area government rate from the ECB for EUR (see `GET /macro/rates`). Any other currency, or a source that gives no rate, uses `DCF_RISK_FREE_RATE`: a euro company is never discounted with the US rate. Missing inputs use documented defaults (beta 1, tax rate 25 %, cost of debt = risk-free rate + 2 points) and add a warning.
+
+**Currency.** The valuation is made in the currency of the financial statements (Yahoo's `financialCurrency`, recorded by the deep enrichment); for statements enriched before Fonrex recorded it, in the currency of the listing of the price, until `GET /fundamental/deep?ticker=...&refresh=true`. The price is the last close of the main listing: a price in pence (`GBX`) is turned into pounds, a price in another currency (a US listing of a European company) is not converted — the upsides are then `null` and `warnings` says why.
 
 ---
 
@@ -38,17 +40,22 @@ Answer layout:
   "ticker": "AIR.PA",
   "currency": "EUR",
   "current_price": "155.42",
-  "shares_outstanding": "790000000",
+  "price_currency": "EUR",
+  "warnings": [],
+  "shares_outstanding": 790000000,
   "wacc": {
-    "wacc": "0.0865",
-    "cost_of_equity": "0.0912",
+    "wacc": "0.0907",
+    "cost_of_equity": "0.0957",
     "cost_of_debt": "0.032",
     "tax_rate": "0.25",
     "weight_equity": "0.93",
     "weight_debt": "0.07",
     "beta_used": "1.1",
     "cost_of_debt_source": "calculated",
-    "risk_free_rate_source": "fred_cached"
+    "risk_free_rate": "0.035192",
+    "risk_free_rate_source": "ecb_live",
+    "risk_free_rate_date": "2026-10-08",
+    "risk_free_rate_currency": "EUR"
   },
   "models": {
     "fcf": {
@@ -70,7 +77,7 @@ Answer layout:
 }
 ```
 
-The figures above are illustrative. Amounts and rates are decimal numbers serialised as **strings**. `models` is keyed by model (`fcf`, `eps`, `ddm`); `warnings` of each model says when a default or a cap was applied. `risk_free_rate_source` is `fred_cached` (FRED rate), `env_fallback` (`DCF_RISK_FREE_RATE`) or `client_override` (your `POST` assumptions).
+The figures above are illustrative. Amounts and rates are decimal numbers serialised as **strings**. `currency` is the currency of the valuation, `price_currency` that of `current_price`. `models` is keyed by model (`fcf`, `eps`, `ddm`): each model gives its own `upside_pct` over the price, and its `warnings` says when a default or a cap was applied. `risk_free_rate_source` is `fred_live`, `fred_cached` or `fred_stale` (FRED), `ecb_live`, `ecb_cached` or `ecb_stale` (ECB), `env_fallback` (`DCF_RISK_FREE_RATE`) or `client_override` (your `POST` assumptions); `stale` is an older stored rate, used when the source could not be read. `risk_free_rate_currency` names the currency of a rate read from FRED or the ECB, and is `null` for the two others.
 
 ---
 
@@ -115,24 +122,47 @@ Intrinsic value for a grid of WACC (rows) × terminal growth (columns).
 | `growth_min`, `growth_max`, `growth_step` | `0.01`, `0.05`, `0.01` |
 | `force_refresh` | `false` |
 
-The answer holds `ticker`, `model`, `wacc_range`, `growth_range` and `matrix`; each cell gives the intrinsic value and the upside or downside against the current price.
+The answer holds `ticker`, `model`, `wacc_range`, `growth_range` and `matrix`; each cell gives the intrinsic value and the upside or downside against the current price. The upside is `null` when the price is quoted in another currency than the statements.
 
 ---
 
 ## <span className="api-method get">GET</span> `/macro/rates`
 
-The risk-free rate used by the valuation:
+The rates of the two sources, or of one currency with `currency=USD` or `currency=EUR`:
+
+```bash
+curl -s -H "X-API-KEY: $FONREX_API_KEY" "http://localhost:5000/macro/rates?currency=EUR"
+```
 
 ```json
 {
+  "currency": "EUR",
   "risk_free_rate": {
-    "series_id": "DGS10",
-    "label": "10-Year Treasury Constant Maturity Rate",
-    "value": "0.0412",
-    "unit": "percent",
-    "observation_date": "2026-10-07"
-  }
+    "series_id": "YC.B.U2.EUR.4F.G_N_A.SV_C_YM.SR_10Y",
+    "label": "Euro area AAA government 10-year spot rate",
+    "value": "0.035192",
+    "unit": "ratio",
+    "observation_date": "2026-10-08",
+    "freshness": "live",
+    "source": "ecb",
+    "currency": "EUR"
+  },
+  "rates": [
+    { "series_id": "YC.B.U2.EUR.4F.G_N_A.SV_C_YM.SR_10Y", "value": "0.035192", "unit": "ratio", "...": "..." },
+    { "series_id": "FM.D.U2.EUR.4F.KR.DFR.LEV", "label": "ECB deposit facility rate", "value": "0.02", "unit": "ratio", "...": "..." },
+    { "series_id": "CISS.D.U2.Z0Z.4F.EC.SS_CIN.IDX", "label": "Composite Indicator of Systemic Stress (euro area)", "value": "0.081234", "unit": "index", "...": "..." }
+  ]
 }
 ```
 
-`value` is a ratio (0.0412 = 4.12 %), serialised as a string, although `unit` says `percent`. It comes from Redis (6 hours), then from the value stored in `macro_rates_cache` when it was read from FRED less than 6 hours ago, then from the FRED API (`FRED_API_KEY`), and finally from an older stored value. Without any value, `risk_free_rate` is `null` and the valuation uses `DCF_RISK_FREE_RATE`.
+| Series | Source | Currency | What it is |
+|---|---|---|---|
+| `DGS10` | FRED | USD | US 10-year Treasury yield — the risk-free rate of USD |
+| `YC.B.U2.EUR.4F.G_N_A.SV_C_YM.SR_10Y` | ECB | EUR | 10-year spot rate of the AAA euro area government curve — the risk-free rate of EUR |
+| `FM.D.U2.EUR.4F.KR.DFR.LEV` | ECB | EUR | Deposit facility rate (the ECB policy rate) |
+| `CISS.D.U2.Z0Z.4F.EC.SS_CIN.IDX` | ECB | EUR | Composite Indicator of Systemic Stress, an index between 0 and 1 |
+
+- Without `currency`, `rates` holds the four series and `risk_free_rate` is the US one. Another currency answers `422`: no source publishes its rates.
+- A rate is a ratio (`0.0412` = 4.12 %, `unit` = `ratio`), serialised as a string; it may be zero or negative. The CISS is an index (`unit` = `index`).
+- `freshness`: `live` (read from the source for this answer), `cached` (Redis, or stored and read less than 6 hours ago — `MACRO_RATES_CACHE_TTL`), `stale` (an older stored value: the source could not be read). FRED needs `FRED_API_KEY`; the ECB needs no key.
+- A series without any value is left out, and so is a source that did not start (`503` when it is the only one asked).

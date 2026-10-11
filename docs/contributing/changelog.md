@@ -14,6 +14,13 @@ description: "Project history, feature additions, schema migrations, and version
 - **One adjustment per series.** A split or a dividend after the last ingestion used to leave a false return where the stored and the new bars met (about minus the dividend yield, -75 % after a 4-for-1 split). The ingestion now compares the last stored bars with the source and fetches the whole series again when they differ. Migration 016 adds `price_series_adjustments`; series stored before are fetched again at their next ingestion (`scripts/ingest_all.py --force` for all at once).
 - **`isin` parameter** on `GET /eod/{ticker}`, `GET /ticker/{symbol}/history` and `POST /historical/ingest`: names the instrument when several share a ticker. The answers give the `listing` they read.
 
+### Euro rates and currency of the valuation
+- **The DCF discounts with the risk-free rate of the currency of the statements**: FRED for USD, the AAA euro area rate of the ECB for EUR, `DCF_RISK_FREE_RATE` otherwise. A euro company is no longer discounted with the US rate. The answer gives `price_currency`, `warnings` and `wacc.risk_free_rate_currency`.
+- **A price in another currency gives no upside** instead of a wrong one; a price in pence is turned into pounds. Each model now gives its own `upside_pct` (it was always 0).
+- **`GET /macro/rates?currency=`**: the ECB rates (AAA 10-year, deposit facility rate, CISS) next to the FRED rate; each rate says its `source`, `currency` and `freshness`. The OpenBB macro widget shows one card per series.
+- The enrichment records the **currency of the statements** (migration 018) and reads Yahoo's dates in seconds (migration 019: no more 1970-01-01).
+- **`AIR.PA` is Airbus, never AAR Corp**: a ticker looked up without its suffix designates a listing on the exchange of the suffix only. The `/fundamental/deep` cache is kept per instrument.
+
 ## October 2026 — Secure defaults, per-listing prices, verified provider data
 
 Merged on `main` on 8 October 2026 (pull request #15).

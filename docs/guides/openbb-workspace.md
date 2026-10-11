@@ -42,7 +42,7 @@ Every `/openbb/...` route requires it.
 
 **Fonrex — Screener & Macro** — discovery:
 - *Screener*: technical screener (e.g. RSI < 30)
-- *Macro Context*: FRED rates and index constituents
+- *Macro Context*: FRED and ECB rates (USD and EUR) and index constituents
 
 Import them from the Apps menu of OpenBB, or add widgets one by one to your own dashboard.
 

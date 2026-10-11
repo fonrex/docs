@@ -75,11 +75,12 @@ Les clients envoient une clé sous la forme `Authorization: Bearer <key>` ou `X-
 |---|---|---|
 | `DCF_CACHE_TTL` | `21600` | Durée de vie d'une réponse DCF dans Redis (6 h) |
 | `DCF_DEFAULT_PROJECTION_YEARS` | `5` | Années de projection (3 à 10) |
-| `DCF_RISK_FREE_RATE` | `0.04` | Taux sans risque utilisé quand FRED n'en fournit pas |
+| `DCF_RISK_FREE_RATE` | `0.04` | Taux sans risque, en ratio, quand la source de la devise des états financiers (FRED pour l'USD, la BCE pour l'EUR) n'en donne aucun, et pour toute autre devise |
 | `DCF_EQUITY_RISK_PREMIUM` | `0.055` | Prime de risque actions, sous forme de ratio |
 | `DCF_TERMINAL_GROWTH_RATE` | `0.025` | Taux de croissance terminal, sous forme de ratio |
-| `FRED_API_KEY` | *(vide)* | Clé gratuite de fred.stlouisfed.org ; sans elle, le taux stocké ou `DCF_RISK_FREE_RATE` est utilisé |
-| `MACRO_RATES_CACHE_TTL` | `21600` | Durée de vie des taux macroéconomiques dans Redis (6 h) |
+| `FRED_API_KEY` | *(vide)* | Clé gratuite de fred.stlouisfed.org pour le taux américain ; sans elle, le taux enregistré ou `DCF_RISK_FREE_RATE` est utilisé |
+| `MACRO_RATES_CACHE_TTL` | `21600` | Durée de vie des taux macroéconomiques (FRED et BCE) dans Redis (6 h) |
+| `ECB_API_URL` | `https://data-api.ecb.europa.eu/service/data` | Portail de données de la BCE (taux en euros, gratuit, sans clé) ; à définir seulement pour utiliser un miroir |
 
 ## Surveillance des fournisseurs
 

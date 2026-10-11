@@ -42,7 +42,7 @@ Toutes les routes `/openbb/...` l'exigent.
 
 **Fonrex — Screener & Macro** — découverte :
 - *Screener* : screener technique (par exemple RSI < 30)
-- *Macro Context* : taux FRED et composants des indices
+- *Macro Context* : taux FRED et BCE (USD et EUR) et composants des indices
 
 Importez-les depuis le menu Apps d'OpenBB, ou ajoutez les widgets un par un à votre propre tableau de bord.
 

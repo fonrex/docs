@@ -199,7 +199,7 @@ curl -s -X POST -H "X-API-KEY: $KEY" -H "Content-Type: application/json" \
   http://localhost:5000/dcf/AIR.PA
 ```
 
-`GET /dcf` computes the FCF model; `/compare` and a `POST` naming several models weigh FCF, EPS and DDM 50/30/20. WACC from CAPM with the FRED 10-year rate. See [Valuation & DCF](../api-reference/valuation-dcf.md).
+`GET /dcf` computes the FCF model; `/compare` and a `POST` naming several models weigh FCF, EPS and DDM 50/30/20. WACC from CAPM with the 10-year rate of the currency of the statements (FRED for USD, the ECB for EUR). See [Valuation & DCF](../api-reference/valuation-dcf.md).
 
 ## 4. Google Sheets
 
@@ -565,11 +565,12 @@ Clients send a key as `Authorization: Bearer <key>` or `X-API-KEY: <key>`. See [
 |---|---|---|
 | `DCF_CACHE_TTL` | `21600` | Lifetime of a DCF answer in Redis (6 h) |
 | `DCF_DEFAULT_PROJECTION_YEARS` | `5` | Projection years (3 to 10) |
-| `DCF_RISK_FREE_RATE` | `0.04` | Risk-free rate used when FRED gives none |
+| `DCF_RISK_FREE_RATE` | `0.04` | Risk-free rate, as a ratio, when the source of the currency of the statements (FRED for USD, the ECB for EUR) gives none, and for every other currency |
 | `DCF_EQUITY_RISK_PREMIUM` | `0.055` | Equity risk premium, as a ratio |
 | `DCF_TERMINAL_GROWTH_RATE` | `0.025` | Terminal growth rate, as a ratio |
-| `FRED_API_KEY` | *(empty)* | Free key from fred.stlouisfed.org; without it the stored rate or `DCF_RISK_FREE_RATE` is used |
-| `MACRO_RATES_CACHE_TTL` | `21600` | Lifetime of the macro rates in Redis (6 h) |
+| `FRED_API_KEY` | *(empty)* | Free key from fred.stlouisfed.org for the US rate; without it the stored rate or `DCF_RISK_FREE_RATE` is used |
+| `MACRO_RATES_CACHE_TTL` | `21600` | Lifetime of the macro rates (FRED and ECB) in Redis (6 h) |
+| `ECB_API_URL` | `https://data-api.ecb.europa.eu/service/data` | ECB Data Portal (euro rates, free, no key); set only to use a mirror |
 
 ## Provider monitoring
 
@@ -954,6 +955,7 @@ End-of-day prices of a listing, in JSON or CSV. When nothing is stored for the r
 A ticker alone does not always designate one instrument: in the default catalogue, `NEM` is Newmont in USD, its Australian line in AUD and Nemetschek in EUR — three ISINs. Fonrex takes, among the listings bearing the ticker, the primary one first, then by currency and exchange in alphabetical order: for `NEM`, the Australian line in AUD.
 
 - `isin` keeps the listings of one instrument only. A listing of another instrument is never returned, even when the ticker with its suffix is not in the catalogue (`MRK.DE` falls back to `MRK` only within the named instrument).
+- A Yahoo suffix names an exchange: without a listing `AIR.PA`, Fonrex looks for `AIR` **in Paris only** (exchange `XPAR`, `EPA`, `PAR` or `PA`, or no exchange and quoted in EUR). `AIR` in New York (AAR Corp) is never taken; the answer is `404`. A suffix that names no exchange (`BRK.B`) gives no lookup without it.
 - `currency` and `exchange` choose among the listings of that instrument.
 
 `isin` with `currency` names a listing without ambiguity: `GET /eod/NEM?period=1y&isin=US6516391066&currency=USD`. An ISIN that does not have 12 characters (two letters, then ten letters or digits) is refused with `400`.
@@ -1100,7 +1102,7 @@ Answer layout:
 }
 ```
 
-The figures are fetched from Yahoo Finance with the verified symbol (`meta.symbol`) and stored. Without a verified symbol nothing is fetched: the answer is what the database already holds, `meta.source` is `database` and `meta.note` gives the reason. Complete answers are cached 24 hours; a request receives only the sections it asked for.
+The figures are fetched from Yahoo Finance with the verified symbol (`meta.symbol`) and stored. Without a verified symbol nothing is fetched: the answer is what the database already holds, `meta.source` is `database` and `meta.note` gives the reason. Complete answers are cached 24 hours per instrument; a request receives only the sections it asked for.
 
 ---
 
@@ -1578,7 +1580,9 @@ The weights are shared among the models computed by the request: with `fcf` and 
 
 **Inputs come from the database only.** The service reads the highlights, the annual statements (grouped by fiscal year, five years), the earnings trend and the analyst ratings stored by the deep enrichment, and the last daily close of the main listing. Run `GET /fundamental/deep?ticker=...` first: a ticker that was never enriched answers `404` with the name of the missing data.
 
-**WACC.** Cost of equity by CAPM (risk-free rate + beta × equity risk premium), cost of debt from interest and debt, weights from market capitalisation and debt; the WACC is kept within 5–20 %. The risk-free rate is the US 10-year Treasury yield from FRED (see `GET /macro/rates`), otherwise `DCF_RISK_FREE_RATE`. Missing inputs use documented defaults (beta 1, tax rate 25 %, cost of debt = risk-free rate + 2 points) and add a warning.
+**WACC.** Cost of equity by CAPM (risk-free rate + beta × equity risk premium), cost of debt from interest and debt, weights from market capitalisation and debt; the WACC is kept within 5–20 %. The risk-free rate is the 10-year rate of the **currency of the statements**: the US Treasury yield from FRED for USD, the AAA euro area government rate from the ECB for EUR (see `GET /macro/rates`). Any other currency, or a source that gives no rate, uses `DCF_RISK_FREE_RATE`: a euro company is never discounted with the US rate. Missing inputs use documented defaults (beta 1, tax rate 25 %, cost of debt = risk-free rate + 2 points) and add a warning.
+
+**Currency.** The valuation is made in the currency of the financial statements (Yahoo's `financialCurrency`, recorded by the deep enrichment); for statements enriched before Fonrex recorded it, in the currency of the listing of the price, until `GET /fundamental/deep?ticker=...&refresh=true`. The price is the last close of the main listing: a price in pence (`GBX`) is turned into pounds, a price in another currency (a US listing of a European company) is not converted — the upsides are then `null` and `warnings` says why.
 
 ---
 
@@ -1597,17 +1601,22 @@ Answer layout:
   "ticker": "AIR.PA",
   "currency": "EUR",
   "current_price": "155.42",
-  "shares_outstanding": "790000000",
+  "price_currency": "EUR",
+  "warnings": [],
+  "shares_outstanding": 790000000,
   "wacc": {
-    "wacc": "0.0865",
-    "cost_of_equity": "0.0912",
+    "wacc": "0.0907",
+    "cost_of_equity": "0.0957",
     "cost_of_debt": "0.032",
     "tax_rate": "0.25",
     "weight_equity": "0.93",
     "weight_debt": "0.07",
     "beta_used": "1.1",
     "cost_of_debt_source": "calculated",
-    "risk_free_rate_source": "fred_cached"
+    "risk_free_rate": "0.035192",
+    "risk_free_rate_source": "ecb_live",
+    "risk_free_rate_date": "2026-10-08",
+    "risk_free_rate_currency": "EUR"
   },
   "models": {
     "fcf": {
@@ -1629,7 +1638,7 @@ Answer layout:
 }
 ```
 
-The figures above are illustrative. Amounts and rates are decimal numbers serialised as **strings**. `models` is keyed by model (`fcf`, `eps`, `ddm`); `warnings` of each model says when a default or a cap was applied. `risk_free_rate_source` is `fred_cached` (FRED rate), `env_fallback` (`DCF_RISK_FREE_RATE`) or `client_override` (your `POST` assumptions).
+The figures above are illustrative. Amounts and rates are decimal numbers serialised as **strings**. `currency` is the currency of the valuation, `price_currency` that of `current_price`. `models` is keyed by model (`fcf`, `eps`, `ddm`): each model gives its own `upside_pct` over the price, and its `warnings` says when a default or a cap was applied. `risk_free_rate_source` is `fred_live`, `fred_cached` or `fred_stale` (FRED), `ecb_live`, `ecb_cached` or `ecb_stale` (ECB), `env_fallback` (`DCF_RISK_FREE_RATE`) or `client_override` (your `POST` assumptions); `stale` is an older stored rate, used when the source could not be read. `risk_free_rate_currency` names the currency of a rate read from FRED or the ECB, and is `null` for the two others.
 
 ---
 
@@ -1674,27 +1683,50 @@ Intrinsic value for a grid of WACC (rows) × terminal growth (columns).
 | `growth_min`, `growth_max`, `growth_step` | `0.01`, `0.05`, `0.01` |
 | `force_refresh` | `false` |
 
-The answer holds `ticker`, `model`, `wacc_range`, `growth_range` and `matrix`; each cell gives the intrinsic value and the upside or downside against the current price.
+The answer holds `ticker`, `model`, `wacc_range`, `growth_range` and `matrix`; each cell gives the intrinsic value and the upside or downside against the current price. The upside is `null` when the price is quoted in another currency than the statements.
 
 ---
 
 ## <span className="api-method get">GET</span> `/macro/rates`
 
-The risk-free rate used by the valuation:
+The rates of the two sources, or of one currency with `currency=USD` or `currency=EUR`:
+
+```bash
+curl -s -H "X-API-KEY: $FONREX_API_KEY" "http://localhost:5000/macro/rates?currency=EUR"
+```
 
 ```json
 {
+  "currency": "EUR",
   "risk_free_rate": {
-    "series_id": "DGS10",
-    "label": "10-Year Treasury Constant Maturity Rate",
-    "value": "0.0412",
-    "unit": "percent",
-    "observation_date": "2026-10-07"
-  }
+    "series_id": "YC.B.U2.EUR.4F.G_N_A.SV_C_YM.SR_10Y",
+    "label": "Euro area AAA government 10-year spot rate",
+    "value": "0.035192",
+    "unit": "ratio",
+    "observation_date": "2026-10-08",
+    "freshness": "live",
+    "source": "ecb",
+    "currency": "EUR"
+  },
+  "rates": [
+    { "series_id": "YC.B.U2.EUR.4F.G_N_A.SV_C_YM.SR_10Y", "value": "0.035192", "unit": "ratio", "...": "..." },
+    { "series_id": "FM.D.U2.EUR.4F.KR.DFR.LEV", "label": "ECB deposit facility rate", "value": "0.02", "unit": "ratio", "...": "..." },
+    { "series_id": "CISS.D.U2.Z0Z.4F.EC.SS_CIN.IDX", "label": "Composite Indicator of Systemic Stress (euro area)", "value": "0.081234", "unit": "index", "...": "..." }
+  ]
 }
 ```
 
-`value` is a ratio (0.0412 = 4.12 %), serialised as a string, although `unit` says `percent`. It comes from Redis (6 hours), then from the value stored in `macro_rates_cache` when it was read from FRED less than 6 hours ago, then from the FRED API (`FRED_API_KEY`), and finally from an older stored value. Without any value, `risk_free_rate` is `null` and the valuation uses `DCF_RISK_FREE_RATE`.
+| Series | Source | Currency | What it is |
+|---|---|---|---|
+| `DGS10` | FRED | USD | US 10-year Treasury yield — the risk-free rate of USD |
+| `YC.B.U2.EUR.4F.G_N_A.SV_C_YM.SR_10Y` | ECB | EUR | 10-year spot rate of the AAA euro area government curve — the risk-free rate of EUR |
+| `FM.D.U2.EUR.4F.KR.DFR.LEV` | ECB | EUR | Deposit facility rate (the ECB policy rate) |
+| `CISS.D.U2.Z0Z.4F.EC.SS_CIN.IDX` | ECB | EUR | Composite Indicator of Systemic Stress, an index between 0 and 1 |
+
+- Without `currency`, `rates` holds the four series and `risk_free_rate` is the US one. Another currency answers `422`: no source publishes its rates.
+- A rate is a ratio (`0.0412` = 4.12 %, `unit` = `ratio`), serialised as a string; it may be zero or negative. The CISS is an index (`unit` = `index`).
+- `freshness`: `live` (read from the source for this answer), `cached` (Redis, or stored and read less than 6 hours ago — `MACRO_RATES_CACHE_TTL`), `stale` (an older stored value: the source could not be read). FRED needs `FRED_API_KEY`; the ECB needs no key.
+- A series without any value is left out, and so is a source that did not start (`503` when it is the only one asked).
 
 
 
@@ -2112,6 +2144,8 @@ A read-only key (`FONREX_READ_ONLY_API_KEYS`) is enough for every widget. CORS a
 | `fonrex_insider_transactions` | table | `GET /openbb/insider-transactions/{ticker}` | `/insider-transactions/{ticker}` |
 | `fonrex_etf_details` | table | `GET /openbb/etf/{isin}/details` | `/etf/{isin}/details` |
 | `fonrex_index_constituents` | table | `GET /openbb/index/{index_name}/constituents` | `/index/{index_name}/constituents` |
+
+The macro widget takes a `currency` parameter (`USD`, `EUR`, or empty for both) and shows one card per series: the US 10-year rate, the euro AAA 10-year rate, the ECB deposit rate and the CISS stress index.
 
 Each route takes the parameters of the route it adapts (see the corresponding API reference page), with a few differences: `/openbb/fundamental` has no `fmt`; `/openbb/technical/{ticker}/multi` has no `include_ohlcv` and defaults to `sma_20,ema_50,rsi_14`; `/openbb/technical/{ticker}/chart` defaults to `sma_20,rsi_14`; `/openbb/news/feed` returns 20 articles by default.
 
@@ -2976,7 +3010,7 @@ Every `/openbb/...` route requires it.
 
 **Fonrex — Screener & Macro** — discovery:
 - *Screener*: technical screener (e.g. RSI < 30)
-- *Macro Context*: FRED rates and index constituents
+- *Macro Context*: FRED and ECB rates (USD and EUR) and index constituents
 
 Import them from the Apps menu of OpenBB, or add widgets one by one to your own dashboard.
 
@@ -3055,7 +3089,7 @@ flowchart TD
         TV[TradingView]
         Scraped[13 scraped websites]
         NewsSites[7 news sources]
-        Specialised[SEC EDGAR, JustETF, Wikipedia, FRED]
+        Specialised[SEC EDGAR, JustETF, Wikipedia, FRED, ECB]
     end
 
     Redis[(Redis: cache + Pub/Sub)]
@@ -3092,7 +3126,7 @@ flowchart TD
 
 `entrypoint.sh` waits for PostgreSQL and Redis, applies `alembic upgrade head`, optionally imports `data/etf.csv` (`SEED_ON_FIRST_RUN`), then starts Gunicorn with `WEB_CONCURRENCY` workers (1 by default).
 
-`main.py` then creates the services and publishes them in `app.state`: database and Redis clients, ingestion, indicators, realtime worker (restores the stored subscriptions), news, FRED, DCF, validation layer, canary monitor and its daily scheduler, usage recorder. The start is tolerant: a service that fails to start leaves its routes answering `503` while the rest of the API runs. A provider that cannot be imported is listed by `GET /health`.
+`main.py` then creates the services and publishes them in `app.state`: database and Redis clients, ingestion, indicators, realtime worker (restores the stored subscriptions), news, FRED, ECB, DCF, validation layer, canary monitor and its daily scheduler, usage recorder. The start is tolerant: a service that fails to start leaves its routes answering `503` while the rest of the API runs. A provider that cannot be imported is listed by `GET /health`.
 
 `main.py` never changes the schema: it compares the database revision with the Alembic head and marks the database unavailable when they differ.
 
@@ -3284,7 +3318,7 @@ The Yahoo Finance mapping of a listing holds its **verified symbol** — found f
 | Table | Description |
 |---|---|
 | `fundamentals_highlights` | Last snapshot of an instrument (valuation, profitability, dividend, short interest, solvency). `dividend_yield` is a ratio |
-| `financial_statements` | One row per statement type (income, balance, cash flow), fiscal period and frequency. A fiscal year is three rows; calculations put them together with `financials/fiscal_years.py` |
+| `financial_statements` | One row per statement type (income, balance, cash flow), fiscal period and frequency. A fiscal year is three rows; calculations put them together with `financials/fiscal_years.py`. `currency` is the currency of the statements given by Yahoo (`NULL` when unknown); the DCF is made in it |
 | `earnings_history`, `earnings_trend` | Actual vs estimated EPS; analyst estimates for `0q`, `+1q`, `0y`, `+1y` |
 | `analyst_ratings` | Consensus, target price, rating counts |
 | `esg_scores` | E/S/G scores and 15 controversy flags |
@@ -3299,7 +3333,7 @@ These tables are written by the deep enrichment from Yahoo Finance (`/fundamenta
 | Table | Description |
 |---|---|
 | `news_articles` | Unique on `url`; indexes for the feed and the statistics. Old articles are not purged automatically |
-| `macro_rates_cache` | Series read from FRED, unique on `(series_id, observation_date)` |
+| `macro_rates_cache` | Series read from FRED and the ECB (`source`), unique on `(series_id, observation_date)` |
 | `usage_logs` | One row per API request, written in background batches; IP not kept unless `USAGE_LOG_IP` asks for it; purged after `USAGE_LOG_RETENTION_DAYS` |
 
 ## Monitoring
@@ -3345,6 +3379,9 @@ Alembic owns the schema, including the TimescaleDB hypertables, compression and 
 | 014 | `014_prices_per_listing.py` | `prices_eod` rebuilt per listing: key `(asset_listing_id, resolution, time)`, rows re-dated to their session; compression and aggregates per listing |
 | 015 | `015_dividend_yield_as_ratio.py` | Stored dividend yields converted from percentages to ratios |
 | 016 | `016_price_series_adjustments.py` | `price_series_adjustments`: how each stored price series is adjusted and when it was last fetched in one piece. Series stored before are fetched again in full at their next ingestion |
+| 017 | `017_macro_rates_source.py` | `macro_rates_cache` holds series of several sources: longer `series_id`, new `source` column (`fred`, `ecb`) |
+| 018 | `018_statements_currency_unknown.py` | `financial_statements.currency` loses its `USD` default; the stored rows become unknown (`NULL`) until the next deep enrichment records Yahoo's currency |
+| 019 | `019_yahoo_epoch_dates.py` | `dividend_ex_date` and `shares_short_date` equal to 1970-01-01 (Yahoo seconds read as nanoseconds) become `NULL` |
 
 ## How migrations run
 
@@ -3359,7 +3396,7 @@ Migration 014 first deletes the TimescaleDB jobs of the price tables (waiting fo
 alembic revision -m "describe_the_change"
 ```
 
-Rename the new file of `alembic/versions/` and set its identifiers after the last migration (`revision = "017"`, `down_revision = "016"`, file `017_describe_the_change.py`), then:
+Rename the new file of `alembic/versions/` and set its identifiers after the last migration (`revision = "020"`, `down_revision = "019"`, file `020_describe_the_change.py`), then:
 
 ```bash
 alembic upgrade head
@@ -4032,7 +4069,7 @@ Every variable of `.env.example` is read by the code (`tests/test_env_settings.p
 
 | Variable | Default | When |
 |---|---|---|
-| `FRED_API_KEY` | *(empty)* | Live risk-free rate for the DCF |
+| `FRED_API_KEY` | *(empty)* | Live US risk-free rate for the DCF (the euro rate comes from the ECB without key) |
 | `FONREX_PROXY_URL`, `FONREX_PROXY_PROVIDERS` | *(empty)* | Websites refusing your server's IP |
 | `FONREX_PROVIDER_MAX_CONCURRENCY` | `4` | Fewer simultaneous requests per website |
 | `OPENBB_ALLOWED_ORIGIN` | `https://pro.openbb.co` | Another OpenBB origin (CORS) |
@@ -4084,6 +4121,9 @@ Restore the backup taken in step 1 with the previous version of the code (see [D
 | 014 — prices per listing | Rebuilds `prices_eod` with one series per listing and re-dates the existing bars to their trading session. Runs by itself; nothing is downloaded again. If a series looks wrong afterwards: `POST /historical/ingest?ticker=<ticker>&force_refresh=true` |
 | 015 — dividend yields as ratios | Converts stored dividend yields from percentages to ratios |
 | 016 — adjustment of price series | Creates `price_series_adjustments`. Prices are not touched: each series stored before is fetched again in full at its next ingestion, with the traded close in `close` and the dividend-adjusted close in `adj_close`. To do it at once: `docker compose exec fonrex-api python scripts/ingest_all.py --force` |
+| 017 — macro rates of several sources | Adds `source` to `macro_rates_cache` (the ECB next to FRED). Nothing to do |
+| 018 — currency of the statements | The stored statements lose their false `USD`. Enrich again the instruments you value (`GET /fundamental/deep?ticker=...&refresh=true`): until then, the DCF takes the currency of the listing |
+| 019 — dates read from Yahoo | Clears the 1970-01-01 ex-dividend and short-interest dates; they come back at the next deep enrichment |
 
 The full list is in [Schema migrations](../architecture/migrations.md).
 
@@ -4345,6 +4385,13 @@ description: "Project history, feature additions, schema migrations, and version
 - **`close` is the traded close again**, adjusted for splits only; **`adj_close`** is adjusted for splits and dividends. Before, both held the dividend-adjusted price.
 - **One adjustment per series.** A split or a dividend after the last ingestion used to leave a false return where the stored and the new bars met (about minus the dividend yield, -75 % after a 4-for-1 split). The ingestion now compares the last stored bars with the source and fetches the whole series again when they differ. Migration 016 adds `price_series_adjustments`; series stored before are fetched again at their next ingestion (`scripts/ingest_all.py --force` for all at once).
 - **`isin` parameter** on `GET /eod/{ticker}`, `GET /ticker/{symbol}/history` and `POST /historical/ingest`: names the instrument when several share a ticker. The answers give the `listing` they read.
+
+### Euro rates and currency of the valuation
+- **The DCF discounts with the risk-free rate of the currency of the statements**: FRED for USD, the AAA euro area rate of the ECB for EUR, `DCF_RISK_FREE_RATE` otherwise. A euro company is no longer discounted with the US rate. The answer gives `price_currency`, `warnings` and `wacc.risk_free_rate_currency`.
+- **A price in another currency gives no upside** instead of a wrong one; a price in pence is turned into pounds. Each model now gives its own `upside_pct` (it was always 0).
+- **`GET /macro/rates?currency=`**: the ECB rates (AAA 10-year, deposit facility rate, CISS) next to the FRED rate; each rate says its `source`, `currency` and `freshness`. The OpenBB macro widget shows one card per series.
+- The enrichment records the **currency of the statements** (migration 018) and reads Yahoo's dates in seconds (migration 019: no more 1970-01-01).
+- **`AIR.PA` is Airbus, never AAR Corp**: a ticker looked up without its suffix designates a listing on the exchange of the suffix only. The `/fundamental/deep` cache is kept per instrument.
 
 ## October 2026 — Secure defaults, per-listing prices, verified provider data
 

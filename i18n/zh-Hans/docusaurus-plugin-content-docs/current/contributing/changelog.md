@@ -14,6 +14,13 @@ description: "项目历史、功能新增、Schema 迁移和版本更新"
 - **每个序列使用同一种调整。** 以前，上次采集之后发生的拆股或分红会在已存储 K 线与新 K 线的衔接处留下一个虚假的收益率（约为负的股息率，四拆一之后为 -75 %）。现在采集过程会将最后几根已存储的 K 线与来源进行比较，若不一致则重新获取整个序列。迁移 016 新增 `price_series_adjustments`；之前存储的序列会在下一次采集时被重新获取（使用 `scripts/ingest_all.py --force` 可一次性全部执行）。
 - `GET /eod/{ticker}`、`GET /ticker/{symbol}/history` 和 `POST /historical/ingest` 新增 **`isin` 参数**：当多个金融工具共用同一 ticker 时用于指定金融工具。响应会给出实际读取的 `listing`。
 
+### 欧元利率与估值货币 {#euro-rates-and-currency-of-the-valuation}
+- **DCF 使用财务报表货币的无风险利率贴现**：USD 为 FRED，EUR 为欧洲央行的欧元区 AAA 利率，其他货币为 `DCF_RISK_FREE_RATE`。欧元公司不再使用美国利率贴现。响应提供 `price_currency`、`warnings` 和 `wacc.risk_free_rate_currency`。
+- **价格为其他货币时不给出上涨空间**，而不是给出错误的值；以便士计价的价格会换算为英镑。每个模型现在都给出自己的 `upside_pct`（此前始终为 0）。
+- **`GET /macro/rates?currency=`**：在 FRED 利率之外提供 ECB 利率（AAA 10 年期、存款便利利率、CISS）；每个利率注明其 `source`、`currency` 和 `freshness`。OpenBB 宏观组件为每个序列显示一张卡片。
+- 补全会记录**财务报表货币**（迁移 018），并以秒读取 Yahoo 的日期（迁移 019：不再出现 1970-01-01）。
+- **`AIR.PA` 是 Airbus，绝不是 AAR Corp**：去掉后缀查找的代码只指向后缀所代表交易所的上市品种。`/fundamental/deep` 的缓存按金融工具保存。
+
 ## 2026 年 10 月——默认安全、按上市品种存储价格、经过验证的数据提供方数据
 
 于 2026 年 10 月 8 日合并到 `main`（pull request #15）。

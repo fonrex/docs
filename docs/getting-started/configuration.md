@@ -75,11 +75,12 @@ Clients send a key as `Authorization: Bearer <key>` or `X-API-KEY: <key>`. See [
 |---|---|---|
 | `DCF_CACHE_TTL` | `21600` | Lifetime of a DCF answer in Redis (6 h) |
 | `DCF_DEFAULT_PROJECTION_YEARS` | `5` | Projection years (3 to 10) |
-| `DCF_RISK_FREE_RATE` | `0.04` | Risk-free rate used when FRED gives none |
+| `DCF_RISK_FREE_RATE` | `0.04` | Risk-free rate, as a ratio, when the source of the currency of the statements (FRED for USD, the ECB for EUR) gives none, and for every other currency |
 | `DCF_EQUITY_RISK_PREMIUM` | `0.055` | Equity risk premium, as a ratio |
 | `DCF_TERMINAL_GROWTH_RATE` | `0.025` | Terminal growth rate, as a ratio |
-| `FRED_API_KEY` | *(empty)* | Free key from fred.stlouisfed.org; without it the stored rate or `DCF_RISK_FREE_RATE` is used |
-| `MACRO_RATES_CACHE_TTL` | `21600` | Lifetime of the macro rates in Redis (6 h) |
+| `FRED_API_KEY` | *(empty)* | Free key from fred.stlouisfed.org for the US rate; without it the stored rate or `DCF_RISK_FREE_RATE` is used |
+| `MACRO_RATES_CACHE_TTL` | `21600` | Lifetime of the macro rates (FRED and ECB) in Redis (6 h) |
+| `ECB_API_URL` | `https://data-api.ecb.europa.eu/service/data` | ECB Data Portal (euro rates, free, no key); set only to use a mirror |
 
 ## Provider monitoring
 

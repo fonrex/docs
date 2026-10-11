@@ -46,7 +46,7 @@ curl -s -X POST -H "X-API-KEY: $KEY" -H "Content-Type: application/json" \
   http://localhost:5000/dcf/AIR.PA
 ```
 
-`GET /dcf` calcule le modèle FCF ; `/compare` et un `POST` qui demande plusieurs modèles pondèrent FCF, EPS et DDM 50/30/20. WACC issu du CAPM avec le taux à 10 ans de FRED. Voir [Valorisation et DCF](../api-reference/valuation-dcf.md).
+`GET /dcf` calcule le modèle FCF ; `/compare` et un `POST` qui demande plusieurs modèles pondèrent FCF, EPS et DDM 50/30/20. WACC issu du CAPM avec le taux à 10 ans de la devise des états financiers (FRED pour l'USD, la BCE pour l'EUR). Voir [Valorisation et DCF](../api-reference/valuation-dcf.md).
 
 ## 4. Google Sheets
 
