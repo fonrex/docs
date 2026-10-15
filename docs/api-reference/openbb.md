@@ -26,7 +26,7 @@ A read-only key (`FONREX_READ_ONLY_API_KEYS`) is enough for every widget. CORS a
 
 ## Discovery files
 
-- `GET /widgets.json` — the 21 widgets: for each one, its name, category, type, route and parameters (`integrations/openbb/widgets.json`).
+- `GET /widgets.json` — the 23 widgets: for each one, its name, category, type, route and parameters (`integrations/openbb/widgets.json`).
 - `GET /apps.json` — two pre-assembled dashboards, **Fonrex — EU Markets** and **Fonrex — Screener & Macro** (`integrations/openbb/apps.json`).
 
 ## Routes
@@ -35,6 +35,7 @@ A read-only key (`FONREX_READ_ONLY_API_KEYS`) is enough for every widget. CORS a
 |---|---|---|---|
 | `fonrex_quote` | metric | `GET /openbb/quote/{ticker}` | `/quote/{ticker}` |
 | `fonrex_macro_rates` | metric | `GET /openbb/macro/rates` | `/macro/rates` |
+| `fonrex_macro_indicators` | metric | `GET /openbb/macro/indicators` (`geo`, EA by default) | `/macro/indicators` |
 | `fonrex_eod` | chart | `GET /openbb/eod/{ticker}` (`period` 1y by default) | `/eod/{ticker}` |
 | `fonrex_history` | chart | `GET /openbb/ticker/{symbol}/history` | `/ticker/{symbol}/history` |
 | `fonrex_technical` | chart | `GET /openbb/technical/{ticker}` | `/technical/{ticker}` |
@@ -54,6 +55,7 @@ A read-only key (`FONREX_READ_ONLY_API_KEYS`) is enough for every widget. CORS a
 | `fonrex_index_constituents` | table | `GET /openbb/index/{index_name}/constituents` | `/index/{index_name}/constituents` |
 | `fonrex_factor_exposure` | table | `GET /openbb/factors/exposure/{ticker}` | `/factors/exposure/{ticker}` |
 | `fonrex_factor_returns` | chart | `GET /openbb/factors/{dataset}/chart` | `/factors/{dataset}` |
+| `fonrex_macro_indicator_chart` | chart | `GET /openbb/macro/indicators/{indicator}/chart` (`geo` EA,DE,FR,IT,ES and 10 years by default) | `/macro/indicators/{indicator}` |
 
 The macro widget takes a `currency` parameter (`USD`, `EUR`, or empty for both) and shows one card per series: the US 10-year rate, the euro AAA 10-year rate, the ECB deposit rate and the CISS stress index.
 

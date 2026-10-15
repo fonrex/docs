@@ -26,7 +26,12 @@ description: "项目历史、功能新增、Schema 迁移和版本更新"
 - **上市品种的因子暴露**：`GET /factors/exposure/{ticker}` 将其超额收益对所在地区的因子进行回归（`ff3`、`ff5`、`carhart`）：贝塔、t 统计量、年化阿尔法、R²。
 - 自 1999 年起按日的欧元**欧洲央行汇率**，用于以美元比较以其他货币计价的上市品种（`fx_rates`、`scripts/load_fx_rates.py`；迁移 021）。
 - DCF 中**基于因子的股权成本**：在 `POST /dcf/{ticker}` 中设置 `wacc_params.cost_of_equity_model` = `ff3`、`ff5` 或 `carhart`。默认仍为 CAPM。
-- 两个 **OpenBB 小组件**（共 21 个）：因子暴露和因子收益，位于 EU Markets 应用新的 *Factors* 标签页。
+- 两个 **OpenBB 小组件**：因子暴露和因子收益，位于 EU Markets 应用新的 *Factors* 标签页。
+
+### Eurostat 指标
+- 来自 Eurostat（免费，无需密钥）的欧元区及各欧盟国家的**通胀、失业、GDP 增长和商业调查**：`GET /macro/indicators`（最新值及相对上一期间的变化）、`GET /macro/indicators/{indicator}`（最多 10 个国家的序列）、`POST /macro/indicators/refresh`。参见[宏观指标](../api-reference/macro-indicators.md)。
+- 按期间保存在 `macro_observations` 中（迁移 022）；Eurostat 的修订（例如通胀快速估计之后的最终数据）会替换该期间的值。新增设置 `EUROSTAT_REFRESH_HOURS` 和 `EUROSTAT_API_URL`。
+- 两个 **OpenBB 小组件**（共 23 个）：以卡片显示一个国家的指标，以图表显示多个国家的同一指标，位于 Screener & Macro 应用的 *Macro Context* 标签页。
 
 ## 2026 年 10 月——默认安全、按上市品种存储价格、经过验证的数据提供方数据
 

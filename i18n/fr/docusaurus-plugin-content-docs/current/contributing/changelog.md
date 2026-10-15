@@ -26,7 +26,12 @@ description: "Historique du projet, ajouts de fonctionnalités, migrations de sc
 - **Exposition d'une cotation aux facteurs** : `GET /factors/exposure/{ticker}` régresse ses rendements excédentaires sur les facteurs de sa région (`ff3`, `ff5`, `carhart`) : bêtas, t-stats, alpha annualisé, R².
 - **Cours de change de la BCE** de l'euro, jour par jour depuis 1999, pour comparer en dollars une cotation dans une autre devise (`fx_rates`, `scripts/load_fx_rates.py` ; migration 021).
 - **Coût des fonds propres à partir des facteurs** dans le DCF : `wacc_params.cost_of_equity_model` = `ff3`, `ff5` ou `carhart` sur `POST /dcf/{ticker}`. Le CAPM reste le défaut.
-- Deux **widgets OpenBB** (21 au total) : exposition aux facteurs et rendements des facteurs, dans un nouvel onglet *Factors* de l'app EU Markets.
+- Deux **widgets OpenBB** : exposition aux facteurs et rendements des facteurs, dans un nouvel onglet *Factors* de l'app EU Markets.
+
+### Indicateurs Eurostat
+- **Inflation, chômage, croissance du PIB et enquêtes de conjoncture** de la zone euro et de chaque pays de l'UE, depuis Eurostat (gratuit, sans clé) : `GET /macro/indicators` (dernières valeurs avec la variation sur la période précédente), `GET /macro/indicators/{indicator}` (séries de 10 pays au plus), `POST /macro/indicators/refresh`. Voir [Indicateurs macro](../api-reference/macro-indicators.md).
+- Conservés période par période dans `macro_observations` (migration 022) ; une révision d'Eurostat, comme le chiffre définitif après une estimation flash de l'inflation, remplace la valeur de sa période. Nouveaux réglages `EUROSTAT_REFRESH_HOURS` et `EUROSTAT_API_URL`.
+- Deux **widgets OpenBB** (23 au total) : les indicateurs d'un pays en cartes, et un indicateur de plusieurs pays en graphique, dans l'onglet *Macro Context* de l'app Screener & Macro.
 
 ## Octobre 2026 — Sécurité par défaut, prix par cotation, données fournisseurs vérifiées
 

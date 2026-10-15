@@ -81,6 +81,8 @@ Les clients envoient une clé sous la forme `Authorization: Bearer <key>` ou `X-
 | `FRED_API_KEY` | *(vide)* | Clé gratuite de fred.stlouisfed.org pour le taux américain ; sans elle, le taux enregistré ou `DCF_RISK_FREE_RATE` est utilisé |
 | `MACRO_RATES_CACHE_TTL` | `21600` | Durée de vie des taux macroéconomiques (FRED et BCE) dans Redis (6 h) |
 | `ECB_API_URL` | `https://data-api.ecb.europa.eu/service/data` | Portail de données de la BCE (taux en euros, gratuit, sans clé) ; à définir seulement pour utiliser un miroir |
+| `EUROSTAT_API_URL` | `https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data` | Eurostat (inflation, chômage, PIB, enquêtes ; gratuit, sans clé) ; à définir seulement pour utiliser un miroir |
+| `EUROSTAT_REFRESH_HOURS` | `24` | Heures avant qu'une série Eurostat soit relue (1 à 720) |
 
 ## Facteurs et taux de change {#factors-and-exchange-rates}
 

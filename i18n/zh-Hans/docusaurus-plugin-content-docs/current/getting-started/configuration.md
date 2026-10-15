@@ -81,6 +81,8 @@ Fonrex 从环境变量读取设置。将 `.env.example` 复制为 `.env` 并进�
 | `FRED_API_KEY` | *（空）* | 来自 fred.stlouisfed.org 的免费密钥，用于美国利率；没有密钥时使用已存储的利率或 `DCF_RISK_FREE_RATE` |
 | `MACRO_RATES_CACHE_TTL` | `21600` | 宏观利率（FRED 和 ECB）在 Redis 中的有效期（6 小时） |
 | `ECB_API_URL` | `https://data-api.ecb.europa.eu/service/data` | 欧洲央行数据门户（欧元利率，免费，无需密钥）；仅在使用镜像时设置 |
+| `EUROSTAT_API_URL` | `https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data` | Eurostat（通胀、失业、GDP、调查；免费，无需密钥）；仅在使用镜像时设置 |
+| `EUROSTAT_REFRESH_HOURS` | `24` | 再次读取 Eurostat 序列前的小时数（1 到 720） |
 
 ## 因子与汇率 {#factors-and-exchange-rates}
 

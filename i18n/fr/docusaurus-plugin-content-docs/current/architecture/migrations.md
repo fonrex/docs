@@ -34,6 +34,7 @@ Alembic est maître du schéma, y compris les hypertables TimescaleDB, la compre
 | 019 | `019_yahoo_epoch_dates.py` | `dividend_ex_date` et `shares_short_date` égales au 1970-01-01 (secondes de Yahoo lues comme des nanosecondes) deviennent `NULL` |
 | 020 | `020_factor_returns.py` | `factor_returns` et `factor_dataset_loads` : les fichiers de facteurs Fama/French |
 | 021 | `021_fx_rates.py` | `fx_rates` et `fx_rate_loads` : les cours de change de référence de la BCE |
+| 022 | `022_macro_observations.py` | `macro_observations` et `macro_series_loads` : les indicateurs Eurostat, période par période |
 
 ## Exécution des migrations
 
@@ -48,7 +49,7 @@ La migration 014 supprime d'abord les jobs TimescaleDB des tables de prix (en at
 alembic revision -m "describe_the_change"
 ```
 
-Renommez le nouveau fichier de `alembic/versions/` et placez ses identifiants après la dernière migration (`revision = "022"`, `down_revision = "021"`, fichier `022_describe_the_change.py`), puis :
+Renommez le nouveau fichier de `alembic/versions/` et placez ses identifiants après la dernière migration (`revision = "023"`, `down_revision = "022"`, fichier `023_describe_the_change.py`), puis :
 
 ```bash
 alembic upgrade head

@@ -32,6 +32,7 @@
 - [Technical Indicators API Reference](https://docs.fonrex.io/docs/api-reference/technical-indicators): 18 server-side technical indicators, multi-indicator requests, chart data and a screener
 - [DCF Valuation API Reference](https://docs.fonrex.io/docs/api-reference/valuation-dcf): Intrinsic value with three DCF models, dynamic WACC, model comparison, sensitivity matrix and macro rates
 - [Fama/French Factors API Reference](https://docs.fonrex.io/docs/api-reference/factors): Factor returns of the Kenneth French Data Library, factor exposure of a listing, and the ECB exchange rates used to compare it in US dollars
+- [Macro Indicators API Reference (Eurostat)](https://docs.fonrex.io/docs/api-reference/macro-indicators): Inflation, unemployment, GDP growth and business surveys of the euro area and of each EU country, read from Eurostat and kept period by period
 - [News Aggregator API Reference](https://docs.fonrex.io/docs/api-reference/news): News of a ticker from 7 providers, deduplicated, and the global feed of stored articles
 - [Provider Monitoring & Administration API Reference](https://docs.fonrex.io/docs/api-reference/monitoring): Provider health, canary runs, alerts, validation statistics, cache and database administration
 - [Specialized Providers API Reference](https://docs.fonrex.io/docs/api-reference/specialized): SEC insider transactions, UCITS ETF details from JustETF and index constituents

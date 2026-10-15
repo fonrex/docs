@@ -18,7 +18,7 @@ description: "Connecter votre instance Fonrex auto-hébergée aux widgets et tab
 
 1. Dans OpenBB Workspace, faites un clic droit sur le tableau de bord et sélectionnez **Add data** (ou ouvrez les connexions de backend).
 2. Saisissez l'URL de votre instance, par exemple `http://localhost:5000` ou `https://myfonrex.share.zrok.io`.
-3. OpenBB lit `/widgets.json` et liste les 21 widgets. Ce fichier et `/apps.json` répondent sans clé.
+3. OpenBB lit `/widgets.json` et liste les 23 widgets. Ce fichier et `/apps.json` répondent sans clé.
 
 ## Étape 2 — Ajouter la clé
 
@@ -43,7 +43,7 @@ Toutes les routes `/openbb/...` l'exigent.
 
 **Fonrex — Screener & Macro** — découverte :
 - *Screener* : screener technique (par exemple RSI < 30)
-- *Macro Context* : taux FRED et BCE (USD et EUR) et composants des indices
+- *Macro Context* : taux FRED et BCE (USD et EUR), indicateurs Eurostat de la zone euro, inflation des principaux pays de la zone euro dans le temps, et composants des indices
 
 Importez-les depuis le menu Apps d'OpenBB, ou ajoutez les widgets un par un à votre propre tableau de bord.
 
@@ -70,6 +70,8 @@ Importez-les depuis le menu Apps d'OpenBB, ou ajoutez les widgets un par un à v
 | `fonrex_dcf_compare` | Fonrex DCF Models Comparison | Valuation | table |
 | `fonrex_dcf_sensitivity` | Fonrex DCF Sensitivity Matrix | Valuation | table |
 | `fonrex_macro_rates` | Fonrex Macro Rates | Macro | metric |
+| `fonrex_macro_indicators` | Fonrex Macro Indicators | Macro | metric |
+| `fonrex_macro_indicator_chart` | Fonrex Macro Indicator Chart | Macro | chart |
 | `fonrex_factor_exposure` | Fonrex Factor Exposure | Factors | table |
 | `fonrex_factor_returns` | Fonrex Factor Returns | Factors | chart |
 
