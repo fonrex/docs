@@ -110,6 +110,8 @@ erDiagram
 |---|---|
 | `news_articles` | 在 `url` 上唯一；为信息流和统计建有索引。旧文章不会自动清除 |
 | `macro_rates_cache` | 从 FRED 和 ECB 读取的序列（`source`），在 `(series_id, observation_date)` 上唯一 |
+| `macro_observations` | Eurostat 指标，每个 `(source, indicator, geo, period)` 一个值；期间以其第一天标注，修订会替换该期间的值；`status` 保留 Eurostat 的标记（`e` 表示估计值） |
+| `macro_series_loads` | 每个序列（指标和国家）一行：最近一次读取的时间、第一个和最后一个期间、Eurostat 公布的最近更新时间 |
 | `usage_logs` | 每个 API 请求一行，由后台批量写入；除非 `USAGE_LOG_IP` 要求，否则不保留 IP；在 `USAGE_LOG_RETENTION_DAYS` 之后清除 |
 
 ## 因子与汇率 {#factors-and-exchange-rates}

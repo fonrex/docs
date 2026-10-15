@@ -579,6 +579,8 @@ Clients send a key as `Authorization: Bearer <key>` or `X-API-KEY: <key>`. See [
 | `FRED_API_KEY` | *(empty)* | Free key from fred.stlouisfed.org for the US rate; without it the stored rate or `DCF_RISK_FREE_RATE` is used |
 | `MACRO_RATES_CACHE_TTL` | `21600` | Lifetime of the macro rates (FRED and ECB) in Redis (6 h) |
 | `ECB_API_URL` | `https://data-api.ecb.europa.eu/service/data` | ECB Data Portal (euro rates, free, no key); set only to use a mirror |
+| `EUROSTAT_API_URL` | `https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data` | Eurostat (inflation, unemployment, GDP, surveys; free, no key); set only to use a mirror |
+| `EUROSTAT_REFRESH_HOURS` | `24` | Hours before a Eurostat series is read again (1 to 720) |
 
 ## Factors and exchange rates
 
@@ -1685,7 +1687,7 @@ description: "Connect your self-hosted Fonrex instance to OpenBB Workspace widge
 
 1. In OpenBB Workspace, right-click on the dashboard and select **Add data** (or open the backend connections).
 2. Enter the URL of your instance, e.g. `http://localhost:5000` or `https://myfonrex.share.zrok.io`.
-3. OpenBB reads `/widgets.json` and lists the 21 widgets. This file and `/apps.json` answer without a key.
+3. OpenBB reads `/widgets.json` and lists the 23 widgets. This file and `/apps.json` answer without a key.
 
 ## Step 2 — Add the key
 
@@ -1710,7 +1712,7 @@ Every `/openbb/...` route requires it.
 
 **Fonrex — Screener & Macro** — discovery:
 - *Screener*: technical screener (e.g. RSI < 30)
-- *Macro Context*: FRED and ECB rates (USD and EUR) and index constituents
+- *Macro Context*: FRED and ECB rates (USD and EUR), Eurostat indicators of the euro area, inflation of the main euro area countries over time, and index constituents
 
 Import them from the Apps menu of OpenBB, or add widgets one by one to your own dashboard.
 
@@ -1737,6 +1739,8 @@ Import them from the Apps menu of OpenBB, or add widgets one by one to your own 
 | `fonrex_dcf_compare` | Fonrex DCF Models Comparison | Valuation | table |
 | `fonrex_dcf_sensitivity` | Fonrex DCF Sensitivity Matrix | Valuation | table |
 | `fonrex_macro_rates` | Fonrex Macro Rates | Macro | metric |
+| `fonrex_macro_indicators` | Fonrex Macro Indicators | Macro | metric |
+| `fonrex_macro_indicator_chart` | Fonrex Macro Indicator Chart | Macro | chart |
 | `fonrex_factor_exposure` | Fonrex Factor Exposure | Factors | table |
 | `fonrex_factor_returns` | Fonrex Factor Returns | Factors | chart |
 
@@ -2037,6 +2041,8 @@ These tables are written by the deep enrichment from Yahoo Finance (`/fundamenta
 |---|---|
 | `news_articles` | Unique on `url`; indexes for the feed and the statistics. Old articles are not purged automatically |
 | `macro_rates_cache` | Series read from FRED and the ECB (`source`), unique on `(series_id, observation_date)` |
+| `macro_observations` | Eurostat indicators, one value per `(source, indicator, geo, period)`; a period is dated by its first day and a revision replaces its value; `status` keeps the flag of Eurostat (`e` for an estimate) |
+| `macro_series_loads` | One row per series (indicator and country): when it was last read, first and last period, last update announced by Eurostat |
 | `usage_logs` | One row per API request, written in background batches; IP not kept unless `USAGE_LOG_IP` asks for it; purged after `USAGE_LOG_RETENTION_DAYS` |
 
 ## Factors and exchange rates
@@ -2098,6 +2104,7 @@ Alembic owns the schema, including the TimescaleDB hypertables, compression and 
 | 019 | `019_yahoo_epoch_dates.py` | `dividend_ex_date` and `shares_short_date` equal to 1970-01-01 (Yahoo seconds read as nanoseconds) become `NULL` |
 | 020 | `020_factor_returns.py` | `factor_returns` and `factor_dataset_loads`: the Fama/French factor files |
 | 021 | `021_fx_rates.py` | `fx_rates` and `fx_rate_loads`: the ECB reference exchange rates |
+| 022 | `022_macro_observations.py` | `macro_observations` and `macro_series_loads`: the Eurostat indicators, period by period |
 
 ## How migrations run
 
@@ -2112,7 +2119,7 @@ Migration 014 first deletes the TimescaleDB jobs of the price tables (waiting fo
 alembic revision -m "describe_the_change"
 ```
 
-Rename the new file of `alembic/versions/` and set its identifiers after the last migration (`revision = "022"`, `down_revision = "021"`, file `022_describe_the_change.py`), then:
+Rename the new file of `alembic/versions/` and set its identifiers after the last migration (`revision = "023"`, `down_revision = "022"`, file `023_describe_the_change.py`), then:
 
 ```bash
 alembic upgrade head
@@ -3115,7 +3122,12 @@ description: "Project history, feature additions, schema migrations, and version
 - **Factor exposure of a listing**: `GET /factors/exposure/{ticker}` regresses its excess returns on the factors of its region (`ff3`, `ff5`, `carhart`): betas, t-stats, annualised alpha, R².
 - **ECB exchange rates** of the euro, day by day since 1999, to compare a listing quoted in another currency in dollars (`fx_rates`, `scripts/load_fx_rates.py`; migration 021).
 - **Cost of equity from the factors** in the DCF: `wacc_params.cost_of_equity_model` = `ff3`, `ff5` or `carhart` on `POST /dcf/{ticker}`. The CAPM stays the default.
-- Two **OpenBB widgets** (21 in all): factor exposure and factor returns, in a new *Factors* tab of the EU Markets app.
+- Two **OpenBB widgets**: factor exposure and factor returns, in a new *Factors* tab of the EU Markets app.
+
+### Eurostat indicators
+- **Inflation, unemployment, GDP growth and business surveys** of the euro area and of each EU country, from Eurostat (free, no key): `GET /macro/indicators` (latest values with the change on the previous period), `GET /macro/indicators/{indicator}` (series of up to 10 countries), `POST /macro/indicators/refresh`. See [Macro indicators](../api-reference/macro-indicators.md).
+- Kept period by period in `macro_observations` (migration 022); a revision of Eurostat, such as the final figure after a flash inflation estimate, replaces the value of its period. New settings `EUROSTAT_REFRESH_HOURS` and `EUROSTAT_API_URL`.
+- Two **OpenBB widgets** (23 in all): the indicators of a country as cards, and one indicator of several countries as a chart, in the *Macro Context* tab of the Screener & Macro app.
 
 ## October 2026 — Secure defaults, per-listing prices, verified provider data
 

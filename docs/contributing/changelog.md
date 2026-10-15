@@ -26,7 +26,12 @@ description: "Project history, feature additions, schema migrations, and version
 - **Factor exposure of a listing**: `GET /factors/exposure/{ticker}` regresses its excess returns on the factors of its region (`ff3`, `ff5`, `carhart`): betas, t-stats, annualised alpha, R².
 - **ECB exchange rates** of the euro, day by day since 1999, to compare a listing quoted in another currency in dollars (`fx_rates`, `scripts/load_fx_rates.py`; migration 021).
 - **Cost of equity from the factors** in the DCF: `wacc_params.cost_of_equity_model` = `ff3`, `ff5` or `carhart` on `POST /dcf/{ticker}`. The CAPM stays the default.
-- Two **OpenBB widgets** (21 in all): factor exposure and factor returns, in a new *Factors* tab of the EU Markets app.
+- Two **OpenBB widgets**: factor exposure and factor returns, in a new *Factors* tab of the EU Markets app.
+
+### Eurostat indicators
+- **Inflation, unemployment, GDP growth and business surveys** of the euro area and of each EU country, from Eurostat (free, no key): `GET /macro/indicators` (latest values with the change on the previous period), `GET /macro/indicators/{indicator}` (series of up to 10 countries), `POST /macro/indicators/refresh`. See [Macro indicators](../api-reference/macro-indicators.md).
+- Kept period by period in `macro_observations` (migration 022); a revision of Eurostat, such as the final figure after a flash inflation estimate, replaces the value of its period. New settings `EUROSTAT_REFRESH_HOURS` and `EUROSTAT_API_URL`.
+- Two **OpenBB widgets** (23 in all): the indicators of a country as cards, and one indicator of several countries as a chart, in the *Macro Context* tab of the Screener & Macro app.
 
 ## October 2026 — Secure defaults, per-listing prices, verified provider data
 

@@ -18,7 +18,7 @@ description: "将您自托管的 Fonrex 实例连接到 OpenBB Workspace 的小�
 
 1. 在 OpenBB Workspace 中，右键单击仪表板并选择 **Add data**（或打开后端连接）。
 2. 输入您实例的 URL，例如 `http://localhost:5000` 或 `https://myfonrex.share.zrok.io`。
-3. OpenBB 读取 `/widgets.json` 并列出 21 个小组件。该文件和 `/apps.json` 无需密钥即可响应。
+3. OpenBB 读取 `/widgets.json` 并列出 23 个小组件。该文件和 `/apps.json` 无需密钥即可响应。
 
 ## 第 2 步 — 添加密钥
 
@@ -43,7 +43,7 @@ description: "将您自托管的 Fonrex 实例连接到 OpenBB Workspace 的小�
 
 **Fonrex — Screener & Macro** — 发现：
 - *Screener*：技术筛选器（例如 RSI < 30）
-- *Macro Context*：FRED 与 ECB 利率（USD 和 EUR）以及指数成分股
+- *Macro Context*：FRED 与 ECB 利率（USD 和 EUR）、欧元区的 Eurostat 指标、欧元区主要国家的通胀走势，以及指数成分股
 
 可以从 OpenBB 的 Apps 菜单导入它们，也可以将小组件逐个添加到您自己的仪表板。
 
@@ -70,6 +70,8 @@ description: "将您自托管的 Fonrex 实例连接到 OpenBB Workspace 的小�
 | `fonrex_dcf_compare` | Fonrex DCF Models Comparison | Valuation | table |
 | `fonrex_dcf_sensitivity` | Fonrex DCF Sensitivity Matrix | Valuation | table |
 | `fonrex_macro_rates` | Fonrex Macro Rates | Macro | metric |
+| `fonrex_macro_indicators` | Fonrex Macro Indicators | Macro | metric |
+| `fonrex_macro_indicator_chart` | Fonrex Macro Indicator Chart | Macro | chart |
 | `fonrex_factor_exposure` | Fonrex Factor Exposure | Factors | table |
 | `fonrex_factor_returns` | Fonrex Factor Returns | Factors | chart |
 

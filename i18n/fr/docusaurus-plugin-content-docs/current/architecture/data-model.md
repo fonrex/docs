@@ -110,6 +110,8 @@ Ces tables sont écrites par l'enrichissement approfondi à partir de Yahoo Fina
 |---|---|
 | `news_articles` | Unique sur `url` ; index pour le flux et les statistiques. Les anciens articles ne sont pas purgés automatiquement |
 | `macro_rates_cache` | Séries lues sur FRED et à la BCE (`source`), unique sur `(series_id, observation_date)` |
+| `macro_observations` | Indicateurs Eurostat, une valeur par `(source, indicator, geo, period)` ; une période est datée de son premier jour et une révision remplace sa valeur ; `status` garde le marqueur d'Eurostat (`e` pour une estimation) |
+| `macro_series_loads` | Une ligne par série (indicateur et pays) : date de la dernière lecture, première et dernière période, dernière mise à jour annoncée par Eurostat |
 | `usage_logs` | Une ligne par requête API, écrite par lots en arrière-plan ; l'IP n'est pas conservée sauf si `USAGE_LOG_IP` le demande ; purgée après `USAGE_LOG_RETENTION_DAYS` |
 
 ## Facteurs et taux de change {#factors-and-exchange-rates}

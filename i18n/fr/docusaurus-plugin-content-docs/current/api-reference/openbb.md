@@ -26,7 +26,7 @@ Une clé en lecture seule (`FONREX_READ_ONLY_API_KEYS`) suffit pour tous les wid
 
 ## Fichiers de découverte
 
-- `GET /widgets.json` : les 21 widgets, avec pour chacun son nom, sa catégorie, son type, sa route et ses paramètres (`integrations/openbb/widgets.json`).
+- `GET /widgets.json` : les 23 widgets, avec pour chacun son nom, sa catégorie, son type, sa route et ses paramètres (`integrations/openbb/widgets.json`).
 - `GET /apps.json` : deux tableaux de bord pré-assemblés, **Fonrex — EU Markets** et **Fonrex — Screener & Macro** (`integrations/openbb/apps.json`).
 
 ## Routes
@@ -35,6 +35,7 @@ Une clé en lecture seule (`FONREX_READ_ONLY_API_KEYS`) suffit pour tous les wid
 |---|---|---|---|
 | `fonrex_quote` | metric | `GET /openbb/quote/{ticker}` | `/quote/{ticker}` |
 | `fonrex_macro_rates` | metric | `GET /openbb/macro/rates` | `/macro/rates` |
+| `fonrex_macro_indicators` | metric | `GET /openbb/macro/indicators` (`geo`, EA par défaut) | `/macro/indicators` |
 | `fonrex_eod` | chart | `GET /openbb/eod/{ticker}` (`period` 1y par défaut) | `/eod/{ticker}` |
 | `fonrex_history` | chart | `GET /openbb/ticker/{symbol}/history` | `/ticker/{symbol}/history` |
 | `fonrex_technical` | chart | `GET /openbb/technical/{ticker}` | `/technical/{ticker}` |
@@ -54,6 +55,7 @@ Une clé en lecture seule (`FONREX_READ_ONLY_API_KEYS`) suffit pour tous les wid
 | `fonrex_index_constituents` | table | `GET /openbb/index/{index_name}/constituents` | `/index/{index_name}/constituents` |
 | `fonrex_factor_exposure` | table | `GET /openbb/factors/exposure/{ticker}` | `/factors/exposure/{ticker}` |
 | `fonrex_factor_returns` | chart | `GET /openbb/factors/{dataset}/chart` | `/factors/{dataset}` |
+| `fonrex_macro_indicator_chart` | chart | `GET /openbb/macro/indicators/{indicator}/chart` (`geo` EA,DE,FR,IT,ES et 10 ans par défaut) | `/macro/indicators/{indicator}` |
 
 Le widget macro prend un paramètre `currency` (`USD`, `EUR`, ou vide pour les deux) et affiche une carte par série : le taux américain à 10 ans, le taux AAA de la zone euro à 10 ans, le taux de dépôt de la BCE et l'indice de stress CISS.
 
