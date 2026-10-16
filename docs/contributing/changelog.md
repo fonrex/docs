@@ -31,7 +31,14 @@ description: "Project history, feature additions, schema migrations, and version
 ### Eurostat indicators
 - **Inflation, unemployment, GDP growth and business surveys** of the euro area and of each EU country, from Eurostat (free, no key): `GET /macro/indicators` (latest values with the change on the previous period), `GET /macro/indicators/{indicator}` (series of up to 10 countries), `POST /macro/indicators/refresh`. See [Macro indicators](../api-reference/macro-indicators.md).
 - Kept period by period in `macro_observations` (migration 022); a revision of Eurostat, such as the final figure after a flash inflation estimate, replaces the value of its period. New settings `EUROSTAT_REFRESH_HOURS` and `EUROSTAT_API_URL`.
-- Two **OpenBB widgets** (23 in all): the indicators of a country as cards, and one indicator of several countries as a chart, in the *Macro Context* tab of the Screener & Macro app.
+- Two **OpenBB widgets**: the indicators of a country as cards, and one indicator of several countries as a chart, in the *Macro Context* tab of the Screener & Macro app.
+
+### SEC filings (XBRL)
+- **Annual statements filed with the SEC**, read from the XBRL facts of EDGAR (free, no key): `GET /sec/{ticker}/statements` gives each figure with its XBRL concept and a link to its filing. 10-K, 20-F and 40-F reports only; a restatement replaces the value it corrects. See [SEC filings](../api-reference/sec-filings.md).
+- **The Yahoo statements checked against the SEC**: `GET /sec/{ticker}/check` gives, year by year, `match`, `mismatch`, `missing_yahoo` or `missing_sec` for each figure both sources define alike. `POST /sec/{ticker}/refresh` reads a company again at once.
+- **The CIK is never guessed from a ticker**: only a US listing of the instrument is looked up, and the name at the SEC must match. `AIR.PA` (Airbus) is never confused with `AIR` (AAR Corp).
+- Facts kept in `xbrl_facts` and `sec_company_loads` (migration 023). New settings `SEC_XBRL_REFRESH_HOURS` and `SEC_CHECK_TOLERANCE`; a warning at start-up while `SEC_EDGAR_EMAIL` is the address of the example.
+- One **OpenBB widget** (24 in all): *Fonrex SEC Check*, the check as a table, gaps first.
 
 ## October 2026 — Secure defaults, per-listing prices, verified provider data
 

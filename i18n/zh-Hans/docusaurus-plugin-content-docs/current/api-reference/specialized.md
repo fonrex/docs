@@ -15,6 +15,8 @@ description: "SEC 内部人交易、来自 JustETF 的 UCITS ETF 详情以及指
 
 向美国 SEC（EDGAR）提交的 Form 4 内部人交易。缓存 12 小时。
 
+向 SEC 提交的年度报表，以及据此对 Yahoo 报表的核对，见 [SEC 申报](./sec-filings.md)。
+
 | 参数 | 类型 | 默认值 | 说明 |
 |---|---|---|---|
 | `ticker` | string | — | 向 SEC 提交文件的股票（例如 `AAPL`） |

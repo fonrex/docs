@@ -26,7 +26,7 @@ Une clé en lecture seule (`FONREX_READ_ONLY_API_KEYS`) suffit pour tous les wid
 
 ## Fichiers de découverte
 
-- `GET /widgets.json` : les 23 widgets, avec pour chacun son nom, sa catégorie, son type, sa route et ses paramètres (`integrations/openbb/widgets.json`).
+- `GET /widgets.json` : les 24 widgets, avec pour chacun son nom, sa catégorie, son type, sa route et ses paramètres (`integrations/openbb/widgets.json`).
 - `GET /apps.json` : deux tableaux de bord pré-assemblés, **Fonrex — EU Markets** et **Fonrex — Screener & Macro** (`integrations/openbb/apps.json`).
 
 ## Routes
@@ -51,6 +51,7 @@ Une clé en lecture seule (`FONREX_READ_ONLY_API_KEYS`) suffit pour tous les wid
 | `fonrex_dcf_compare` | table | `GET /openbb/dcf/{ticker}/compare` | `/dcf/{ticker}/compare` |
 | `fonrex_dcf_sensitivity` | table | `GET /openbb/dcf/{ticker}/sensitivity` | `/dcf/{ticker}/sensitivity` |
 | `fonrex_insider_transactions` | table | `GET /openbb/insider-transactions/{ticker}` | `/insider-transactions/{ticker}` |
+| `fonrex_sec_check` | table | `GET /openbb/sec/{ticker}/check` (`years` 3 par défaut) | `/sec/{ticker}/check` |
 | `fonrex_etf_details` | table | `GET /openbb/etf/{isin}/details` | `/etf/{isin}/details` |
 | `fonrex_index_constituents` | table | `GET /openbb/index/{index_name}/constituents` | `/index/{index_name}/constituents` |
 | `fonrex_factor_exposure` | table | `GET /openbb/factors/exposure/{ticker}` | `/factors/exposure/{ticker}` |
