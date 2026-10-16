@@ -23,7 +23,8 @@ SEC 按公司归档数据，使用 **CIK**（Central Index Key）。Fonrex 从�
 
 - 只查找该金融工具的**美国上市品种**：以 USD 报价、在美国交易所上市、代码不指向任何外国交易所。`AIR.PA` 和 `SAP.DE` 永远不会发送给 SEC。
 - 代码必须出现在 [SEC 的代码表](https://www.sec.gov/files/company_tickers_exchange.json)中，且表中的公司**名称**必须与您目录中该金融工具的名称一致。
-- 找到的 CIK 保存在**金融工具**上：它的所有上市品种共享同样的申报文件。如果您的目录中有 SAP 的纽交所上市品种（`SAP`），就能通过它找到 SAP，`SAP.DE` 随后也会得到同样的答案。
+- 找到的 CIK 保存在**金融工具**（一个 ISIN）上：它的所有上市品种共享同样的申报文件。ADR 有自己的 ISIN，因此是一个独立的金融工具：SAP 在纽交所的 ADR（`US8030542042`，名为 *ADR on SAP SE* 或 *SAP SE ADR*）可以找到，德国股票 `SAP.DE`（`DE0007164600`）则找不到。
+- 当多个金融工具共用一个代码时（例如 `MSFT` 同时指微软和一个 Leverage Shares 跟踪产品），请添加 `isin=` 进行选择。
 - 没有美国上市品种的金融工具返回 `404` 并附带原因。7 天内不会再次查找；`POST /sec/{ticker}/refresh` 会立即查找（例如在添加美国上市品种之后）。
 - 您在 `asset_mappings` 中自行设置的 CIK（提供方 `SEC`，`source` = `manual`，不关联上市品种）会被直接采信。
 
@@ -138,7 +139,7 @@ curl -s -H "X-API-KEY: $FONREX_API_KEY" "http://localhost:5000/sec/AAPL/statemen
 - **`difference`** 等于 `(yahoo - sec) / |sec|`，以比率表示。资本支出、已付股息和利息费用按**金额**比较，不考虑符号。
 - **比较的数字**：营业收入、毛利、营业利润、净利润、每股收益和股数（基本和稀释）、利息费用、所得税、总资产、总负债、三项现金流、资本支出和已付股息。
 - **不比较**的数字（列在 `not_compared` 中），因为两个来源的定义不同：现金（Yahoo 可能加入短期投资）和股东权益（Yahoo 包含少数股东权益）。
-- **货币不同的年份**不进行比较：该年没有数字，并有一条 `note` 说明原因。
+- **Yahoo 没有的年份**（从未运行深度补充，或 Yahoo 提供的年份较少）和**货币不同的年份**不进行比较：这些年份没有数字，并有一条 `note` 说明原因。
 
 ```bash
 curl -s -H "X-API-KEY: $FONREX_API_KEY" "http://localhost:5000/sec/AAPL/check?years=1"
