@@ -2250,8 +2250,7 @@ The SEC files its data by company, under a **CIK** (Central Index Key). Fonrex n
 
 - Only a **US listing** of the instrument is looked up: quoted in USD, on a US exchange, with a ticker that names no foreign exchange. `AIR.PA` and `SAP.DE` are never sent to the SEC.
 - The ticker must be in the [table of the SEC](https://www.sec.gov/files/company_tickers_exchange.json), and the **name** of the company there must match the name of the instrument in your catalogue.
-- The CIK found is kept for the **instrument** (one ISIN): every listing of it shares the same filings. An ADR has an ISIN of its own, so it is an instrument of its own: the NYSE ADR of SAP (`US8030542042`, named *ADR on SAP SE* or *SAP SE ADR*) is found, the German share `SAP.DE` (`DE0007164600`) is not.
-- When several instruments share a ticker (`MSFT` for Microsoft and for a Leverage Shares tracker, say), add `isin=` to choose one.
+- The CIK found is kept for the **instrument**: every listing of it shares the same filings. SAP is found through its NYSE listing (`SAP`) when your catalogue has it, and `SAP.DE` then gets the same answer.
 - An instrument without US listing gets `404` with the reason. It is not looked up again for 7 days; `POST /sec/{ticker}/refresh` looks it up at once (after you add a US listing, for instance).
 - A CIK you set yourself in `asset_mappings` (provider `SEC`, `source` = `manual`, no listing) is trusted as it is.
 
@@ -2366,7 +2365,7 @@ How the two sources are put side by side:
 - **`difference`** is `(yahoo - sec) / |sec|`, as a ratio. Capex, dividends paid and interest expense are compared as **amounts**, their sign left aside.
 - **Figures compared**: revenue, gross profit, operating income, net income, EPS and share counts (basic and diluted), interest expense, income tax, total assets, total liabilities, the three cash flows, capex and dividends paid.
 - **Not compared**, because the two sources define them differently (listed in `not_compared`): cash (Yahoo may add the short-term investments) and equity (Yahoo includes the minority interests).
-- **A year Yahoo does not have** (deep enrichment never run, or Yahoo gives fewer years) and **a year in another currency** are not compared: they have no figures and a `note` that says why.
+- **A year in another currency** is not compared: it has no figures and a `note` that says why.
 
 ```bash
 curl -s -H "X-API-KEY: $FONREX_API_KEY" "http://localhost:5000/sec/AAPL/check?years=1"

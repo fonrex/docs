@@ -23,8 +23,7 @@ La SEC classe ses données par société, sous un **CIK** (Central Index Key). F
 
 - Seule une **cotation américaine** de l'instrument est recherchée : cotée en USD, sur une bourse américaine, avec un ticker qui ne désigne aucune bourse étrangère. `AIR.PA` et `SAP.DE` ne sont jamais envoyés à la SEC.
 - Le ticker doit figurer dans la [table de la SEC](https://www.sec.gov/files/company_tickers_exchange.json), et le **nom** de la société dans cette table doit correspondre au nom de l'instrument dans votre catalogue.
-- Le CIK trouvé est gardé pour l'**instrument** (un ISIN) : toutes ses cotations partagent les mêmes dépôts. Un ADR a son propre ISIN, c'est donc un instrument à part : l'ADR de SAP au NYSE (`US8030542042`, nommé *ADR on SAP SE* ou *SAP SE ADR*) est trouvé, l'action allemande `SAP.DE` (`DE0007164600`) ne l'est pas.
-- Quand plusieurs instruments partagent un ticker (`MSFT` pour Microsoft et pour un tracker Leverage Shares, par exemple), ajoutez `isin=` pour en choisir un.
+- Le CIK trouvé est gardé pour l'**instrument** : toutes ses cotations partagent les mêmes dépôts. SAP est trouvée par sa cotation au NYSE (`SAP`) si votre catalogue l'a, et `SAP.DE` reçoit alors la même réponse.
 - Un instrument sans cotation américaine reçoit `404` avec la raison. Il n'est pas recherché à nouveau pendant 7 jours ; `POST /sec/{ticker}/refresh` le recherche tout de suite (après l'ajout d'une cotation américaine, par exemple).
 - Un CIK que vous renseignez vous-même dans `asset_mappings` (fournisseur `SEC`, `source` = `manual`, sans cotation) est accepté tel quel.
 
@@ -139,7 +138,7 @@ Comment les deux sources sont mises côte à côte :
 - **`difference`** vaut `(yahoo - sec) / |sec|`, sous forme de ratio. Le capex, les dividendes versés et les charges d'intérêts sont comparés en **montants**, sans tenir compte du signe.
 - **Chiffres comparés** : chiffre d'affaires, marge brute, résultat d'exploitation, résultat net, BPA et nombres d'actions (de base et dilués), charges d'intérêts, impôt sur le résultat, total de l'actif, total du passif, les trois flux de trésorerie, capex et dividendes versés.
 - **Non comparés**, car les deux sources les définissent différemment (listés dans `not_compared`) : la trésorerie (Yahoo peut ajouter les placements à court terme) et les capitaux propres (Yahoo inclut les intérêts minoritaires).
-- **Une année que Yahoo n'a pas** (enrichissement complet jamais lancé, ou Yahoo donne moins d'années) et **une année dans une autre devise** ne sont pas comparées : elles n'ont pas de chiffres et une `note` explique pourquoi.
+- **Une année dans une autre devise** n'est pas comparée : elle n'a pas de chiffres et une `note` explique pourquoi.
 
 ```bash
 curl -s -H "X-API-KEY: $FONREX_API_KEY" "http://localhost:5000/sec/AAPL/check?years=1"
