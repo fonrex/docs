@@ -15,6 +15,8 @@ Three routes query one specialised source each. Every route accepts `refresh=tru
 
 Form 4 insider transactions filed with the US SEC (EDGAR). Cached 12 hours.
 
+The annual statements filed with the SEC, and the check of the Yahoo statements against them, are on [SEC filings](./sec-filings.md).
+
 | Parameter | Type | Default | Description |
 |---|---|---|---|
 | `ticker` | string | — | A share that files with the SEC (e.g. `AAPL`) |

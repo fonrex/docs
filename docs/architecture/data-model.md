@@ -74,7 +74,7 @@ erDiagram
 |---|---|
 | `assets` | One row per ISIN: partial unique index `uq_assets_isin_not_null` (`WHERE isin IS NOT NULL`) |
 | `asset_listings` | Unique on `(asset_id, ticker, exchange, currency)` (`uq_asset_listing_identity`); `is_primary` marks the default listing |
-| `asset_mappings` | Unique on `(asset_listing_id, provider_name)`. A mapping without listing applies to every listing of the instrument. `source` says where the identifier comes from: `csv_import`, `manual`, `isin_search`, `ticker_check`, `symbol_not_found` |
+| `asset_mappings` | Unique on `(asset_listing_id, provider_name)`. A mapping without listing applies to every listing of the instrument. `source` says where the identifier comes from: `csv_import`, `manual`, `isin_search`, `ticker_check`, `symbol_not_found`. The CIK of the SEC is a mapping of the instrument (provider `SEC`, no listing) |
 
 The Yahoo Finance mapping of a listing holds its **verified symbol** — found from the ISIN and checked against the listing's currency — or, with `source = 'manual'`, a symbol you set by hand.
 
@@ -95,6 +95,8 @@ The Yahoo Finance mapping of a listing holds its **verified symbol** — found f
 |---|---|
 | `fundamentals_highlights` | Last snapshot of an instrument (valuation, profitability, dividend, short interest, solvency). `dividend_yield` is a ratio |
 | `financial_statements` | One row per statement type (income, balance, cash flow), fiscal period and frequency. A fiscal year is three rows; calculations put them together with `financials/fiscal_years.py`. `currency` is the currency of the statements given by Yahoo (`NULL` when unknown); the DCF is made in it |
+| `xbrl_facts` | Facts of the XBRL filings of the SEC, kept apart from Yahoo: one value per `(cik, taxonomy, concept, unit, period_end, duration_days)`. `duration_days` is 0 for a balance at a date. A restatement replaces the value, and `accession`, `form` and `filed` name the filing it comes from |
+| `sec_company_loads` | One row per company (CIK): name at the SEC, when its facts were last read, latest filing kept, number of facts |
 | `earnings_history`, `earnings_trend` | Actual vs estimated EPS; analyst estimates for `0q`, `+1q`, `0y`, `+1y` |
 | `analyst_ratings` | Consensus, target price, rating counts |
 | `esg_scores` | E/S/G scores and 15 controversy flags |

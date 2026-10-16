@@ -609,6 +609,8 @@ Clients send a key as `Authorization: Bearer <key>` or `X-API-KEY: <key>`. See [
 | Variable | Default | Description |
 |---|---|---|
 | `SEC_EDGAR_EMAIL` | `contact@fonrex.io` | Contact address sent to SEC EDGAR (required by the SEC policy): put your own |
+| `SEC_XBRL_REFRESH_HOURS` | `24` | Hours before the XBRL facts of a company are read again from the SEC (1 to 720) |
+| `SEC_CHECK_TOLERANCE` | `0.01` | Largest relative gap between Yahoo and the SEC still counted as a match, as a ratio (0 to 0.5) |
 | `OPENFIGI_API_KEY` | *(empty)* | Optional OpenFIGI key (higher rate limit) |
 | `BARRONS_TOKEN`, `MARKETWATCH_TOKEN`, `WSJ_TOKEN` | *(empty)* | Optional tokens of these websites |
 | `FONREX_PROVIDER_MAX_CONCURRENCY` | `4` | Requests one provider may run at the same time (1 to 64) |
@@ -2221,6 +2223,232 @@ Both are in the *Macro Context* tab of the **Fonrex — Screener & Macro** dashb
 
 
 
+<!-- FILE: /docs/api-reference/sec-filings.md -->
+
+---
+id: "sec-filings"
+title: "SEC Filings API Reference (XBRL)"
+sidebar_label: "SEC Filings (XBRL)"
+description: "Annual statements filed with the SEC, read from the XBRL facts of EDGAR, and the Yahoo statements checked against them"
+---
+
+# SEC Filings API Reference (XBRL)
+
+A company listed in the United States files its annual report with the [SEC](https://www.sec.gov/edgar), and each figure of it is published as an **XBRL fact**: a concept (`us-gaap:Revenues`), a unit, a period, a value and the filing it comes from. Fonrex reads these facts (free API, no key), keeps them in your database and uses them as a **source of verification** for the statements stored from Yahoo Finance.
+
+| Route | What it does |
+|---|---|
+| `GET /sec/{ticker}/statements` | The annual statements filed with the SEC, each figure with its concept and its filing |
+| `GET /sec/{ticker}/check` | The Yahoo statements checked against the SEC filings, figure by figure |
+| `POST /sec/{ticker}/refresh` | Looks the company up again and reads its facts now |
+
+The Form 4 insider transactions stay on [`GET /insider-transactions/{ticker}`](./specialized.md).
+
+## Which instruments
+
+The SEC files its data by company, under a **CIK** (Central Index Key). Fonrex never guesses it from a ticker: `AIR.PA` is Airbus in Paris, while `AIR` at the SEC is AAR Corp, a US company. A CIK taken from the wrong ticker would give the statements of another company without any error.
+
+- Only a **US listing** of the instrument is looked up: quoted in USD, on a US exchange, with a ticker that names no foreign exchange. `AIR.PA` and `SAP.DE` are never sent to the SEC.
+- The ticker must be in the [table of the SEC](https://www.sec.gov/files/company_tickers_exchange.json), and the **name** of the company there must match the name of the instrument in your catalogue.
+- The CIK found is kept for the **instrument** (one ISIN): every listing of it shares the same filings. An ADR has an ISIN of its own, so it is an instrument of its own: the NYSE ADR of SAP (`US8030542042`, named *ADR on SAP SE* or *SAP SE ADR*) is found, the German share `SAP.DE` (`DE0007164600`) is not.
+- When several instruments share a ticker (`MSFT` for Microsoft and for a Leverage Shares tracker, say), add `isin=` to choose one.
+- An instrument without US listing gets `404` with the reason. It is not looked up again for 7 days; `POST /sec/{ticker}/refresh` looks it up at once (after you add a US listing, for instance).
+- A CIK you set yourself in `asset_mappings` (provider `SEC`, `source` = `manual`, no listing) is trusted as it is.
+
+## How the statements are read
+
+- **Annual reports only**: forms `10-K` (US companies), `20-F` (foreign companies), `40-F` (Canadian companies) and their amendments.
+- **A fiscal year is a period of 350 to 380 days**; a balance sheet figure is a fact at the end of the year. The nine-month figures of a quarterly report are never taken for a year.
+- **A restatement wins**: a 10-K repeats the two previous years and may correct them. For each period, the value of the latest filing is kept, and the figure says which filing it comes from.
+- **Several concepts for one figure**: revenue is `Revenues` at JPMorgan, `RevenueFromContractWithCustomerExcludingAssessedTax` at Apple, `Revenue` (IFRS) at SAP. Each figure lists its concepts in order and the first one filed for the year is taken; the answer names it.
+- **One currency per year**: the currency of the latest annual report. A foreign filer reporting in euros gives euros, never a mix of euros and dollars.
+- **Values as filed**: payments (`capex`, `dividends_paid`, `stock_repurchases`) are **positive** amounts, where Yahoo gives negative cash flows. A figure the company does not file is absent: a bank has no `operating_income`.
+
+### Figures
+
+| Statement | Figures |
+|---|---|
+| Income | `revenue`, `gross_profit`, `operating_income`, `net_income`, `eps_basic`, `eps_diluted`, `shares_basic`, `shares_diluted`, `rd_expense`, `sga_expense`, `interest_expense`, `tax_provision` |
+| Balance sheet | `total_assets`, `total_liabilities`, `total_equity`, `cash_and_equivalents`, `short_term_investments`, `accounts_receivable`, `inventory`, `goodwill`, `intangible_assets`, `long_term_debt`, `retained_earnings` |
+| Cash flow | `operating_cashflow`, `investing_cashflow`, `financing_cashflow`, `capex`, `dividends_paid`, `stock_repurchases`, `depreciation_amortization` |
+
+The names are those of the columns of `financial_statements`, so a figure of the SEC and the same figure of Yahoo have the same name.
+
+## Freshness
+
+The facts of a company are read from the SEC the first time they are asked, all at once (one file per company, 4 to 8 MB for the largest). After that:
+
+- a company read less than **`SEC_XBRL_REFRESH_HOURS`** hours ago (24 by default) is answered from the database;
+- an older one is read again; a new filing adds its years and replaces the values it restates;
+- when the SEC does not answer, the stored figures are given with `load.status` = `failed` and the reason.
+
+Every answer says, in `load`, what was done: `fetched` (read now), `fresh` (read recently) or `failed`, with `last_filed` (the latest filing kept) and `facts` (the facts kept).
+
+The SEC asks every automated client to give a contact address. Set **`SEC_EDGAR_EMAIL`** to your own address: the API logs a warning at start-up while it is the address of the example.
+
+---
+
+## <span className="api-method get">GET</span> `/sec/{ticker}/statements`
+
+The annual statements filed with the SEC, most recent fiscal year first.
+
+| Parameter | Default | Description |
+|---|---|---|
+| `ticker` | — | A ticker of your catalogue |
+| `years` | every year | Most recent fiscal years given (1 to 30) |
+| `isin` | — | The instrument, when several share the ticker |
+
+```bash
+curl -s -H "X-API-KEY: $FONREX_API_KEY" "http://localhost:5000/sec/AAPL/statements?years=1"
+```
+
+```json
+{
+  "ticker": "AAPL",
+  "cik": "0000320193",
+  "entity_name": "Apple Inc.",
+  "source": "SEC EDGAR, XBRL company facts (https://www.sec.gov/edgar)",
+  "load": {
+    "status": "fresh",
+    "fetched_at": "2026-10-16T09:00:00Z",
+    "last_filed": "2025-10-31",
+    "facts": 1240,
+    "reason": null
+  },
+  "years": [
+    {
+      "period_end": "2025-09-27",
+      "currency": "USD",
+      "figures": {
+        "revenue": {
+          "value": 416161000000.0,
+          "concept": "RevenueFromContractWithCustomerExcludingAssessedTax",
+          "taxonomy": "us-gaap",
+          "unit": "USD",
+          "form": "10-K",
+          "filed": "2025-10-31",
+          "accession": "0000320193-25-000079",
+          "filing_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/"
+        },
+        "net_income": { "value": 112010000000.0, "concept": "NetIncomeLoss", "...": "..." },
+        "eps_diluted": { "value": 7.46, "unit": "USD/shares", "...": "..." },
+        "capex": { "value": 12715000000.0, "concept": "PaymentsToAcquirePropertyPlantAndEquipment", "...": "..." }
+      }
+    }
+  ]
+}
+```
+
+`period_end` is the end of the fiscal year as filed: Apple closes its year on the last Saturday of September. `filing_url` opens the folder of the filing on EDGAR.
+
+---
+
+## <span className="api-method get">GET</span> `/sec/{ticker}/check`
+
+The statements stored from Yahoo checked against the SEC filings. For each fiscal year filed, each figure both sources define alike gets a status:
+
+| `status` | Meaning |
+|---|---|
+| `match` | Same value within **`SEC_CHECK_TOLERANCE`** (1 % by default) |
+| `mismatch` | A gap larger than the tolerance: worth a look |
+| `missing_yahoo` | Filed with the SEC, absent at Yahoo |
+| `missing_sec` | Given by Yahoo, not filed with the SEC |
+
+| Parameter | Default | Description |
+|---|---|---|
+| `ticker` | — | A ticker of your catalogue |
+| `years` | every year | Most recent fiscal years given (1 to 30) |
+| `isin` | — | The instrument, when several share the ticker |
+
+How the two sources are put side by side:
+
+- **A year is matched by its end**, two weeks apart at most: Yahoo dates Apple's year ending on 27 September 2025 at the 30th. `yahoo_period_end` gives the date matched, `null` when Yahoo has no such year.
+- **`difference`** is `(yahoo - sec) / |sec|`, as a ratio. Capex, dividends paid and interest expense are compared as **amounts**, their sign left aside.
+- **Figures compared**: revenue, gross profit, operating income, net income, EPS and share counts (basic and diluted), interest expense, income tax, total assets, total liabilities, the three cash flows, capex and dividends paid.
+- **Not compared**, because the two sources define them differently (listed in `not_compared`): cash (Yahoo may add the short-term investments) and equity (Yahoo includes the minority interests).
+- **A year Yahoo does not have** (deep enrichment never run, or Yahoo gives fewer years) and **a year in another currency** are not compared: they have no figures and a `note` that says why.
+
+```bash
+curl -s -H "X-API-KEY: $FONREX_API_KEY" "http://localhost:5000/sec/AAPL/check?years=1"
+```
+
+```json
+{
+  "ticker": "AAPL",
+  "cik": "0000320193",
+  "entity_name": "Apple Inc.",
+  "source": "SEC EDGAR, XBRL company facts (https://www.sec.gov/edgar)",
+  "tolerance": 0.01,
+  "not_compared": {
+    "cash_and_equivalents": "Yahoo may add the short-term investments",
+    "total_equity": "Yahoo includes the minority interests"
+  },
+  "load": { "status": "fresh", "...": "..." },
+  "years": [
+    {
+      "period_end": "2025-09-27",
+      "yahoo_period_end": "2025-09-30",
+      "currency": "USD",
+      "yahoo_currency": "USD",
+      "note": null,
+      "match": 14,
+      "mismatch": 1,
+      "missing_yahoo": 0,
+      "missing_sec": 0,
+      "figures": [
+        {
+          "column": "revenue",
+          "statement": "income",
+          "status": "match",
+          "sec": 416161000000.0,
+          "yahoo": 416161000000.0,
+          "difference": 0.0,
+          "concept": "RevenueFromContractWithCustomerExcludingAssessedTax",
+          "filing_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/"
+        },
+        { "column": "capex", "statement": "cashflow", "status": "match", "sec": 12715000000.0, "yahoo": -12715000000.0, "difference": 0.0, "...": "..." }
+      ]
+    }
+  ]
+}
+```
+
+Values are illustrative. A `mismatch` is not always an error of Yahoo: check the figure in the filing (`filing_url`) before you correct anything.
+
+---
+
+## <span className="api-method post">POST</span> `/sec/{ticker}/refresh`
+
+Looks the CIK of the instrument up again in the table of the SEC and reads the facts of the company now, even if they were read recently. Needs a full-access key: a read-only key gets `403`.
+
+| Parameter | Default | Description |
+|---|---|---|
+| `ticker` | — | A ticker of your catalogue |
+| `isin` | — | The instrument, when several share the ticker |
+
+```bash
+curl -s -X POST -H "X-API-KEY: $FONREX_API_KEY" "http://localhost:5000/sec/AAPL/refresh"
+```
+
+The answer gives `ticker`, `cik`, `entity_name` and the `load` of the reading.
+
+## Errors
+
+| Status | When |
+|---|---|
+| `404` | Unknown ticker, or no SEC filer for the instrument (the reason is given: no US listing, name that does not match…) |
+| `422` | `years` outside 1 to 30 |
+| `502` | The SEC could not be read and nothing was stored for the company yet |
+| `503` | No database |
+
+## OpenBB widget
+
+**Fonrex SEC Check** (`fonrex_sec_check`) shows the check as a table: one row per year and figure, gaps first, with the SEC and Yahoo values, the gap in percent, the XBRL concept and the link to the filing. Its `years` parameter is 3 by default.
+
+It is not in the pre-assembled dashboards, which follow European tickers without SEC filings: add it to your own dashboard for a US ticker. See the [OpenBB Workspace guide](../guides/openbb-workspace.md).
+
+
+
 <!-- FILE: /docs/api-reference/news.md -->
 
 ---
@@ -2496,6 +2724,8 @@ Three routes query one specialised source each. Every route accepts `refresh=tru
 
 Form 4 insider transactions filed with the US SEC (EDGAR). Cached 12 hours.
 
+The annual statements filed with the SEC, and the check of the Yahoo statements against them, are on [SEC filings](./sec-filings.md).
+
 | Parameter | Type | Default | Description |
 |---|---|---|---|
 | `ticker` | string | — | A share that files with the SEC (e.g. `AAPL`) |
@@ -2609,7 +2839,7 @@ A read-only key (`FONREX_READ_ONLY_API_KEYS`) is enough for every widget. CORS a
 
 ## Discovery files
 
-- `GET /widgets.json` — the 23 widgets: for each one, its name, category, type, route and parameters (`integrations/openbb/widgets.json`).
+- `GET /widgets.json` — the 24 widgets: for each one, its name, category, type, route and parameters (`integrations/openbb/widgets.json`).
 - `GET /apps.json` — two pre-assembled dashboards, **Fonrex — EU Markets** and **Fonrex — Screener & Macro** (`integrations/openbb/apps.json`).
 
 ## Routes
@@ -2634,6 +2864,7 @@ A read-only key (`FONREX_READ_ONLY_API_KEYS`) is enough for every widget. CORS a
 | `fonrex_dcf_compare` | table | `GET /openbb/dcf/{ticker}/compare` | `/dcf/{ticker}/compare` |
 | `fonrex_dcf_sensitivity` | table | `GET /openbb/dcf/{ticker}/sensitivity` | `/dcf/{ticker}/sensitivity` |
 | `fonrex_insider_transactions` | table | `GET /openbb/insider-transactions/{ticker}` | `/insider-transactions/{ticker}` |
+| `fonrex_sec_check` | table | `GET /openbb/sec/{ticker}/check` (`years` 3 by default) | `/sec/{ticker}/check` |
 | `fonrex_etf_details` | table | `GET /openbb/etf/{isin}/details` | `/etf/{isin}/details` |
 | `fonrex_index_constituents` | table | `GET /openbb/index/{index_name}/constituents` | `/index/{index_name}/constituents` |
 | `fonrex_factor_exposure` | table | `GET /openbb/factors/exposure/{ticker}` | `/factors/exposure/{ticker}` |
@@ -3483,7 +3714,7 @@ description: "Connect your self-hosted Fonrex instance to OpenBB Workspace widge
 
 1. In OpenBB Workspace, right-click on the dashboard and select **Add data** (or open the backend connections).
 2. Enter the URL of your instance, e.g. `http://localhost:5000` or `https://myfonrex.share.zrok.io`.
-3. OpenBB reads `/widgets.json` and lists the 23 widgets. This file and `/apps.json` answer without a key.
+3. OpenBB reads `/widgets.json` and lists the 24 widgets. This file and `/apps.json` answer without a key.
 
 ## Step 2 — Add the key
 
@@ -3512,6 +3743,8 @@ Every `/openbb/...` route requires it.
 
 Import them from the Apps menu of OpenBB, or add widgets one by one to your own dashboard.
 
+**Fonrex SEC Check** is in neither dashboard: it needs a US ticker that files with the SEC (`AAPL`, `MSFT`…), and the two dashboards follow European ones. Add it to your own dashboard; see [SEC filings](../api-reference/sec-filings.md).
+
 ## Widgets
 
 | Widget | Name | Category | Type |
@@ -3519,6 +3752,7 @@ Import them from the Apps menu of OpenBB, or add widgets one by one to your own 
 | `fonrex_fundamentals` | Fonrex Fundamentals | Fundamentals | table |
 | `fonrex_fundamentals_deep` | Fonrex Deep Fundamentals | Fundamentals | table |
 | `fonrex_insider_transactions` | Fonrex Insider Transactions | Fundamentals | table |
+| `fonrex_sec_check` | Fonrex SEC Check | Fundamentals | table |
 | `fonrex_etf_details` | Fonrex ETF Details | Fundamentals | table |
 | `fonrex_eod` | Fonrex EOD History | Historical | chart |
 | `fonrex_history` | Fonrex OHLCV History | Historical | chart |
@@ -3801,7 +4035,7 @@ erDiagram
 |---|---|
 | `assets` | One row per ISIN: partial unique index `uq_assets_isin_not_null` (`WHERE isin IS NOT NULL`) |
 | `asset_listings` | Unique on `(asset_id, ticker, exchange, currency)` (`uq_asset_listing_identity`); `is_primary` marks the default listing |
-| `asset_mappings` | Unique on `(asset_listing_id, provider_name)`. A mapping without listing applies to every listing of the instrument. `source` says where the identifier comes from: `csv_import`, `manual`, `isin_search`, `ticker_check`, `symbol_not_found` |
+| `asset_mappings` | Unique on `(asset_listing_id, provider_name)`. A mapping without listing applies to every listing of the instrument. `source` says where the identifier comes from: `csv_import`, `manual`, `isin_search`, `ticker_check`, `symbol_not_found`. The CIK of the SEC is a mapping of the instrument (provider `SEC`, no listing) |
 
 The Yahoo Finance mapping of a listing holds its **verified symbol** — found from the ISIN and checked against the listing's currency — or, with `source = 'manual'`, a symbol you set by hand.
 
@@ -3822,6 +4056,8 @@ The Yahoo Finance mapping of a listing holds its **verified symbol** — found f
 |---|---|
 | `fundamentals_highlights` | Last snapshot of an instrument (valuation, profitability, dividend, short interest, solvency). `dividend_yield` is a ratio |
 | `financial_statements` | One row per statement type (income, balance, cash flow), fiscal period and frequency. A fiscal year is three rows; calculations put them together with `financials/fiscal_years.py`. `currency` is the currency of the statements given by Yahoo (`NULL` when unknown); the DCF is made in it |
+| `xbrl_facts` | Facts of the XBRL filings of the SEC, kept apart from Yahoo: one value per `(cik, taxonomy, concept, unit, period_end, duration_days)`. `duration_days` is 0 for a balance at a date. A restatement replaces the value, and `accession`, `form` and `filed` name the filing it comes from |
+| `sec_company_loads` | One row per company (CIK): name at the SEC, when its facts were last read, latest filing kept, number of facts |
 | `earnings_history`, `earnings_trend` | Actual vs estimated EPS; analyst estimates for `0q`, `+1q`, `0y`, `+1y` |
 | `analyst_ratings` | Consensus, target price, rating counts |
 | `esg_scores` | E/S/G scores and 15 controversy flags |
@@ -3901,6 +4137,7 @@ Alembic owns the schema, including the TimescaleDB hypertables, compression and 
 | 020 | `020_factor_returns.py` | `factor_returns` and `factor_dataset_loads`: the Fama/French factor files |
 | 021 | `021_fx_rates.py` | `fx_rates` and `fx_rate_loads`: the ECB reference exchange rates |
 | 022 | `022_macro_observations.py` | `macro_observations` and `macro_series_loads`: the Eurostat indicators, period by period |
+| 023 | `023_xbrl_facts.py` | `xbrl_facts` and `sec_company_loads`: the facts of the XBRL filings of the SEC |
 
 ## How migrations run
 
@@ -3915,7 +4152,7 @@ Migration 014 first deletes the TimescaleDB jobs of the price tables (waiting fo
 alembic revision -m "describe_the_change"
 ```
 
-Rename the new file of `alembic/versions/` and set its identifiers after the last migration (`revision = "023"`, `down_revision = "022"`, file `023_describe_the_change.py`), then:
+Rename the new file of `alembic/versions/` and set its identifiers after the last migration (`revision = "024"`, `down_revision = "023"`, file `024_describe_the_change.py`), then:
 
 ```bash
 alembic upgrade head
@@ -4923,7 +5160,14 @@ description: "Project history, feature additions, schema migrations, and version
 ### Eurostat indicators
 - **Inflation, unemployment, GDP growth and business surveys** of the euro area and of each EU country, from Eurostat (free, no key): `GET /macro/indicators` (latest values with the change on the previous period), `GET /macro/indicators/{indicator}` (series of up to 10 countries), `POST /macro/indicators/refresh`. See [Macro indicators](../api-reference/macro-indicators.md).
 - Kept period by period in `macro_observations` (migration 022); a revision of Eurostat, such as the final figure after a flash inflation estimate, replaces the value of its period. New settings `EUROSTAT_REFRESH_HOURS` and `EUROSTAT_API_URL`.
-- Two **OpenBB widgets** (23 in all): the indicators of a country as cards, and one indicator of several countries as a chart, in the *Macro Context* tab of the Screener & Macro app.
+- Two **OpenBB widgets**: the indicators of a country as cards, and one indicator of several countries as a chart, in the *Macro Context* tab of the Screener & Macro app.
+
+### SEC filings (XBRL)
+- **Annual statements filed with the SEC**, read from the XBRL facts of EDGAR (free, no key): `GET /sec/{ticker}/statements` gives each figure with its XBRL concept and a link to its filing. 10-K, 20-F and 40-F reports only; a restatement replaces the value it corrects. See [SEC filings](../api-reference/sec-filings.md).
+- **The Yahoo statements checked against the SEC**: `GET /sec/{ticker}/check` gives, year by year, `match`, `mismatch`, `missing_yahoo` or `missing_sec` for each figure both sources define alike. `POST /sec/{ticker}/refresh` reads a company again at once.
+- **The CIK is never guessed from a ticker**: only a US listing of the instrument is looked up, and the name at the SEC must match. `AIR.PA` (Airbus) is never confused with `AIR` (AAR Corp).
+- Facts kept in `xbrl_facts` and `sec_company_loads` (migration 023). New settings `SEC_XBRL_REFRESH_HOURS` and `SEC_CHECK_TOLERANCE`; a warning at start-up while `SEC_EDGAR_EMAIL` is the address of the example.
+- One **OpenBB widget** (24 in all): *Fonrex SEC Check*, the check as a table, gaps first.
 
 ## October 2026 — Secure defaults, per-listing prices, verified provider data
 

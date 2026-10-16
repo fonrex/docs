@@ -31,7 +31,14 @@ description: "项目历史、功能新增、Schema 迁移和版本更新"
 ### Eurostat 指标
 - 来自 Eurostat（免费，无需密钥）的欧元区及各欧盟国家的**通胀、失业、GDP 增长和商业调查**：`GET /macro/indicators`（最新值及相对上一期间的变化）、`GET /macro/indicators/{indicator}`（最多 10 个国家的序列）、`POST /macro/indicators/refresh`。参见[宏观指标](../api-reference/macro-indicators.md)。
 - 按期间保存在 `macro_observations` 中（迁移 022）；Eurostat 的修订（例如通胀快速估计之后的最终数据）会替换该期间的值。新增设置 `EUROSTAT_REFRESH_HOURS` 和 `EUROSTAT_API_URL`。
-- 两个 **OpenBB 小组件**（共 23 个）：以卡片显示一个国家的指标，以图表显示多个国家的同一指标，位于 Screener & Macro 应用的 *Macro Context* 标签页。
+- 两个 **OpenBB 小组件**：以卡片显示一个国家的指标，以图表显示多个国家的同一指标，位于 Screener & Macro 应用的 *Macro Context* 标签页。
+
+### SEC 申报（XBRL） {#sec-filings-xbrl}
+- **向 SEC 提交的年度报表**，从 EDGAR 的 XBRL 事实中读取（免费，无需密钥）：`GET /sec/{ticker}/statements` 给出每个数字及其 XBRL 概念和申报文件链接。只取 10-K、20-F 和 40-F 报告；重述会替换其更正的值。参见 [SEC 申报](../api-reference/sec-filings.md)。
+- **用 SEC 核对 Yahoo 的报表**：`GET /sec/{ticker}/check` 逐年给出两个来源定义相同的每个数字的状态：`match`、`mismatch`、`missing_yahoo` 或 `missing_sec`。`POST /sec/{ticker}/refresh` 立即重新读取一家公司。
+- **从不根据代码猜测 CIK**：只查找金融工具的美国上市品种，且 SEC 上的名称必须一致。`AIR.PA`（空客）绝不会与 `AIR`（AAR Corp）混淆。
+- 事实保存在 `xbrl_facts` 和 `sec_company_loads` 中（迁移 023）。新增设置 `SEC_XBRL_REFRESH_HOURS` 和 `SEC_CHECK_TOLERANCE`；只要 `SEC_EDGAR_EMAIL` 仍是示例地址，启动时就会记录警告。
+- 一个 **OpenBB 小组件**（共 24 个）：*Fonrex SEC Check*，以表格显示核对结果，差异排在前面。
 
 ## 2026 年 10 月——默认安全、按上市品种存储价格、经过验证的数据提供方数据
 

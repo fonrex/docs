@@ -74,7 +74,7 @@ erDiagram
 |---|---|
 | `assets` | 每个 ISIN 一行：部分唯一索引 `uq_assets_isin_not_null`（`WHERE isin IS NOT NULL`） |
 | `asset_listings` | 在 `(asset_id, ticker, exchange, currency)` 上唯一（`uq_asset_listing_identity`）；`is_primary` 标记默认上市品种 |
-| `asset_mappings` | 在 `(asset_listing_id, provider_name)` 上唯一。不关联上市品种的映射适用于该金融工具的所有上市品种。`source` 说明标识符的来源：`csv_import`、`manual`、`isin_search`、`ticker_check`、`symbol_not_found` |
+| `asset_mappings` | 在 `(asset_listing_id, provider_name)` 上唯一。不关联上市品种的映射适用于该金融工具的所有上市品种。`source` 说明标识符的来源：`csv_import`、`manual`、`isin_search`、`ticker_check`、`symbol_not_found`。 SEC 的 CIK 是金融工具的一个映射（提供方 `SEC`，不关联上市品种） |
 
 上市品种的 Yahoo Finance 映射保存其**已验证的代码**——根据 ISIN 查得并按上市品种的货币核对——或者在 `source = 'manual'` 时，保存你手动设置的代码。
 
@@ -95,6 +95,8 @@ erDiagram
 |---|---|
 | `fundamentals_highlights` | 金融工具的最新快照（估值、盈利能力、股息、空头头寸、偿债能力）。`dividend_yield` 为比率 |
 | `financial_statements` | 每种报表类型（利润表、资产负债表、现金流量表）、财务期间和频率各一行。一个财年为三行；计算时通过 `financials/fiscal_years.py` 将它们组合起来。 `currency` 是 Yahoo 给出的报表货币（未知时为 `NULL`）；DCF 以该货币进行 |
+| `xbrl_facts` | SEC XBRL 申报的事实，与 Yahoo 的数据分开保存：每个 `(cik, taxonomy, concept, unit, period_end, duration_days)` 一个值。时点资产负债表的 `duration_days` 为 0。重述会替换该值，`accession`、`form` 和 `filed` 注明其来源申报文件 |
+| `sec_company_loads` | 每家公司（CIK）一行：SEC 上的名称、最近一次读取其事实的时间、保存的最新申报、事实数量 |
 | `earnings_history`, `earnings_trend` | 实际与预估每股收益；分析师对 `0q`、`+1q`、`0y`、`+1y` 的预估 |
 | `analyst_ratings` | 一致评级、目标价、评级数量 |
 | `esg_scores` | E/S/G 评分及 15 个争议标志 |

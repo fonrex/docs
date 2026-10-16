@@ -111,6 +111,8 @@ Clients send a key as `Authorization: Bearer <key>` or `X-API-KEY: <key>`. See [
 | Variable | Default | Description |
 |---|---|---|
 | `SEC_EDGAR_EMAIL` | `contact@fonrex.io` | Contact address sent to SEC EDGAR (required by the SEC policy): put your own |
+| `SEC_XBRL_REFRESH_HOURS` | `24` | Hours before the XBRL facts of a company are read again from the SEC (1 to 720) |
+| `SEC_CHECK_TOLERANCE` | `0.01` | Largest relative gap between Yahoo and the SEC still counted as a match, as a ratio (0 to 0.5) |
 | `OPENFIGI_API_KEY` | *(empty)* | Optional OpenFIGI key (higher rate limit) |
 | `BARRONS_TOKEN`, `MARKETWATCH_TOKEN`, `WSJ_TOKEN` | *(empty)* | Optional tokens of these websites |
 | `FONREX_PROVIDER_MAX_CONCURRENCY` | `4` | Requests one provider may run at the same time (1 to 64) |

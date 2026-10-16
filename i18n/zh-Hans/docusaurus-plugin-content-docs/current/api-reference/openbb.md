@@ -26,7 +26,7 @@ description: "为 OpenBB Workspace 组件提供数据的 /openbb 路由和发现
 
 ## 发现文件
 
-- `GET /widgets.json`——23 个组件：每个组件的名称、类别、类型、路由和参数（`integrations/openbb/widgets.json`）。
+- `GET /widgets.json`——24 个组件：每个组件的名称、类别、类型、路由和参数（`integrations/openbb/widgets.json`）。
 - `GET /apps.json`——两个预先组装好的仪表板：**Fonrex — EU Markets** 和 **Fonrex — Screener & Macro**（`integrations/openbb/apps.json`）。
 
 ## 路由
@@ -51,6 +51,7 @@ description: "为 OpenBB Workspace 组件提供数据的 /openbb 路由和发现
 | `fonrex_dcf_compare` | table | `GET /openbb/dcf/{ticker}/compare` | `/dcf/{ticker}/compare` |
 | `fonrex_dcf_sensitivity` | table | `GET /openbb/dcf/{ticker}/sensitivity` | `/dcf/{ticker}/sensitivity` |
 | `fonrex_insider_transactions` | table | `GET /openbb/insider-transactions/{ticker}` | `/insider-transactions/{ticker}` |
+| `fonrex_sec_check` | table | `GET /openbb/sec/{ticker}/check` (`years` 默认 3) | `/sec/{ticker}/check` |
 | `fonrex_etf_details` | table | `GET /openbb/etf/{isin}/details` | `/etf/{isin}/details` |
 | `fonrex_index_constituents` | table | `GET /openbb/index/{index_name}/constituents` | `/index/{index_name}/constituents` |
 | `fonrex_factor_exposure` | table | `GET /openbb/factors/exposure/{ticker}` | `/factors/exposure/{ticker}` |

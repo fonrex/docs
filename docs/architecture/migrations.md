@@ -35,6 +35,7 @@ Alembic owns the schema, including the TimescaleDB hypertables, compression and 
 | 020 | `020_factor_returns.py` | `factor_returns` and `factor_dataset_loads`: the Fama/French factor files |
 | 021 | `021_fx_rates.py` | `fx_rates` and `fx_rate_loads`: the ECB reference exchange rates |
 | 022 | `022_macro_observations.py` | `macro_observations` and `macro_series_loads`: the Eurostat indicators, period by period |
+| 023 | `023_xbrl_facts.py` | `xbrl_facts` and `sec_company_loads`: the facts of the XBRL filings of the SEC |
 
 ## How migrations run
 
@@ -49,7 +50,7 @@ Migration 014 first deletes the TimescaleDB jobs of the price tables (waiting fo
 alembic revision -m "describe_the_change"
 ```
 
-Rename the new file of `alembic/versions/` and set its identifiers after the last migration (`revision = "023"`, `down_revision = "022"`, file `023_describe_the_change.py`), then:
+Rename the new file of `alembic/versions/` and set its identifiers after the last migration (`revision = "024"`, `down_revision = "023"`, file `024_describe_the_change.py`), then:
 
 ```bash
 alembic upgrade head

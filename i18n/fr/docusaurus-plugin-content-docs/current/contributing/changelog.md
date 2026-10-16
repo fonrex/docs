@@ -31,7 +31,14 @@ description: "Historique du projet, ajouts de fonctionnalités, migrations de sc
 ### Indicateurs Eurostat
 - **Inflation, chômage, croissance du PIB et enquêtes de conjoncture** de la zone euro et de chaque pays de l'UE, depuis Eurostat (gratuit, sans clé) : `GET /macro/indicators` (dernières valeurs avec la variation sur la période précédente), `GET /macro/indicators/{indicator}` (séries de 10 pays au plus), `POST /macro/indicators/refresh`. Voir [Indicateurs macro](../api-reference/macro-indicators.md).
 - Conservés période par période dans `macro_observations` (migration 022) ; une révision d'Eurostat, comme le chiffre définitif après une estimation flash de l'inflation, remplace la valeur de sa période. Nouveaux réglages `EUROSTAT_REFRESH_HOURS` et `EUROSTAT_API_URL`.
-- Deux **widgets OpenBB** (23 au total) : les indicateurs d'un pays en cartes, et un indicateur de plusieurs pays en graphique, dans l'onglet *Macro Context* de l'app Screener & Macro.
+- Deux **widgets OpenBB** : les indicateurs d'un pays en cartes, et un indicateur de plusieurs pays en graphique, dans l'onglet *Macro Context* de l'app Screener & Macro.
+
+### Dépôts SEC (XBRL) {#sec-filings-xbrl}
+- **Les états annuels déposés auprès de la SEC**, lus dans les faits XBRL d'EDGAR (gratuit, sans clé) : `GET /sec/{ticker}/statements` donne chaque chiffre avec son concept XBRL et un lien vers son dépôt. Rapports 10-K, 20-F et 40-F seulement ; un retraitement remplace la valeur qu'il corrige. Voir [Dépôts SEC](../api-reference/sec-filings.md).
+- **Les états Yahoo vérifiés par rapport à la SEC** : `GET /sec/{ticker}/check` donne, année par année, `match`, `mismatch`, `missing_yahoo` ou `missing_sec` pour chaque chiffre que les deux sources définissent de la même façon. `POST /sec/{ticker}/refresh` relit une société tout de suite.
+- **Le CIK n'est jamais deviné à partir d'un ticker** : seule une cotation américaine de l'instrument est recherchée, et le nom à la SEC doit correspondre. `AIR.PA` (Airbus) n'est jamais confondu avec `AIR` (AAR Corp).
+- Faits gardés dans `xbrl_facts` et `sec_company_loads` (migration 023). Nouveaux réglages `SEC_XBRL_REFRESH_HOURS` et `SEC_CHECK_TOLERANCE` ; un avertissement au démarrage tant que `SEC_EDGAR_EMAIL` est l'adresse de l'exemple.
+- Un **widget OpenBB** (24 au total) : *Fonrex SEC Check*, la vérification en tableau, les écarts en premier.
 
 ## Octobre 2026 — Sécurité par défaut, prix par cotation, données fournisseurs vérifiées
 

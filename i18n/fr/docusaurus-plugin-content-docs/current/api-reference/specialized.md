@@ -15,6 +15,8 @@ Trois routes interrogent chacune une source spécialisée. Chaque route accepte 
 
 Les transactions d'initiés Form 4 déposées auprès de la SEC américaine (EDGAR). Mises en cache 12 heures.
 
+Les états annuels déposés auprès de la SEC, et la vérification des états Yahoo par rapport à eux, sont sur [Dépôts SEC](./sec-filings.md).
+
 | Paramètre | Type | Défaut | Description |
 |---|---|---|---|
 | `ticker` | string | — | Une action qui dépose auprès de la SEC (ex. `AAPL`) |
