@@ -42,6 +42,7 @@ Jetons facultatifs : `BARRONS_TOKEN`, `MARKETWATCH_TOKEN`, `WSJ_TOKEN`.
 | `JustETF` | justetf.com | `/etf/{isin}/details` |
 | `IndexConstituents` | Wikipedia | `/index/{index_name}/constituents` |
 | `OpenFIGI` | openfigi.com | Chargé, utilisé par aucune route aujourd'hui |
+| `Treasury` | home.treasury.gov, courbes de taux « par » quotidiennes | `/macro/treasury/curve`, `/macro/treasury/series`, et le taux sans risque américain du DCF quand FRED n'en donne pas |
 
 ## Santé
 

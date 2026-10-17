@@ -26,7 +26,7 @@ description: "为 OpenBB Workspace 组件提供数据的 /openbb 路由和发现
 
 ## 发现文件
 
-- `GET /widgets.json`——24 个组件：每个组件的名称、类别、类型、路由和参数（`integrations/openbb/widgets.json`）。
+- `GET /widgets.json`——26 个组件：每个组件的名称、类别、类型、路由和参数（`integrations/openbb/widgets.json`）。
 - `GET /apps.json`——两个预先组装好的仪表板：**Fonrex — EU Markets** 和 **Fonrex — Screener & Macro**（`integrations/openbb/apps.json`）。
 
 ## 路由
@@ -57,6 +57,8 @@ description: "为 OpenBB Workspace 组件提供数据的 /openbb 路由和发现
 | `fonrex_factor_exposure` | table | `GET /openbb/factors/exposure/{ticker}` | `/factors/exposure/{ticker}` |
 | `fonrex_factor_returns` | chart | `GET /openbb/factors/{dataset}/chart` | `/factors/{dataset}` |
 | `fonrex_macro_indicator_chart` | chart | `GET /openbb/macro/indicators/{indicator}/chart`（默认 `geo` 为 EA,DE,FR,IT,ES，近 10 年） | `/macro/indicators/{indicator}` |
+| `fonrex_treasury_curve` | chart | `GET /openbb/macro/treasury/curve/chart`（默认 `curve` 为 nominal，`compare` 为 1M,1Y） | `/macro/treasury/curve` |
+| `fonrex_treasury_spread` | chart | `GET /openbb/macro/treasury/series/chart`（默认 `tenor` 为 10Y-2Y，近 10 年） | `/macro/treasury/series` |
 
 宏观组件接受 `currency` 参数（`USD`、`EUR`，留空表示两者），每个序列显示一张卡片：美国 10 年期利率、欧元区 AAA 10 年期利率、欧洲央行存款利率以及 CISS 压力指数。
 

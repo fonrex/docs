@@ -114,6 +114,8 @@ These tables are written by the deep enrichment from Yahoo Finance (`/fundamenta
 | `macro_rates_cache` | Series read from FRED and the ECB (`source`), unique on `(series_id, observation_date)` |
 | `macro_observations` | Eurostat indicators, one value per `(source, indicator, geo, period)`; a period is dated by its first day and a revision replaces its value; `status` keeps the flag of Eurostat (`e` for an estimate) |
 | `macro_series_loads` | One row per series (indicator and country): when it was last read, first and last period, last update announced by Eurostat |
+| `yield_curve_points` | Daily yield curves of the US Treasury (nominal since 1990, real since 2003): one rate per `(source, curve, rate_date, tenor)`, as a ratio (a real yield may be negative); `tenor_months` sorts a curve; a maturity not published on a day has no row |
+| `yield_curve_loads` | One row per year of a curve: when it was last read, number of days, first and last day. A past year read after its end is not read again |
 | `usage_logs` | One row per API request, written in background batches; IP not kept unless `USAGE_LOG_IP` asks for it; purged after `USAGE_LOG_RETENTION_DAYS` |
 
 ## Factors and exchange rates

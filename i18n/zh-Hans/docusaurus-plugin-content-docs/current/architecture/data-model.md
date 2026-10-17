@@ -114,6 +114,8 @@ erDiagram
 | `macro_rates_cache` | 从 FRED 和 ECB 读取的序列（`source`），在 `(series_id, observation_date)` 上唯一 |
 | `macro_observations` | Eurostat 指标，每个 `(source, indicator, geo, period)` 一个值；期间以其第一天标注，修订会替换该期间的值；`status` 保留 Eurostat 的标记（`e` 表示估计值） |
 | `macro_series_loads` | 每个序列（指标和国家）一行：最近一次读取的时间、第一个和最后一个期间、Eurostat 公布的最近更新时间 |
+| `yield_curve_points` | 美国财政部的每日收益率曲线（名义曲线自 1990 年起，实际曲线自 2003 年起）：每个 `(source, curve, rate_date, tenor)` 一个利率，以比率表示（实际收益率可能为负）；`tenor_months` 用于排序曲线；某天未公布的期限没有行 |
+| `yield_curve_loads` | 每条曲线每年一行：最近一次读取的时间、天数、第一天和最后一天。在年末之后读取过的过去年份不再重新读取 |
 | `usage_logs` | 每个 API 请求一行，由后台批量写入；除非 `USAGE_LOG_IP` 要求，否则不保留 IP；在 `USAGE_LOG_RETENTION_DAYS` 之后清除 |
 
 ## 因子与汇率 {#factors-and-exchange-rates}

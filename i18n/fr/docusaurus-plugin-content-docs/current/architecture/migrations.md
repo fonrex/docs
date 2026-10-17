@@ -36,6 +36,7 @@ Alembic est maître du schéma, y compris les hypertables TimescaleDB, la compre
 | 021 | `021_fx_rates.py` | `fx_rates` et `fx_rate_loads` : les cours de change de référence de la BCE |
 | 022 | `022_macro_observations.py` | `macro_observations` et `macro_series_loads` : les indicateurs Eurostat, période par période |
 | 023 | `023_xbrl_facts.py` | `xbrl_facts` et `sec_company_loads` : les faits des dépôts XBRL de la SEC |
+| 024 | `024_yield_curves.py` | `yield_curve_points` et `yield_curve_loads` : les courbes de taux quotidiennes du Trésor américain |
 
 ## Exécution des migrations
 
@@ -50,7 +51,7 @@ La migration 014 supprime d'abord les jobs TimescaleDB des tables de prix (en at
 alembic revision -m "describe_the_change"
 ```
 
-Renommez le nouveau fichier de `alembic/versions/` et placez ses identifiants après la dernière migration (`revision = "024"`, `down_revision = "023"`, fichier `024_describe_the_change.py`), puis :
+Renommez le nouveau fichier de `alembic/versions/` et placez ses identifiants après la dernière migration (`revision = "025"`, `down_revision = "024"`, fichier `025_describe_the_change.py`), puis :
 
 ```bash
 alembic upgrade head

@@ -38,7 +38,14 @@ description: "项目历史、功能新增、Schema 迁移和版本更新"
 - **用 SEC 核对 Yahoo 的报表**：`GET /sec/{ticker}/check` 逐年给出两个来源定义相同的每个数字的状态：`match`、`mismatch`、`missing_yahoo` 或 `missing_sec`。`POST /sec/{ticker}/refresh` 立即重新读取一家公司。
 - **从不根据代码猜测 CIK**：只查找金融工具的美国上市品种，且 SEC 上的名称必须一致。`AIR.PA`（空客）绝不会与 `AIR`（AAR Corp）混淆。
 - 事实保存在 `xbrl_facts` 和 `sec_company_loads` 中（迁移 023）。新增设置 `SEC_XBRL_REFRESH_HOURS` 和 `SEC_CHECK_TOLERANCE`；只要 `SEC_EDGAR_EMAIL` 仍是示例地址，启动时就会记录警告。
-- 一个 **OpenBB 小组件**（共 24 个）：*Fonrex SEC Check*，以表格显示核对结果，差异排在前面。
+- 一个 **OpenBB 小组件**：*Fonrex SEC Check*，以表格显示核对结果，差异排在前面。
+
+### 美国国债收益率曲线 {#us-treasury-yield-curves}
+- **美国财政部的每日收益率曲线**，免费文件，无需密钥：名义曲线自 1990 年起（1 个月到 30 年），实际曲线（TIPS）自 2003 年起（5 到 30 年）。参见[美国国债收益率曲线](../api-reference/treasury-curves.md)。
+- `GET /macro/treasury/curve` 给出某一天的曲线，附**盈亏平衡通胀率**以及与其他日期的比较（`compare=1M`、`1Y` 或日期）；`GET /macro/treasury/series` 给出各期限和**利差**（`10Y-2Y`）的走势；`POST /macro/treasury/refresh` 和 `scripts/load_treasury_curve.py` 按需读取年份。
+- 按天保存在 `yield_curve_points` 中（迁移 024）：只有请求需要时才读取某一年，年末之后读取过的过去年份不再读取，当年在 `TREASURY_REFRESH_HOURS` 后重新读取（新增设置，默认 12）。
+- **没有 FRED 密钥时 DCF 的美国无风险利率**：FRED 不提供利率时，使用美国国债曲线的 10 年期利率（`treasury_live`、`treasury_cached`、`treasury_stale`），而不是 `DCF_RISK_FREE_RATE`。
+- 两个 **OpenBB 小组件**（共 26 个）：当天的曲线及 1 个月前和 1 年前的曲线，以及 10 年期减 2 年期利差，位于 Screener & Macro 应用的 *Macro Context* 标签页。
 
 ## 2026 年 10 月——默认安全、按上市品种存储价格、经过验证的数据提供方数据
 

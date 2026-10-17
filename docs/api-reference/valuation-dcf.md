@@ -19,7 +19,7 @@ The weights are shared among the models computed by the request: with `fcf` and 
 
 **Inputs come from the database only.** The service reads the highlights, the annual statements (grouped by fiscal year, five years), the earnings trend and the analyst ratings stored by the deep enrichment, and the last daily close of the main listing. Run `GET /fundamental/deep?ticker=...` first: a ticker that was never enriched answers `404` with the name of the missing data.
 
-**WACC.** Cost of equity by CAPM (risk-free rate + beta × equity risk premium), cost of debt from interest and debt, weights from market capitalisation and debt; the WACC is kept within 5–20 %. The risk-free rate is the 10-year rate of the **currency of the statements**: the US Treasury yield from FRED for USD, the AAA euro area government rate from the ECB for EUR (see `GET /macro/rates`). Any other currency, or a source that gives no rate, uses `DCF_RISK_FREE_RATE`: a euro company is never discounted with the US rate. Missing inputs use documented defaults (beta 1, tax rate 25 %, cost of debt = risk-free rate + 2 points) and add a warning.
+**WACC.** Cost of equity by CAPM (risk-free rate + beta × equity risk premium), cost of debt from interest and debt, weights from market capitalisation and debt; the WACC is kept within 5–20 %. The risk-free rate is the 10-year rate of the **currency of the statements**: the US Treasury yield from FRED for USD (from the [Treasury yield curve](./treasury-curves.md) when FRED gives none, without key), the AAA euro area government rate from the ECB for EUR (see `GET /macro/rates`). Any other currency, or a source that gives no rate, uses `DCF_RISK_FREE_RATE`: a euro company is never discounted with the US rate. Missing inputs use documented defaults (beta 1, tax rate 25 %, cost of debt = risk-free rate + 2 points) and add a warning.
 
 **Currency.** The valuation is made in the currency of the financial statements (Yahoo's `financialCurrency`, recorded by the deep enrichment); for statements enriched before Fonrex recorded it, in the currency of the listing of the price, until `GET /fundamental/deep?ticker=...&refresh=true`. The price is the last close of the main listing: a price in pence (`GBX`) is turned into pounds, a price in another currency (a US listing of a European company) is not converted — the upsides are then `null` and `warnings` says why.
 
@@ -196,11 +196,12 @@ curl -s -H "X-API-KEY: $FONREX_API_KEY" "http://localhost:5000/macro/rates?curre
 | Series | Source | Currency | What it is |
 |---|---|---|---|
 | `DGS10` | FRED | USD | US 10-year Treasury yield — the risk-free rate of USD |
+| `treasury:nominal:10Y` | US Treasury | USD | The same 10-year yield, read from the [Treasury yield curve](./treasury-curves.md) when FRED gives none (no key, or no answer) |
 | `YC.B.U2.EUR.4F.G_N_A.SV_C_YM.SR_10Y` | ECB | EUR | 10-year spot rate of the AAA euro area government curve — the risk-free rate of EUR |
 | `FM.D.U2.EUR.4F.KR.DFR.LEV` | ECB | EUR | Deposit facility rate (the ECB policy rate) |
 | `CISS.D.U2.Z0Z.4F.EC.SS_CIN.IDX` | ECB | EUR | Composite Indicator of Systemic Stress, an index between 0 and 1 |
 
 - Without `currency`, `rates` holds the four series and `risk_free_rate` is the US one. Another currency answers `422`: no source publishes its rates.
 - A rate is a ratio (`0.0412` = 4.12 %, `unit` = `ratio`), serialised as a string; it may be zero or negative. The CISS is an index (`unit` = `index`).
-- `freshness`: `live` (read from the source for this answer), `cached` (Redis, or stored and read less than 6 hours ago — `MACRO_RATES_CACHE_TTL`), `stale` (an older stored value: the source could not be read). FRED needs `FRED_API_KEY`; the ECB needs no key.
+- `freshness`: `live` (read from the source for this answer), `cached` (Redis, or stored and read less than 6 hours ago — `MACRO_RATES_CACHE_TTL`), `stale` (an older stored value: the source could not be read). FRED needs `FRED_API_KEY`; the ECB and the Treasury need no key. The WACC names the source of its rate: `fred_live`, `treasury_cached`, `ecb_stale`...
 - A series without any value is left out, and so is a source that did not start (`503` when it is the only one asked).

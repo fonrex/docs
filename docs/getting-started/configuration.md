@@ -78,11 +78,12 @@ Clients send a key as `Authorization: Bearer <key>` or `X-API-KEY: <key>`. See [
 | `DCF_RISK_FREE_RATE` | `0.04` | Risk-free rate, as a ratio, when the source of the currency of the statements (FRED for USD, the ECB for EUR) gives none, and for every other currency |
 | `DCF_EQUITY_RISK_PREMIUM` | `0.055` | Equity risk premium, as a ratio |
 | `DCF_TERMINAL_GROWTH_RATE` | `0.025` | Terminal growth rate, as a ratio |
-| `FRED_API_KEY` | *(empty)* | Free key from fred.stlouisfed.org for the US rate; without it the stored rate or `DCF_RISK_FREE_RATE` is used |
+| `FRED_API_KEY` | *(empty)* | Free key from fred.stlouisfed.org for the US rate; without it the 10-year rate of the Treasury yield curve (no key), then the stored rate or `DCF_RISK_FREE_RATE`, is used |
 | `MACRO_RATES_CACHE_TTL` | `21600` | Lifetime of the macro rates (FRED and ECB) in Redis (6 h) |
 | `ECB_API_URL` | `https://data-api.ecb.europa.eu/service/data` | ECB Data Portal (euro rates, free, no key); set only to use a mirror |
 | `EUROSTAT_API_URL` | `https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data` | Eurostat (inflation, unemployment, GDP, surveys; free, no key); set only to use a mirror |
 | `EUROSTAT_REFRESH_HOURS` | `24` | Hours before a Eurostat series is read again (1 to 720) |
+| `TREASURY_REFRESH_HOURS` | `12` | Hours before the current year of a Treasury yield curve is read again (1 to 720); a past year read after its end is never read again |
 
 ## Factors and exchange rates
 

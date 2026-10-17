@@ -19,7 +19,7 @@ description: "对外暴露实例之前的安全、配置、监控和备份检查
 ## 配置
 - [ ] `SEC_EDGAR_EMAIL` 已设置为你自己的联系地址。
 - [ ] `WEB_CONCURRENCY=1`。
-- [ ] 如果使用 DCF，已设置 `FRED_API_KEY`。
+- [ ] 如果需要 FRED 的美国无风险利率，已设置 `FRED_API_KEY`（没有它时，DCF 使用美国国债收益率曲线）。
 - [ ] 如有需要，为拒绝你服务器 IP 的网站配置代理（`FONREX_PROXY_URL`）。
 
 ## 数据

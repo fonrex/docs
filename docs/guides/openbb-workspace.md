@@ -18,7 +18,7 @@ description: "Connect your self-hosted Fonrex instance to OpenBB Workspace widge
 
 1. In OpenBB Workspace, right-click on the dashboard and select **Add data** (or open the backend connections).
 2. Enter the URL of your instance, e.g. `http://localhost:5000` or `https://myfonrex.share.zrok.io`.
-3. OpenBB reads `/widgets.json` and lists the 24 widgets. This file and `/apps.json` answer without a key.
+3. OpenBB reads `/widgets.json` and lists the 26 widgets. This file and `/apps.json` answer without a key.
 
 ## Step 2 — Add the key
 
@@ -43,7 +43,7 @@ Every `/openbb/...` route requires it.
 
 **Fonrex — Screener & Macro** — discovery:
 - *Screener*: technical screener (e.g. RSI < 30)
-- *Macro Context*: FRED and ECB rates (USD and EUR), Eurostat indicators of the euro area, inflation of the main euro area countries over time, and index constituents
+- *Macro Context*: FRED and ECB rates (USD and EUR), Eurostat indicators of the euro area, inflation of the main euro area countries over time, the US Treasury curve (today, 1 month and 1 year before) and the 10-year minus 2-year spread, and index constituents
 
 Import them from the Apps menu of OpenBB, or add widgets one by one to your own dashboard.
 
@@ -75,6 +75,8 @@ Import them from the Apps menu of OpenBB, or add widgets one by one to your own 
 | `fonrex_macro_rates` | Fonrex Macro Rates | Macro | metric |
 | `fonrex_macro_indicators` | Fonrex Macro Indicators | Macro | metric |
 | `fonrex_macro_indicator_chart` | Fonrex Macro Indicator Chart | Macro | chart |
+| `fonrex_treasury_curve` | Fonrex Treasury Curve | Macro | chart |
+| `fonrex_treasury_spread` | Fonrex Treasury Spread | Macro | chart |
 | `fonrex_factor_exposure` | Fonrex Factor Exposure | Factors | table |
 | `fonrex_factor_returns` | Fonrex Factor Returns | Factors | chart |
 
