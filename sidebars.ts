@@ -37,6 +37,7 @@ const sidebars: SidebarsConfig = {
         'api-reference/valuation-dcf',
         'api-reference/factors',
         'api-reference/macro-indicators',
+        'api-reference/treasury-curves',
         'api-reference/sec-filings',
         'api-reference/news',
         'api-reference/monitoring',

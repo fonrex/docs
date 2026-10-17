@@ -19,7 +19,7 @@ description: "基于三种 DCF 模型的内在价值、动态 WACC、模型对�
 
 **输入数据仅来自数据库。** 服务读取深度补全所存储的要点指标、年度报表（按财年分组，五年）、盈利趋势和分析师评级，以及主上市品种的最新日收盘价。请先运行 `GET /fundamental/deep?ticker=...`：从未补全过的代码会返回 `404`，并给出缺失数据的名称。
 
-**WACC。** 股权成本按 CAPM 计算（无风险利率 + beta × 股权风险溢价），债务成本根据利息和债务计算，权重根据市值和债务确定；WACC 被限定在 5–20 % 之间。无风险利率取**财务报表货币**的 10 年期利率：USD 取 FRED 提供的美国国债收益率，EUR 取欧洲央行（ECB）提供的欧元区 AAA 级政府债券利率（参见 `GET /macro/rates`）。其他货币，或来源未给出利率时，使用 `DCF_RISK_FREE_RATE`：欧元公司绝不会用美国利率贴现。缺失的输入使用文档中规定的默认值（beta 1、税率 25 %、债务成本 = 无风险利率 + 2 个百分点），并添加一条警告。
+**WACC。** 股权成本按 CAPM 计算（无风险利率 + beta × 股权风险溢价），债务成本根据利息和债务计算，权重根据市值和债务确定；WACC 被限定在 5–20 % 之间。无风险利率取**财务报表货币**的 10 年期利率：USD 取 FRED 提供的美国国债收益率（FRED 不提供时取自[美国国债收益率曲线](./treasury-curves.md)，无需密钥），EUR 取欧洲央行（ECB）提供的欧元区 AAA 级政府债券利率（参见 `GET /macro/rates`）。其他货币，或来源未给出利率时，使用 `DCF_RISK_FREE_RATE`：欧元公司绝不会用美国利率贴现。缺失的输入使用文档中规定的默认值（beta 1、税率 25 %、债务成本 = 无风险利率 + 2 个百分点），并添加一条警告。
 
 **货币。** 估值以财务报表的货币进行（Yahoo 的 `financialCurrency`，由深度补全记录）；对于 Fonrex 开始记录之前补全的报表，在运行 `GET /fundamental/deep?ticker=...&refresh=true` 之前，使用价格所属上市品种的货币。价格取主上市品种的最新收盘价：以便士（`GBX`）计价的价格会换算为英镑；以其他货币计价的价格（例如欧洲公司的美国上市品种）不会被换算——此时上涨空间为 `null`，并由 `warnings` 说明原因。
 
@@ -196,11 +196,12 @@ curl -s -H "X-API-KEY: $FONREX_API_KEY" "http://localhost:5000/macro/rates?curre
 | 序列 | 来源 | 货币 | 含义 |
 |---|---|---|---|
 | `DGS10` | FRED | USD | 美国 10 年期国债收益率——USD 的无风险利率 |
+| `treasury:nominal:10Y` | 美国财政部 | USD | 同一 10 年期收益率，当 FRED 不提供时（没有密钥或无响应）从[美国国债收益率曲线](./treasury-curves.md)读取 |
 | `YC.B.U2.EUR.4F.G_N_A.SV_C_YM.SR_10Y` | ECB | EUR | 欧元区 AAA 级政府债券收益率曲线的 10 年期即期利率——EUR 的无风险利率 |
 | `FM.D.U2.EUR.4F.KR.DFR.LEV` | ECB | EUR | 存款便利利率（欧洲央行的政策利率） |
 | `CISS.D.U2.Z0Z.4F.EC.SS_CIN.IDX` | ECB | EUR | 系统性压力综合指标（CISS），介于 0 和 1 之间的指数 |
 
 - 不带 `currency` 时，`rates` 包含四个序列，`risk_free_rate` 为美国利率。其他货币返回 `422`：没有来源发布其利率。
 - 利率是比率（`0.0412` = 4.12 %，`unit` = `ratio`），序列化为字符串；可以为零或负数。CISS 是指数（`unit` = `index`）。
-- `freshness`：`live`（本次响应从来源读取）、`cached`（Redis，或已存储且在 6 小时内读取——`MACRO_RATES_CACHE_TTL`）、`stale`（较早存储的值：无法读取来源）。FRED 需要 `FRED_API_KEY`；ECB 无需密钥。
+- `freshness`：`live`（本次响应从来源读取）、`cached`（Redis，或已存储且在 6 小时内读取——`MACRO_RATES_CACHE_TTL`）、`stale`（较早存储的值：无法读取来源）。FRED 需要 `FRED_API_KEY`；ECB 和美国财政部无需密钥。WACC 会注明其利率的来源：`fred_live`、`treasury_cached`、`ecb_stale`……
 - 没有任何值的序列会被省略，未启动的来源也会被省略（当它是唯一请求的来源时返回 `503`）。

@@ -38,7 +38,14 @@ description: "Historique du projet, ajouts de fonctionnalités, migrations de sc
 - **Les états Yahoo vérifiés par rapport à la SEC** : `GET /sec/{ticker}/check` donne, année par année, `match`, `mismatch`, `missing_yahoo` ou `missing_sec` pour chaque chiffre que les deux sources définissent de la même façon. `POST /sec/{ticker}/refresh` relit une société tout de suite.
 - **Le CIK n'est jamais deviné à partir d'un ticker** : seule une cotation américaine de l'instrument est recherchée, et le nom à la SEC doit correspondre. `AIR.PA` (Airbus) n'est jamais confondu avec `AIR` (AAR Corp).
 - Faits gardés dans `xbrl_facts` et `sec_company_loads` (migration 023). Nouveaux réglages `SEC_XBRL_REFRESH_HOURS` et `SEC_CHECK_TOLERANCE` ; un avertissement au démarrage tant que `SEC_EDGAR_EMAIL` est l'adresse de l'exemple.
-- Un **widget OpenBB** (24 au total) : *Fonrex SEC Check*, la vérification en tableau, les écarts en premier.
+- Un **widget OpenBB** : *Fonrex SEC Check*, la vérification en tableau, les écarts en premier.
+
+### Courbes de taux du Trésor américain {#us-treasury-yield-curves}
+- **Les courbes de taux quotidiennes du Trésor américain**, fichiers gratuits sans clé : la courbe nominale depuis 1990 (1 mois à 30 ans) et la courbe réelle (TIPS) depuis 2003 (5 à 30 ans). Voir [Courbes de taux du Trésor](../api-reference/treasury-curves.md).
+- `GET /macro/treasury/curve` donne la courbe d'un jour avec le **point mort d'inflation** et des comparaisons avec d'autres jours (`compare=1M`, `1Y` ou une date) ; `GET /macro/treasury/series` les maturités et les **écarts** (`10Y-2Y`) dans le temps ; `POST /macro/treasury/refresh` et `scripts/load_treasury_curve.py` lisent des années à la demande.
+- Conservées jour par jour dans `yield_curve_points` (migration 024) : une année n'est lue que si une requête en a besoin, une année passée lue après sa fin plus jamais, l'année en cours après `TREASURY_REFRESH_HOURS` (nouveau réglage, 12 par défaut).
+- **Le taux sans risque américain du DCF sans clé FRED** : quand FRED ne donne pas de taux, le taux à 10 ans de la courbe du Trésor est utilisé (`treasury_live`, `treasury_cached`, `treasury_stale`) au lieu de `DCF_RISK_FREE_RATE`.
+- Deux **widgets OpenBB** (26 au total) : la courbe du jour avec celles d'il y a 1 mois et 1 an, et l'écart 10 ans moins 2 ans, dans l'onglet *Macro Context* de l'app Screener & Macro.
 
 ## Octobre 2026 — Sécurité par défaut, prix par cotation, données fournisseurs vérifiées
 

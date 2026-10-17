@@ -19,7 +19,7 @@ description: "Security, configuration, monitoring and backup checks before expos
 ## Configuration
 - [ ] `SEC_EDGAR_EMAIL` set to your own contact address.
 - [ ] `WEB_CONCURRENCY=1`.
-- [ ] `FRED_API_KEY` set if you use the DCF.
+- [ ] `FRED_API_KEY` set if you want the US risk-free rate of FRED (without it, the DCF uses the Treasury yield curve).
 - [ ] A proxy (`FONREX_PROXY_URL`) for the websites that refuse your server's IP, if needed.
 
 ## Data

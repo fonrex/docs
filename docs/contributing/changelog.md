@@ -38,7 +38,14 @@ description: "Project history, feature additions, schema migrations, and version
 - **The Yahoo statements checked against the SEC**: `GET /sec/{ticker}/check` gives, year by year, `match`, `mismatch`, `missing_yahoo` or `missing_sec` for each figure both sources define alike. `POST /sec/{ticker}/refresh` reads a company again at once.
 - **The CIK is never guessed from a ticker**: only a US listing of the instrument is looked up, and the name at the SEC must match. `AIR.PA` (Airbus) is never confused with `AIR` (AAR Corp).
 - Facts kept in `xbrl_facts` and `sec_company_loads` (migration 023). New settings `SEC_XBRL_REFRESH_HOURS` and `SEC_CHECK_TOLERANCE`; a warning at start-up while `SEC_EDGAR_EMAIL` is the address of the example.
-- One **OpenBB widget** (24 in all): *Fonrex SEC Check*, the check as a table, gaps first.
+- One **OpenBB widget**: *Fonrex SEC Check*, the check as a table, gaps first.
+
+### US Treasury yield curves
+- **The daily yield curves of the US Treasury**, free files without key: the nominal curve since 1990 (1 month to 30 years) and the real curve (TIPS) since 2003 (5 to 30 years). See [Treasury yield curves](../api-reference/treasury-curves.md).
+- `GET /macro/treasury/curve` gives the curve of a day with the **breakeven inflation** and comparisons with other days (`compare=1M`, `1Y` or a date); `GET /macro/treasury/series` maturities and **spreads** (`10Y-2Y`) over time; `POST /macro/treasury/refresh` and `scripts/load_treasury_curve.py` read years on demand.
+- Kept day by day in `yield_curve_points` (migration 024): a year is read only when a request needs it, a past year read after its end never again, the current year after `TREASURY_REFRESH_HOURS` (new setting, 12 by default).
+- **The US risk-free rate of the DCF without FRED key**: when FRED gives no rate, the 10-year rate of the Treasury curve is used (`treasury_live`, `treasury_cached`, `treasury_stale`) instead of `DCF_RISK_FREE_RATE`.
+- Two **OpenBB widgets** (26 in all): the curve of the day with the curves of 1 month and 1 year before, and the 10-year minus 2-year spread, in the *Macro Context* tab of the Screener & Macro app.
 
 ## October 2026 — Secure defaults, per-listing prices, verified provider data
 

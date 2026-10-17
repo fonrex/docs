@@ -19,7 +19,7 @@ description: "Vérifications de sécurité, de configuration, de surveillance et
 ## Configuration
 - [ ] `SEC_EDGAR_EMAIL` défini avec votre propre adresse de contact.
 - [ ] `WEB_CONCURRENCY=1`.
-- [ ] `FRED_API_KEY` défini si vous utilisez le DCF.
+- [ ] `FRED_API_KEY` défini si vous voulez le taux sans risque américain de FRED (sans elle, le DCF utilise la courbe de taux du Trésor).
 - [ ] Un proxy (`FONREX_PROXY_URL`) pour les sites qui refusent l'IP de votre serveur, si besoin.
 
 ## Données

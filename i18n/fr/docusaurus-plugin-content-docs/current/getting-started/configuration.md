@@ -78,11 +78,12 @@ Les clients envoient une clé sous la forme `Authorization: Bearer <key>` ou `X-
 | `DCF_RISK_FREE_RATE` | `0.04` | Taux sans risque, en ratio, quand la source de la devise des états financiers (FRED pour l'USD, la BCE pour l'EUR) n'en donne aucun, et pour toute autre devise |
 | `DCF_EQUITY_RISK_PREMIUM` | `0.055` | Prime de risque actions, sous forme de ratio |
 | `DCF_TERMINAL_GROWTH_RATE` | `0.025` | Taux de croissance terminal, sous forme de ratio |
-| `FRED_API_KEY` | *(vide)* | Clé gratuite de fred.stlouisfed.org pour le taux américain ; sans elle, le taux enregistré ou `DCF_RISK_FREE_RATE` est utilisé |
+| `FRED_API_KEY` | *(vide)* | Clé gratuite de fred.stlouisfed.org pour le taux américain ; sans elle, le taux à 10 ans de la courbe du Trésor (sans clé), puis le taux enregistré ou `DCF_RISK_FREE_RATE`, est utilisé |
 | `MACRO_RATES_CACHE_TTL` | `21600` | Durée de vie des taux macroéconomiques (FRED et BCE) dans Redis (6 h) |
 | `ECB_API_URL` | `https://data-api.ecb.europa.eu/service/data` | Portail de données de la BCE (taux en euros, gratuit, sans clé) ; à définir seulement pour utiliser un miroir |
 | `EUROSTAT_API_URL` | `https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data` | Eurostat (inflation, chômage, PIB, enquêtes ; gratuit, sans clé) ; à définir seulement pour utiliser un miroir |
 | `EUROSTAT_REFRESH_HOURS` | `24` | Heures avant qu'une série Eurostat soit relue (1 à 720) |
+| `TREASURY_REFRESH_HOURS` | `12` | Heures avant que l'année en cours d'une courbe du Trésor soit relue (1 à 720) ; une année passée lue après sa fin n'est plus jamais relue |
 
 ## Facteurs et taux de change {#factors-and-exchange-rates}
 

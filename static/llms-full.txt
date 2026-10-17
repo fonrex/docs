@@ -576,11 +576,12 @@ Clients send a key as `Authorization: Bearer <key>` or `X-API-KEY: <key>`. See [
 | `DCF_RISK_FREE_RATE` | `0.04` | Risk-free rate, as a ratio, when the source of the currency of the statements (FRED for USD, the ECB for EUR) gives none, and for every other currency |
 | `DCF_EQUITY_RISK_PREMIUM` | `0.055` | Equity risk premium, as a ratio |
 | `DCF_TERMINAL_GROWTH_RATE` | `0.025` | Terminal growth rate, as a ratio |
-| `FRED_API_KEY` | *(empty)* | Free key from fred.stlouisfed.org for the US rate; without it the stored rate or `DCF_RISK_FREE_RATE` is used |
+| `FRED_API_KEY` | *(empty)* | Free key from fred.stlouisfed.org for the US rate; without it the 10-year rate of the Treasury yield curve (no key), then the stored rate or `DCF_RISK_FREE_RATE`, is used |
 | `MACRO_RATES_CACHE_TTL` | `21600` | Lifetime of the macro rates (FRED and ECB) in Redis (6 h) |
 | `ECB_API_URL` | `https://data-api.ecb.europa.eu/service/data` | ECB Data Portal (euro rates, free, no key); set only to use a mirror |
 | `EUROSTAT_API_URL` | `https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data` | Eurostat (inflation, unemployment, GDP, surveys; free, no key); set only to use a mirror |
 | `EUROSTAT_REFRESH_HOURS` | `24` | Hours before a Eurostat series is read again (1 to 720) |
+| `TREASURY_REFRESH_HOURS` | `12` | Hours before the current year of a Treasury yield curve is read again (1 to 720); a past year read after its end is never read again |
 
 ## Factors and exchange rates
 
@@ -1600,7 +1601,7 @@ The weights are shared among the models computed by the request: with `fcf` and 
 
 **Inputs come from the database only.** The service reads the highlights, the annual statements (grouped by fiscal year, five years), the earnings trend and the analyst ratings stored by the deep enrichment, and the last daily close of the main listing. Run `GET /fundamental/deep?ticker=...` first: a ticker that was never enriched answers `404` with the name of the missing data.
 
-**WACC.** Cost of equity by CAPM (risk-free rate + beta × equity risk premium), cost of debt from interest and debt, weights from market capitalisation and debt; the WACC is kept within 5–20 %. The risk-free rate is the 10-year rate of the **currency of the statements**: the US Treasury yield from FRED for USD, the AAA euro area government rate from the ECB for EUR (see `GET /macro/rates`). Any other currency, or a source that gives no rate, uses `DCF_RISK_FREE_RATE`: a euro company is never discounted with the US rate. Missing inputs use documented defaults (beta 1, tax rate 25 %, cost of debt = risk-free rate + 2 points) and add a warning.
+**WACC.** Cost of equity by CAPM (risk-free rate + beta × equity risk premium), cost of debt from interest and debt, weights from market capitalisation and debt; the WACC is kept within 5–20 %. The risk-free rate is the 10-year rate of the **currency of the statements**: the US Treasury yield from FRED for USD (from the [Treasury yield curve](./treasury-curves.md) when FRED gives none, without key), the AAA euro area government rate from the ECB for EUR (see `GET /macro/rates`). Any other currency, or a source that gives no rate, uses `DCF_RISK_FREE_RATE`: a euro company is never discounted with the US rate. Missing inputs use documented defaults (beta 1, tax rate 25 %, cost of debt = risk-free rate + 2 points) and add a warning.
 
 **Currency.** The valuation is made in the currency of the financial statements (Yahoo's `financialCurrency`, recorded by the deep enrichment); for statements enriched before Fonrex recorded it, in the currency of the listing of the price, until `GET /fundamental/deep?ticker=...&refresh=true`. The price is the last close of the main listing: a price in pence (`GBX`) is turned into pounds, a price in another currency (a US listing of a European company) is not converted — the upsides are then `null` and `warnings` says why.
 
@@ -1777,13 +1778,14 @@ curl -s -H "X-API-KEY: $FONREX_API_KEY" "http://localhost:5000/macro/rates?curre
 | Series | Source | Currency | What it is |
 |---|---|---|---|
 | `DGS10` | FRED | USD | US 10-year Treasury yield — the risk-free rate of USD |
+| `treasury:nominal:10Y` | US Treasury | USD | The same 10-year yield, read from the [Treasury yield curve](./treasury-curves.md) when FRED gives none (no key, or no answer) |
 | `YC.B.U2.EUR.4F.G_N_A.SV_C_YM.SR_10Y` | ECB | EUR | 10-year spot rate of the AAA euro area government curve — the risk-free rate of EUR |
 | `FM.D.U2.EUR.4F.KR.DFR.LEV` | ECB | EUR | Deposit facility rate (the ECB policy rate) |
 | `CISS.D.U2.Z0Z.4F.EC.SS_CIN.IDX` | ECB | EUR | Composite Indicator of Systemic Stress, an index between 0 and 1 |
 
 - Without `currency`, `rates` holds the four series and `risk_free_rate` is the US one. Another currency answers `422`: no source publishes its rates.
 - A rate is a ratio (`0.0412` = 4.12 %, `unit` = `ratio`), serialised as a string; it may be zero or negative. The CISS is an index (`unit` = `index`).
-- `freshness`: `live` (read from the source for this answer), `cached` (Redis, or stored and read less than 6 hours ago — `MACRO_RATES_CACHE_TTL`), `stale` (an older stored value: the source could not be read). FRED needs `FRED_API_KEY`; the ECB needs no key.
+- `freshness`: `live` (read from the source for this answer), `cached` (Redis, or stored and read less than 6 hours ago — `MACRO_RATES_CACHE_TTL`), `stale` (an older stored value: the source could not be read). FRED needs `FRED_API_KEY`; the ECB and the Treasury need no key. The WACC names the source of its rate: `fred_live`, `treasury_cached`, `ecb_stale`...
 - A series without any value is left out, and so is a source that did not start (`503` when it is the only one asked).
 
 
@@ -2064,7 +2066,7 @@ Fonrex reads the main macro-economic indicators of the euro area and of each cou
 | `GET /macro/indicators/{indicator}` | One indicator over time, for up to 10 countries |
 | `POST /macro/indicators/refresh` | Reads series from Eurostat on demand |
 
-The rates of FRED and of the ECB (risk-free rates, deposit facility rate, CISS) stay on [`GET /macro/rates`](./valuation-dcf.md).
+The rates of FRED and of the ECB (risk-free rates, deposit facility rate, CISS) stay on [`GET /macro/rates`](./valuation-dcf.md); the US yield curve, every maturity day by day, is on [`GET /macro/treasury/curve`](./treasury-curves.md).
 
 ## Indicators
 
@@ -2218,6 +2220,199 @@ A code Eurostat does not know (`geo=XX`) is not an error of the request: the ser
 
 - **Fonrex Macro Indicators** (`fonrex_macro_indicators`): one card per indicator for a country; the delta is the change on the previous period, in percentage points for a rate.
 - **Fonrex Macro Indicator Chart** (`fonrex_macro_indicator_chart`): one indicator over time, one line per country, the last 10 years by default.
+
+Both are in the *Macro Context* tab of the **Fonrex — Screener & Macro** dashboard. See the [OpenBB Workspace guide](../guides/openbb-workspace.md).
+
+
+
+<!-- FILE: /docs/api-reference/treasury-curves.md -->
+
+---
+id: "treasury-curves"
+title: "US Treasury Yield Curves API Reference"
+sidebar_label: "Treasury Yield Curves"
+description: "The daily yield curves of the US Treasury, nominal since 1990 and real (TIPS) since 2003: the curve of a day, maturities and spreads over time, breakeven inflation"
+---
+
+# US Treasury Yield Curves API Reference
+
+Fonrex reads the daily yield curves of the [US Treasury](https://home.treasury.gov/resource-center/data-chart-center/interest-rates) (free files, no key) and keeps them in your database, day by day:
+
+- the **nominal curve** (par yields), since 1990, from 1 month to 30 years;
+- the **real curve** (TIPS, inflation-protected), since 2003, from 5 to 30 years.
+
+FRED republishes the 10-year rate of this curve (`DGS10`) and needs a key. The Treasury gives the whole curve, every day since 1990, without key: it is also the US risk-free rate of the DCF when FRED gives none (see [Valuation](./valuation-dcf.md)).
+
+| Route | What it does |
+|---|---|
+| `GET /macro/treasury/curve` | The curve of a day, with the breakeven inflation and comparisons with other days |
+| `GET /macro/treasury/series` | Maturities (`10Y`) and spreads (`10Y-2Y`) over time |
+| `POST /macro/treasury/refresh` | Reads years of the curves from the Treasury on demand |
+
+## Maturities
+
+| `tenor` | Maturity | Nominal curve | Real curve |
+|---|---|---|---|
+| `1M`, `2M`, `3M`, `4M`, `6M` | 1, 2, 3, 4, 6 months | ✓ | |
+| `6W` | 6 weeks (the Treasury's "1.5 Month") | ✓ | |
+| `1Y`, `2Y`, `3Y` | 1, 2, 3 years | ✓ | |
+| `5Y`, `7Y`, `10Y`, `20Y`, `30Y` | 5, 7, 10, 20, 30 years | ✓ | ✓ |
+
+The maturities published changed over the years: `1M` since July 2001, `2M` since October 2018, `4M` since October 2022, `6W` since February 2025; no `20Y` before October 1993, no `30Y` from February 2002 to February 2006; on the real curve, `20Y` since July 2004 and `30Y` since February 2010. A maturity not published on a day has no rate: a curve of 1990 has 9 maturities, one of 2026 has 14.
+
+- **Rates are ratios**: `0.0509` is 5.09 %. A real yield may be negative (every day of 2012 and of 2021), a nominal one may be zero (2008 to 2015, 2020, 2021).
+- **A day is a business day of the Treasury**: a weekend or a holiday has no curve, and a request for that day gets the business day before.
+
+## Freshness
+
+A year of a curve is read from the Treasury the first time a request needs it: one file a year, a few kilobytes. After that:
+
+- a **past year** read after its end is complete: it is never asked again;
+- the **current year** is read again once its last reading is older than **`TREASURY_REFRESH_HOURS`** hours (12 by default);
+- when the Treasury does not answer, the stored rates are given with `load.status` = `failed` and the reason, and the next years of the request are not asked.
+
+To load the whole history at once (37 files for the nominal curve, 24 for the real one):
+
+```bash
+docker compose exec fonrex-api python scripts/load_treasury_curve.py
+```
+
+Every answer says, in `load`, what was done: `fetched` (a year read now), `fresh` (everything needed was stored) or `failed`, with the years read and the first and last day stored.
+
+---
+
+## <span className="api-method get">GET</span> `/macro/treasury/curve`
+
+The curve of one day, shortest maturity first, with the **breakeven inflation** of the day (nominal minus real yield, from 5 to 30 years).
+
+| Parameter | Default | Description |
+|---|---|---|
+| `curve` | `nominal` | `nominal` or `real` |
+| `date` | the latest day | The business day on or before it |
+| `compare` | — | Up to 5 other days, repeated: a date, or an offset before the day (`1W`, `1M`, `3M`, `1Y`) |
+
+```bash
+curl -s -H "X-API-KEY: $FONREX_API_KEY" \
+  "http://localhost:5000/macro/treasury/curve?compare=1M&compare=1Y"
+```
+
+```json
+{
+  "curve": "nominal",
+  "label": "Par yield curve (nominal)",
+  "source": "US Treasury, Daily Treasury Par Yield Curve Rates (https://home.treasury.gov)",
+  "requested_date": null,
+  "date": "2026-10-16",
+  "points": [
+    { "tenor": "1M", "months": 1.0, "value": 0.0412 },
+    { "tenor": "6W", "months": 1.5, "value": 0.0414 },
+    { "tenor": "2Y", "months": 24.0, "value": 0.0474 },
+    { "tenor": "10Y", "months": 120.0, "value": 0.0509 },
+    { "tenor": "30Y", "months": 360.0, "value": 0.0543 }
+  ],
+  "comparisons": [
+    {
+      "requested": "1M",
+      "date": "2026-09-16",
+      "points": [{ "tenor": "10Y", "months": 120.0, "value": 0.0501, "change": 0.0008 }]
+    },
+    {
+      "requested": "1Y",
+      "date": "2025-10-16",
+      "points": [{ "tenor": "10Y", "months": 120.0, "value": 0.0399, "change": 0.011 }]
+    }
+  ],
+  "breakeven": [
+    { "tenor": "5Y", "months": 60.0, "value": 0.0237 },
+    { "tenor": "10Y", "months": 120.0, "value": 0.0235 },
+    { "tenor": "30Y", "months": 360.0, "value": 0.0227 }
+  ],
+  "load": {
+    "status": "fresh",
+    "fetched_at": "2026-10-17T10:32:05Z",
+    "first_day": "1990-01-02",
+    "last_day": "2026-10-16",
+    "years_read": [],
+    "years_failed": [],
+    "reason": null
+  }
+}
+```
+
+The lists are shortened here: the answer gives every maturity of the day. `change` is the rate of the day asked minus the rate of the day compared (`0.011` is 110 basis points); a comparison before the first day stored has no date and no points. `breakeven` is empty on a day without real yields (before 2003).
+
+---
+
+## <span className="api-method get">GET</span> `/macro/treasury/series`
+
+Maturities, and spreads between two maturities, day by day, oldest first.
+
+| Parameter | Default | Description |
+|---|---|---|
+| `tenor` | `10Y` | Up to 6 maturities (`10Y`) or spreads (`10Y-2Y`), repeated or separated by commas |
+| `curve` | `nominal` | `nominal` or `real` |
+| `start` | 10 years before `end` | First day included |
+| `end` | today | Last day included |
+
+```bash
+curl -s -H "X-API-KEY: $FONREX_API_KEY" \
+  "http://localhost:5000/macro/treasury/series?tenor=10Y-2Y&start=2023-07-01&end=2023-07-05"
+```
+
+```json
+{
+  "curve": "nominal",
+  "label": "Par yield curve (nominal)",
+  "source": "US Treasury, Daily Treasury Par Yield Curve Rates (https://home.treasury.gov)",
+  "start": "2023-07-01",
+  "end": "2023-07-05",
+  "series": [
+    {
+      "tenor": "10Y-2Y",
+      "observations": [
+        { "date": "2023-07-03", "value": -0.0108 },
+        { "date": "2023-07-05", "value": -0.0099 }
+      ]
+    }
+  ],
+  "load": { "status": "fresh", "...": "..." }
+}
+```
+
+A spread is given only on the days both maturities are published. Below zero, the curve is **inverted**: the 10-year minus 2-year spread was negative on 1 and 4 April 2022, then from July 2022 to September 2024, down to -1.08 % on 3 July 2023.
+
+---
+
+## <span className="api-method post">POST</span> `/macro/treasury/refresh`
+
+Reads years of the curves from the Treasury into the database. Needs a full-access key: a read-only key gets `403`.
+
+| Parameter | Default | Description |
+|---|---|---|
+| `curve` | both | `nominal`, `real`, repeated |
+| `start_year`, `end_year` | the current year | Years read (1990 or later) |
+| `force` | `false` | Read even the years that are up to date |
+
+```bash
+curl -s -X POST -H "X-API-KEY: $FONREX_API_KEY" \
+  "http://localhost:5000/macro/treasury/refresh?start_year=1990"
+```
+
+The answer lists one `load` per curve, with its `curve`.
+
+## Errors
+
+| Status | When |
+|---|---|
+| `404` | No curve on or before the day asked (the nominal curve starts in 1990, the real one in 2003) |
+| `422` | Unknown curve, a maturity the curve does not publish (`2Y` of the real curve), a spread of more than two maturities, more than 6 series or 5 comparisons, `start` after `end`, a `compare` that is neither a date nor an offset |
+| `502` | The Treasury could not be read and nothing is stored for the curve |
+| `503` | No database |
+
+## OpenBB widgets
+
+- **Fonrex Treasury Curve** (`fonrex_treasury_curve`): the curve of the day, with the curves of 1 month and 1 year before as dotted lines (`compare`, `1M,1Y` by default); `curve` and `date` as above.
+- **Fonrex Treasury Spread** (`fonrex_treasury_spread`): the 10-year minus 2-year spread over the last 10 years, with a zero line; `tenor` also takes `10Y-3M`, `30Y-5Y` or maturities (`2Y,10Y`).
 
 Both are in the *Macro Context* tab of the **Fonrex — Screener & Macro** dashboard. See the [OpenBB Workspace guide](../guides/openbb-workspace.md).
 
@@ -2839,7 +3034,7 @@ A read-only key (`FONREX_READ_ONLY_API_KEYS`) is enough for every widget. CORS a
 
 ## Discovery files
 
-- `GET /widgets.json` — the 24 widgets: for each one, its name, category, type, route and parameters (`integrations/openbb/widgets.json`).
+- `GET /widgets.json` — the 26 widgets: for each one, its name, category, type, route and parameters (`integrations/openbb/widgets.json`).
 - `GET /apps.json` — two pre-assembled dashboards, **Fonrex — EU Markets** and **Fonrex — Screener & Macro** (`integrations/openbb/apps.json`).
 
 ## Routes
@@ -2870,6 +3065,8 @@ A read-only key (`FONREX_READ_ONLY_API_KEYS`) is enough for every widget. CORS a
 | `fonrex_factor_exposure` | table | `GET /openbb/factors/exposure/{ticker}` | `/factors/exposure/{ticker}` |
 | `fonrex_factor_returns` | chart | `GET /openbb/factors/{dataset}/chart` | `/factors/{dataset}` |
 | `fonrex_macro_indicator_chart` | chart | `GET /openbb/macro/indicators/{indicator}/chart` (`geo` EA,DE,FR,IT,ES and 10 years by default) | `/macro/indicators/{indicator}` |
+| `fonrex_treasury_curve` | chart | `GET /openbb/macro/treasury/curve/chart` (`curve` nominal, `compare` 1M,1Y by default) | `/macro/treasury/curve` |
+| `fonrex_treasury_spread` | chart | `GET /openbb/macro/treasury/series/chart` (`tenor` 10Y-2Y and 10 years by default) | `/macro/treasury/series` |
 
 The macro widget takes a `currency` parameter (`USD`, `EUR`, or empty for both) and shows one card per series: the US 10-year rate, the euro AAA 10-year rate, the ECB deposit rate and the CISS stress index.
 
@@ -3714,7 +3911,7 @@ description: "Connect your self-hosted Fonrex instance to OpenBB Workspace widge
 
 1. In OpenBB Workspace, right-click on the dashboard and select **Add data** (or open the backend connections).
 2. Enter the URL of your instance, e.g. `http://localhost:5000` or `https://myfonrex.share.zrok.io`.
-3. OpenBB reads `/widgets.json` and lists the 24 widgets. This file and `/apps.json` answer without a key.
+3. OpenBB reads `/widgets.json` and lists the 26 widgets. This file and `/apps.json` answer without a key.
 
 ## Step 2 — Add the key
 
@@ -3739,7 +3936,7 @@ Every `/openbb/...` route requires it.
 
 **Fonrex — Screener & Macro** — discovery:
 - *Screener*: technical screener (e.g. RSI < 30)
-- *Macro Context*: FRED and ECB rates (USD and EUR), Eurostat indicators of the euro area, inflation of the main euro area countries over time, and index constituents
+- *Macro Context*: FRED and ECB rates (USD and EUR), Eurostat indicators of the euro area, inflation of the main euro area countries over time, the US Treasury curve (today, 1 month and 1 year before) and the 10-year minus 2-year spread, and index constituents
 
 Import them from the Apps menu of OpenBB, or add widgets one by one to your own dashboard.
 
@@ -3771,6 +3968,8 @@ Import them from the Apps menu of OpenBB, or add widgets one by one to your own 
 | `fonrex_macro_rates` | Fonrex Macro Rates | Macro | metric |
 | `fonrex_macro_indicators` | Fonrex Macro Indicators | Macro | metric |
 | `fonrex_macro_indicator_chart` | Fonrex Macro Indicator Chart | Macro | chart |
+| `fonrex_treasury_curve` | Fonrex Treasury Curve | Macro | chart |
+| `fonrex_treasury_spread` | Fonrex Treasury Spread | Macro | chart |
 | `fonrex_factor_exposure` | Fonrex Factor Exposure | Factors | table |
 | `fonrex_factor_returns` | Fonrex Factor Returns | Factors | chart |
 
@@ -4075,6 +4274,8 @@ These tables are written by the deep enrichment from Yahoo Finance (`/fundamenta
 | `macro_rates_cache` | Series read from FRED and the ECB (`source`), unique on `(series_id, observation_date)` |
 | `macro_observations` | Eurostat indicators, one value per `(source, indicator, geo, period)`; a period is dated by its first day and a revision replaces its value; `status` keeps the flag of Eurostat (`e` for an estimate) |
 | `macro_series_loads` | One row per series (indicator and country): when it was last read, first and last period, last update announced by Eurostat |
+| `yield_curve_points` | Daily yield curves of the US Treasury (nominal since 1990, real since 2003): one rate per `(source, curve, rate_date, tenor)`, as a ratio (a real yield may be negative); `tenor_months` sorts a curve; a maturity not published on a day has no row |
+| `yield_curve_loads` | One row per year of a curve: when it was last read, number of days, first and last day. A past year read after its end is not read again |
 | `usage_logs` | One row per API request, written in background batches; IP not kept unless `USAGE_LOG_IP` asks for it; purged after `USAGE_LOG_RETENTION_DAYS` |
 
 ## Factors and exchange rates
@@ -4138,6 +4339,7 @@ Alembic owns the schema, including the TimescaleDB hypertables, compression and 
 | 021 | `021_fx_rates.py` | `fx_rates` and `fx_rate_loads`: the ECB reference exchange rates |
 | 022 | `022_macro_observations.py` | `macro_observations` and `macro_series_loads`: the Eurostat indicators, period by period |
 | 023 | `023_xbrl_facts.py` | `xbrl_facts` and `sec_company_loads`: the facts of the XBRL filings of the SEC |
+| 024 | `024_yield_curves.py` | `yield_curve_points` and `yield_curve_loads`: the daily yield curves of the US Treasury |
 
 ## How migrations run
 
@@ -4152,7 +4354,7 @@ Migration 014 first deletes the TimescaleDB jobs of the price tables (waiting fo
 alembic revision -m "describe_the_change"
 ```
 
-Rename the new file of `alembic/versions/` and set its identifiers after the last migration (`revision = "024"`, `down_revision = "023"`, file `024_describe_the_change.py`), then:
+Rename the new file of `alembic/versions/` and set its identifiers after the last migration (`revision = "025"`, `down_revision = "024"`, file `025_describe_the_change.py`), then:
 
 ```bash
 alembic upgrade head
@@ -4338,6 +4540,7 @@ Optional tokens: `BARRONS_TOKEN`, `MARKETWATCH_TOKEN`, `WSJ_TOKEN`.
 | `JustETF` | justetf.com | `/etf/{isin}/details` |
 | `IndexConstituents` | Wikipedia | `/index/{index_name}/constituents` |
 | `OpenFIGI` | openfigi.com | Loaded, not used by any route today |
+| `Treasury` | home.treasury.gov, daily par yield curves | `/macro/treasury/curve`, `/macro/treasury/series`, and the US risk-free rate of the DCF when FRED gives none |
 
 ## Health
 
@@ -4825,7 +5028,7 @@ Every variable of `.env.example` is read by the code (`tests/test_env_settings.p
 
 | Variable | Default | When |
 |---|---|---|
-| `FRED_API_KEY` | *(empty)* | Live US risk-free rate for the DCF (the euro rate comes from the ECB without key) |
+| `FRED_API_KEY` | *(empty)* | US risk-free rate of the DCF from FRED; without it, the 10-year rate of the Treasury yield curve is used (no key), as is the euro rate of the ECB |
 | `FONREX_PROXY_URL`, `FONREX_PROXY_PROVIDERS` | *(empty)* | Websites refusing your server's IP |
 | `FONREX_PROVIDER_MAX_CONCURRENCY` | `4` | Fewer simultaneous requests per website |
 | `OPENBB_ALLOWED_ORIGIN` | `https://pro.openbb.co` | Another OpenBB origin (CORS) |
@@ -4924,7 +5127,7 @@ description: "Security, configuration, monitoring and backup checks before expos
 ## Configuration
 - [ ] `SEC_EDGAR_EMAIL` set to your own contact address.
 - [ ] `WEB_CONCURRENCY=1`.
-- [ ] `FRED_API_KEY` set if you use the DCF.
+- [ ] `FRED_API_KEY` set if you want the US risk-free rate of FRED (without it, the DCF uses the Treasury yield curve).
 - [ ] A proxy (`FONREX_PROXY_URL`) for the websites that refuse your server's IP, if needed.
 
 ## Data
@@ -5167,7 +5370,14 @@ description: "Project history, feature additions, schema migrations, and version
 - **The Yahoo statements checked against the SEC**: `GET /sec/{ticker}/check` gives, year by year, `match`, `mismatch`, `missing_yahoo` or `missing_sec` for each figure both sources define alike. `POST /sec/{ticker}/refresh` reads a company again at once.
 - **The CIK is never guessed from a ticker**: only a US listing of the instrument is looked up, and the name at the SEC must match. `AIR.PA` (Airbus) is never confused with `AIR` (AAR Corp).
 - Facts kept in `xbrl_facts` and `sec_company_loads` (migration 023). New settings `SEC_XBRL_REFRESH_HOURS` and `SEC_CHECK_TOLERANCE`; a warning at start-up while `SEC_EDGAR_EMAIL` is the address of the example.
-- One **OpenBB widget** (24 in all): *Fonrex SEC Check*, the check as a table, gaps first.
+- One **OpenBB widget**: *Fonrex SEC Check*, the check as a table, gaps first.
+
+### US Treasury yield curves
+- **The daily yield curves of the US Treasury**, free files without key: the nominal curve since 1990 (1 month to 30 years) and the real curve (TIPS) since 2003 (5 to 30 years). See [Treasury yield curves](../api-reference/treasury-curves.md).
+- `GET /macro/treasury/curve` gives the curve of a day with the **breakeven inflation** and comparisons with other days (`compare=1M`, `1Y` or a date); `GET /macro/treasury/series` maturities and **spreads** (`10Y-2Y`) over time; `POST /macro/treasury/refresh` and `scripts/load_treasury_curve.py` read years on demand.
+- Kept day by day in `yield_curve_points` (migration 024): a year is read only when a request needs it, a past year read after its end never again, the current year after `TREASURY_REFRESH_HOURS` (new setting, 12 by default).
+- **The US risk-free rate of the DCF without FRED key**: when FRED gives no rate, the 10-year rate of the Treasury curve is used (`treasury_live`, `treasury_cached`, `treasury_stale`) instead of `DCF_RISK_FREE_RATE`.
+- Two **OpenBB widgets** (26 in all): the curve of the day with the curves of 1 month and 1 year before, and the 10-year minus 2-year spread, in the *Macro Context* tab of the Screener & Macro app.
 
 ## October 2026 — Secure defaults, per-listing prices, verified provider data
 
