@@ -7,7 +7,7 @@ description: "The daily yield curves of the US Treasury, nominal since 1990 and 
 
 # US Treasury Yield Curves API Reference
 
-Fonrex reads the daily yield curves of the [US Treasury](https://home.treasury.gov/resource-center/data-chart-center/interest-rates) (free files, no key) and keeps them in your database, day by day:
+Fonrex reads the daily yield curves of the [US Treasury](https://home.treasury.gov/policy-issues/financing-the-government/interest-rate-statistics) (free files, no key) and keeps them in your database, day by day:
 
 - the **nominal curve** (par yields), since 1990, from 1 month to 30 years;
 - the **real curve** (TIPS, inflation-protected), since 2003, from 5 to 30 years.

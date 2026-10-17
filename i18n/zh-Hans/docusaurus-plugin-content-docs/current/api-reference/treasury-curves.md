@@ -7,7 +7,7 @@ description: "美国财政部的每日收益率曲线，名义曲线自 1990 年
 
 # 美国国债收益率曲线 API 参考
 
-Fonrex 读取[美国财政部](https://home.treasury.gov/resource-center/data-chart-center/interest-rates)的每日收益率曲线（免费文件，无需密钥），并按天保存在您自己的数据库中：
+Fonrex 读取[美国财政部](https://home.treasury.gov/policy-issues/financing-the-government/interest-rate-statistics)的每日收益率曲线（免费文件，无需密钥），并按天保存在您自己的数据库中：
 
 - **名义曲线**（平价收益率），自 1990 年起，期限 1 个月到 30 年；
 - **实际曲线**（TIPS，通胀保值国债），自 2003 年起，期限 5 年到 30 年。

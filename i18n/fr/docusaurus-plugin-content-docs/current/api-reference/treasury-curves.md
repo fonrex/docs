@@ -7,7 +7,7 @@ description: "Les courbes de taux quotidiennes du Trésor américain, nominale d
 
 # Référence API des courbes de taux du Trésor américain
 
-Fonrex lit les courbes de taux quotidiennes du [Trésor américain](https://home.treasury.gov/resource-center/data-chart-center/interest-rates) (fichiers gratuits, sans clé) et les garde dans votre base de données, jour par jour :
+Fonrex lit les courbes de taux quotidiennes du [Trésor américain](https://home.treasury.gov/policy-issues/financing-the-government/interest-rate-statistics) (fichiers gratuits, sans clé) et les garde dans votre base de données, jour par jour :
 
 - la **courbe nominale** (taux « par »), depuis 1990, de 1 mois à 30 ans ;
 - la **courbe réelle** (TIPS, indexée sur l'inflation), depuis 2003, de 5 à 30 ans.
