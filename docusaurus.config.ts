@@ -5,6 +5,10 @@ const config: Config = {
   title: 'Fonrex',
   tagline: 'Open-source financial data infrastructure',
   favicon: 'img/favicon.ico',
+  headTags: [
+    { tagName: 'link', attributes: { rel: 'icon', type: 'image/svg+xml', href: '/img/favicon.svg' } },
+    { tagName: 'link', attributes: { rel: 'apple-touch-icon', href: '/img/apple-touch-icon.png' } },
+  ],
   url: 'https://docs.fonrex.io',
   baseUrl: '/',
   organizationName: 'fonrex',
@@ -63,10 +67,10 @@ const config: Config = {
   themeConfig: {
     image: 'img/fonrex-social.png',
     navbar: {
-      title: 'Fonrex',
       logo: {
         alt: 'Fonrex Logo',
-        src: 'img/logo.png',
+        src: 'img/fonrex-logo.svg',
+        srcDark: 'img/fonrex-logo-dark.svg',
       },
       items: [
         {

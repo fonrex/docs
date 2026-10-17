@@ -1,5 +1,8 @@
 <p align="center">
-  <img src="https://avatars.githubusercontent.com/u/305430843?s=400&v=4" width="120" alt="Fonrex Logo" />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="static/img/fonrex-logo-dark.svg" />
+    <img src="static/img/fonrex-logo.svg" height="64" alt="Fonrex Logo" />
+  </picture>
 </p>
 
 # Fonrex Documentation
