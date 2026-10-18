@@ -66,6 +66,17 @@ curl -s -H "$AUTH" "http://localhost:5000/factors/exposure/AIR.PA?model=carhart"
 
 Les prix stockés sont régressés sur les facteurs Fama/French de leur région (en dollars US) : bêtas, t-stats, alpha annualisé, R². Voir [Facteurs Fama/French](../api-reference/factors.md).
 
+## 5. Ajouter le positionnement des marchés à terme
+
+Les Commitments of Traders de la CFTC donnent, chaque semaine, la position nette des spéculateurs sur les marchés à terme américains et son COT index, un signal de sentiment à combiner avec les prix :
+
+```bash
+docker compose exec fonrex-api python scripts/load_cot.py
+curl -s -H "$AUTH" "http://localhost:5000/cot/signals?market=13874A&report=tff&start=2016-01-01"
+```
+
+Alignez chaque rapport sur sa date `published_on`, pas sur sa `date`, pour qu'un backtest n'utilise pas les positions avant leur publication. Voir [Commitments of Traders](../api-reference/cot.md).
+
 ## Étapes suivantes
 
 - [API des prix historiques](../api-reference/historical.md)

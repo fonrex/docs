@@ -47,6 +47,13 @@ description: "Historique du projet, ajouts de fonctionnalités, migrations de sc
 - **Le taux sans risque américain du DCF sans clé FRED** : quand FRED ne donne pas de taux, le taux à 10 ans de la courbe du Trésor est utilisé (`treasury_live`, `treasury_cached`, `treasury_stale`) au lieu de `DCF_RISK_FREE_RATE`.
 - Deux **widgets OpenBB** (26 au total) : la courbe du jour avec celles d'il y a 1 mois et 1 an, et l'écart 10 ans moins 2 ans, dans l'onglet *Macro Context* de l'app Screener & Macro.
 
+### Commitments of Traders de la CFTC {#cftc-commitments-of-traders}
+- **Les rapports hebdomadaires Commitments of Traders de la CFTC**, fichiers gratuits sans clé : Legacy depuis 1986, Traders in Financial Futures et Disaggregated depuis juin 2006, contrats à terme seuls. Les positions des spéculateurs (non-commerciaux, leveraged funds, managed money) et de tous les autres types d'intervenants sur les marchés à terme américains : indices boursiers, taux, devises, matières premières. Voir [Commitments of Traders](../api-reference/cot.md).
+- `GET /cot/markets` liste les marchés par code CFTC ; `GET /cot/positions` donne tous les types d'intervenants d'un marché ; `GET /cot/signals` la **position nette**, sa part de l'open interest, sa variation et le **COT index** (0 à 100 sur une fenêtre de semaines) ; `GET /cot/extremes` les positionnements les plus extrêmes des marchés clés ; `POST /cot/refresh` et `scripts/load_cot.py` lisent des années à la demande.
+- Chaque date de rapport est accompagnée de son **jour de publication estimé** (le vendredi qui suit), pour des backtests sans anticipation.
+- Gardés semaine par semaine dans `cot_weeks` et `cot_positions` (migration 025) : une année n'est lue que quand une requête en a besoin, les années jusqu'en 2016 une seule fois, l'année en cours après `COT_REFRESH_HOURS` (nouveau réglage, 24 par défaut).
+- Deux **widgets OpenBB** (28 en tout) : le positionnement d'un marché avec son COT index, et les positionnements les plus extrêmes des marchés clés, dans l'onglet *Macro Context* de l'application Screener & Macro.
+
 ## Octobre 2026 — Sécurité par défaut, prix par cotation, données fournisseurs vérifiées
 
 Fusionné sur `main` le 8 octobre 2026 (pull request #15).

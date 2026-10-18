@@ -15,7 +15,7 @@ Fonrex lit les principaux indicateurs macroéconomiques de la zone euro et de ch
 | `GET /macro/indicators/{indicator}` | Un indicateur dans le temps, pour 10 pays au plus |
 | `POST /macro/indicators/refresh` | Lit des séries sur Eurostat à la demande |
 
-Les taux de FRED et de la BCE (taux sans risque, taux de dépôt, CISS) restent sur [`GET /macro/rates`](./valuation-dcf.md) ; la courbe de taux américaine, toutes les maturités jour par jour, est sur [`GET /macro/treasury/curve`](./treasury-curves.md).
+Les taux de FRED et de la BCE (taux sans risque, taux de dépôt, CISS) restent sur [`GET /macro/rates`](./valuation-dcf.md) ; la courbe de taux américaine, toutes les maturités jour par jour, est sur [`GET /macro/treasury/curve`](./treasury-curves.md) ; le positionnement des spéculateurs sur les marchés à terme américains est sur [`GET /cot/signals`](./cot.md).
 
 ## Indicateurs
 

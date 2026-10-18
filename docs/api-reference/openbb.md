@@ -26,7 +26,7 @@ A read-only key (`FONREX_READ_ONLY_API_KEYS`) is enough for every widget. CORS a
 
 ## Discovery files
 
-- `GET /widgets.json` — the 26 widgets: for each one, its name, category, type, route and parameters (`integrations/openbb/widgets.json`).
+- `GET /widgets.json` — the 28 widgets: for each one, its name, category, type, route and parameters (`integrations/openbb/widgets.json`).
 - `GET /apps.json` — two pre-assembled dashboards, **Fonrex — EU Markets** and **Fonrex — Screener & Macro** (`integrations/openbb/apps.json`).
 
 ## Routes
@@ -59,6 +59,8 @@ A read-only key (`FONREX_READ_ONLY_API_KEYS`) is enough for every widget. CORS a
 | `fonrex_macro_indicator_chart` | chart | `GET /openbb/macro/indicators/{indicator}/chart` (`geo` EA,DE,FR,IT,ES and 10 years by default) | `/macro/indicators/{indicator}` |
 | `fonrex_treasury_curve` | chart | `GET /openbb/macro/treasury/curve/chart` (`curve` nominal, `compare` 1M,1Y by default) | `/macro/treasury/curve` |
 | `fonrex_treasury_spread` | chart | `GET /openbb/macro/treasury/series/chart` (`tenor` 10Y-2Y and 10 years by default) | `/macro/treasury/series` |
+| `fonrex_cot_positioning` | chart | `GET /openbb/cot/signals/chart` (`market` 13874A, `report` tff, the speculators and 3 years by default) | `/cot/signals` |
+| `fonrex_cot_extremes` | table | `GET /openbb/cot/extremes` (`report` tff, its key markets by default) | `/cot/extremes` |
 
 The macro widget takes a `currency` parameter (`USD`, `EUR`, or empty for both) and shows one card per series: the US 10-year rate, the euro AAA 10-year rate, the ECB deposit rate and the CISS stress index.
 

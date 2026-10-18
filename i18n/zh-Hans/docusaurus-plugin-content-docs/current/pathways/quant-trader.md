@@ -66,6 +66,17 @@ curl -s -H "$AUTH" "http://localhost:5000/factors/exposure/AIR.PA?model=carhart"
 
 已存储的价格会对其所在地区的 Fama/French 因子（以美元计）进行回归：贝塔、t 统计量、年化阿尔法、R²。请参阅 [Fama/French 因子](../api-reference/factors.md)。
 
+## 5. 加入期货市场的头寸
+
+CFTC 的交易商持仓报告每周给出美国期货市场中投机者的净持仓及其 COT 指数，这是一种可与价格结合使用的情绪信号：
+
+```bash
+docker compose exec fonrex-api python scripts/load_cot.py
+curl -s -H "$AUTH" "http://localhost:5000/cot/signals?market=13874A&report=tff&start=2016-01-01"
+```
+
+请按每期报告的 `published_on` 日期而不是 `date` 对齐，以免回测在持仓公布之前就使用这些数据。参见[交易商持仓报告（COT）](../api-reference/cot.md)。
+
 ## 后续步骤
 
 - [历史价格 API](../api-reference/historical.md)

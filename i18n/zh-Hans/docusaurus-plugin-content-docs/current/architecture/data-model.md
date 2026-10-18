@@ -116,6 +116,9 @@ erDiagram
 | `macro_series_loads` | 每个序列（指标和国家）一行：最近一次读取的时间、第一个和最后一个期间、Eurostat 公布的最近更新时间 |
 | `yield_curve_points` | 美国财政部的每日收益率曲线（名义曲线自 1990 年起，实际曲线自 2003 年起）：每个 `(source, curve, rate_date, tenor)` 一个利率，以比率表示（实际收益率可能为负）；`tenor_months` 用于排序曲线；某天未公布的期限没有行 |
 | `yield_curve_loads` | 每条曲线每年一行：最近一次读取的时间、天数、第一天和最后一天。在年末之后读取过的过去年份不再重新读取 |
+| `cot_weeks` | CFTC 交易商持仓报告（`legacy` 自 1986 年起，`tff` 和 `disaggregated` 自 2006 年 6 月起）：每个 `(report, market_code, report_date)` 一行，市场以其 CFTC 合约市场代码（`13874A`）表示，附该周的市场名称、合约单位和未平仓合约 |
+| `cot_positions` | 一行中各类交易商的持仓，单位为合约数：`long`、`short`，以及有价差头寸的类型的 `spreading`（在 Legacy 历史数据中，非报告头寸可能为负）；随所属行一同删除 |
+| `cot_loads` | 每种报告每年一行：最近一次读取的时间、包含该年的文件、报告日期数量、第一个和最后一个日期。2016 年及以前的年份来自每种报告的一个历史文件 |
 | `usage_logs` | 每个 API 请求一行，由后台批量写入；除非 `USAGE_LOG_IP` 要求，否则不保留 IP；在 `USAGE_LOG_RETENTION_DAYS` 之后清除 |
 
 ## 因子与汇率 {#factors-and-exchange-rates}

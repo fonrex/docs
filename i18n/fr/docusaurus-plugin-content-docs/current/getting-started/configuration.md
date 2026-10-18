@@ -84,6 +84,7 @@ Les clients envoient une clé sous la forme `Authorization: Bearer <key>` ou `X-
 | `EUROSTAT_API_URL` | `https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data` | Eurostat (inflation, chômage, PIB, enquêtes ; gratuit, sans clé) ; à définir seulement pour utiliser un miroir |
 | `EUROSTAT_REFRESH_HOURS` | `24` | Heures avant qu'une série Eurostat soit relue (1 à 720) |
 | `TREASURY_REFRESH_HOURS` | `12` | Heures avant que l'année en cours d'une courbe du Trésor soit relue (1 à 720) ; une année passée lue après sa fin n'est plus jamais relue |
+| `COT_REFRESH_HOURS` | `24` | Heures avant que l'année en cours d'un rapport Commitments of Traders soit relue (1 à 720) ; les années jusqu'en 2016, et une année passée plus récente lue à partir du 15 janvier de l'année suivante, ne sont plus jamais relues |
 
 ## Facteurs et taux de change {#factors-and-exchange-rates}
 

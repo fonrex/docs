@@ -84,6 +84,7 @@ Fonrex 从环境变量读取设置。将 `.env.example` 复制为 `.env` 并进�
 | `EUROSTAT_API_URL` | `https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data` | Eurostat（通胀、失业、GDP、调查；免费，无需密钥）；仅在使用镜像时设置 |
 | `EUROSTAT_REFRESH_HOURS` | `24` | 再次读取 Eurostat 序列前的小时数（1 到 720） |
 | `TREASURY_REFRESH_HOURS` | `12` | 再次读取美国国债收益率曲线当年数据前的小时数（1 到 720）；在年末之后读取过的过去年份不再重新读取 |
+| `COT_REFRESH_HOURS` | `24` | 再次读取交易商持仓报告当年数据前的小时数（1 到 720）；2016 年及以前的年份，以及在次年 1 月 15 日或之后读取过的更晚的过去年份，不再重新读取 |
 
 ## 因子与汇率 {#factors-and-exchange-rates}
 

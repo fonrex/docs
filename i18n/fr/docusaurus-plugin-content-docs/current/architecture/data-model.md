@@ -116,6 +116,9 @@ Ces tables sont écrites par l'enrichissement approfondi à partir de Yahoo Fina
 | `macro_series_loads` | Une ligne par série (indicateur et pays) : date de la dernière lecture, première et dernière période, dernière mise à jour annoncée par Eurostat |
 | `yield_curve_points` | Courbes de taux quotidiennes du Trésor américain (nominale depuis 1990, réelle depuis 2003) : un taux par `(source, curve, rate_date, tenor)`, en ratio (un taux réel peut être négatif) ; `tenor_months` trie une courbe ; une maturité non publiée un jour n'a pas de ligne |
 | `yield_curve_loads` | Une ligne par année d'une courbe : date de la dernière lecture, nombre de jours, premier et dernier jour. Une année passée lue après sa fin n'est plus relue |
+| `cot_weeks` | Commitments of Traders de la CFTC (`legacy` depuis 1986, `tff` et `disaggregated` depuis juin 2006) : une ligne par `(report, market_code, report_date)`, le marché étant son code CFTC (`13874A`), avec le nom du marché cette semaine-là, l'unité de ses contrats et son open interest |
+| `cot_positions` | Les positions de chaque type d'intervenant sur une ligne, en contrats : `long`, `short`, et `spreading` pour les types qui en ont (une position non déclarable peut être négative dans l'historique Legacy) ; supprimées avec leur ligne |
+| `cot_loads` | Une ligne par année d'un rapport : date de la dernière lecture, fichier qui la contenait, nombre de dates de rapport, première et dernière. Les années jusqu'en 2016 viennent d'un fichier historique par rapport |
 | `usage_logs` | Une ligne par requête API, écrite par lots en arrière-plan ; l'IP n'est pas conservée sauf si `USAGE_LOG_IP` le demande ; purgée après `USAGE_LOG_RETENTION_DAYS` |
 
 ## Facteurs et taux de change {#factors-and-exchange-rates}

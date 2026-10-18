@@ -149,6 +149,17 @@ curl -s -H "$AUTH" "http://localhost:5000/factors/exposure/AIR.PA?model=carhart"
 
 The stored prices are regressed on the Fama/French factors of their region (in US dollars): betas, t-stats, annualised alpha, R². See [Fama/French factors](../api-reference/factors.md).
 
+## 5. Add the positioning of the futures markets
+
+The Commitments of Traders of the CFTC give, every week, the net position of the speculators in the US futures markets and its COT index, a sentiment signal to combine with prices:
+
+```bash
+docker compose exec fonrex-api python scripts/load_cot.py
+curl -s -H "$AUTH" "http://localhost:5000/cot/signals?market=13874A&report=tff&start=2016-01-01"
+```
+
+Align each report on its `published_on` date, not on its `date`, so that a backtest does not use the positions before they were published. See [Commitments of Traders](../api-reference/cot.md).
+
 ## Next steps
 
 - [Historical prices API](../api-reference/historical.md)
@@ -582,6 +593,7 @@ Clients send a key as `Authorization: Bearer <key>` or `X-API-KEY: <key>`. See [
 | `EUROSTAT_API_URL` | `https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data` | Eurostat (inflation, unemployment, GDP, surveys; free, no key); set only to use a mirror |
 | `EUROSTAT_REFRESH_HOURS` | `24` | Hours before a Eurostat series is read again (1 to 720) |
 | `TREASURY_REFRESH_HOURS` | `12` | Hours before the current year of a Treasury yield curve is read again (1 to 720); a past year read after its end is never read again |
+| `COT_REFRESH_HOURS` | `24` | Hours before the current year of a Commitments of Traders report is read again (1 to 720); the years up to 2016, and a later past year read from 15 January of the next year on, are never read again |
 
 ## Factors and exchange rates
 
@@ -1690,7 +1702,7 @@ description: "Connect your self-hosted Fonrex instance to OpenBB Workspace widge
 
 1. In OpenBB Workspace, right-click on the dashboard and select **Add data** (or open the backend connections).
 2. Enter the URL of your instance, e.g. `http://localhost:5000` or `https://myfonrex.share.zrok.io`.
-3. OpenBB reads `/widgets.json` and lists the 26 widgets. This file and `/apps.json` answer without a key.
+3. OpenBB reads `/widgets.json` and lists the 28 widgets. This file and `/apps.json` answer without a key.
 
 ## Step 2 — Add the key
 
@@ -1715,7 +1727,7 @@ Every `/openbb/...` route requires it.
 
 **Fonrex — Screener & Macro** — discovery:
 - *Screener*: technical screener (e.g. RSI < 30)
-- *Macro Context*: FRED and ECB rates (USD and EUR), Eurostat indicators of the euro area, inflation of the main euro area countries over time, the US Treasury curve (today, 1 month and 1 year before) and the 10-year minus 2-year spread, and index constituents
+- *Macro Context*: FRED and ECB rates (USD and EUR), Eurostat indicators of the euro area, inflation of the main euro area countries over time, the US Treasury curve (today, 1 month and 1 year before) and the 10-year minus 2-year spread, the positioning of the leveraged funds on the E-mini S&P 500 and the most extreme positioning of the financial futures (CFTC), and index constituents
 
 Import them from the Apps menu of OpenBB, or add widgets one by one to your own dashboard.
 
@@ -1749,6 +1761,8 @@ Import them from the Apps menu of OpenBB, or add widgets one by one to your own 
 | `fonrex_macro_indicator_chart` | Fonrex Macro Indicator Chart | Macro | chart |
 | `fonrex_treasury_curve` | Fonrex Treasury Curve | Macro | chart |
 | `fonrex_treasury_spread` | Fonrex Treasury Spread | Macro | chart |
+| `fonrex_cot_positioning` | Fonrex COT Positioning | Macro | chart |
+| `fonrex_cot_extremes` | Fonrex COT Extremes | Macro | table |
 | `fonrex_factor_exposure` | Fonrex Factor Exposure | Factors | table |
 | `fonrex_factor_returns` | Fonrex Factor Returns | Factors | chart |
 
@@ -2055,6 +2069,9 @@ These tables are written by the deep enrichment from Yahoo Finance (`/fundamenta
 | `macro_series_loads` | One row per series (indicator and country): when it was last read, first and last period, last update announced by Eurostat |
 | `yield_curve_points` | Daily yield curves of the US Treasury (nominal since 1990, real since 2003): one rate per `(source, curve, rate_date, tenor)`, as a ratio (a real yield may be negative); `tenor_months` sorts a curve; a maturity not published on a day has no row |
 | `yield_curve_loads` | One row per year of a curve: when it was last read, number of days, first and last day. A past year read after its end is not read again |
+| `cot_weeks` | Commitments of Traders of the CFTC (`legacy` since 1986, `tff` and `disaggregated` since June 2006): one line per `(report, market_code, report_date)`, the market being its CFTC contract market code (`13874A`), with the name of the market that week, its contract units and its open interest |
+| `cot_positions` | The positions of each type of trader on a line, in contracts: `long`, `short`, and `spreading` for the types that have it (a non-reportable position may be negative in the Legacy history); removed with their line |
+| `cot_loads` | One row per year of a report: when it was last read, the file that held it, number of report dates, first and last. The years up to 2016 come from one history file per report |
 | `usage_logs` | One row per API request, written in background batches; IP not kept unless `USAGE_LOG_IP` asks for it; purged after `USAGE_LOG_RETENTION_DAYS` |
 
 ## Factors and exchange rates
@@ -2119,6 +2136,7 @@ Alembic owns the schema, including the TimescaleDB hypertables, compression and 
 | 022 | `022_macro_observations.py` | `macro_observations` and `macro_series_loads`: the Eurostat indicators, period by period |
 | 023 | `023_xbrl_facts.py` | `xbrl_facts` and `sec_company_loads`: the facts of the XBRL filings of the SEC |
 | 024 | `024_yield_curves.py` | `yield_curve_points` and `yield_curve_loads`: the daily yield curves of the US Treasury |
+| 025 | `025_cot_reports.py` | `cot_weeks`, `cot_positions` and `cot_loads`: the Commitments of Traders reports of the CFTC |
 
 ## How migrations run
 
@@ -2133,7 +2151,7 @@ Migration 014 first deletes the TimescaleDB jobs of the price tables (waiting fo
 alembic revision -m "describe_the_change"
 ```
 
-Rename the new file of `alembic/versions/` and set its identifiers after the last migration (`revision = "025"`, `down_revision = "024"`, file `025_describe_the_change.py`), then:
+Rename the new file of `alembic/versions/` and set its identifiers after the last migration (`revision = "026"`, `down_revision = "025"`, file `026_describe_the_change.py`), then:
 
 ```bash
 alembic upgrade head
@@ -2320,6 +2338,7 @@ Optional tokens: `BARRONS_TOKEN`, `MARKETWATCH_TOKEN`, `WSJ_TOKEN`.
 | `IndexConstituents` | Wikipedia | `/index/{index_name}/constituents` |
 | `OpenFIGI` | openfigi.com | Loaded, not used by any route today |
 | `Treasury` | home.treasury.gov, daily par yield curves | `/macro/treasury/curve`, `/macro/treasury/series`, and the US risk-free rate of the DCF when FRED gives none |
+| `CFTC` | cftc.gov, weekly Commitments of Traders reports (Legacy, TFF, Disaggregated) | `/cot/markets`, `/cot/positions`, `/cot/signals`, `/cot/extremes` |
 
 ## Health
 
@@ -3157,6 +3176,13 @@ description: "Project history, feature additions, schema migrations, and version
 - Kept day by day in `yield_curve_points` (migration 024): a year is read only when a request needs it, a past year read after its end never again, the current year after `TREASURY_REFRESH_HOURS` (new setting, 12 by default).
 - **The US risk-free rate of the DCF without FRED key**: when FRED gives no rate, the 10-year rate of the Treasury curve is used (`treasury_live`, `treasury_cached`, `treasury_stale`) instead of `DCF_RISK_FREE_RATE`.
 - Two **OpenBB widgets** (26 in all): the curve of the day with the curves of 1 month and 1 year before, and the 10-year minus 2-year spread, in the *Macro Context* tab of the Screener & Macro app.
+
+### CFTC Commitments of Traders
+- **The weekly Commitments of Traders reports of the CFTC**, free files without key: Legacy since 1986, Traders in Financial Futures and Disaggregated since June 2006, futures only. The positions of the speculators (non-commercial, leveraged funds, managed money) and of every other type of trader, in the US futures markets: stock indices, rates, currencies, commodities. See [Commitments of Traders](../api-reference/cot.md).
+- `GET /cot/markets` lists the markets by CFTC code; `GET /cot/positions` gives every type of trader of a market; `GET /cot/signals` the **net position**, its share of the open interest, its change and the **COT index** (0 to 100 over a window of weeks); `GET /cot/extremes` the most extreme positioning of the key markets; `POST /cot/refresh` and `scripts/load_cot.py` read years on demand.
+- Each report date comes with its **estimated day of publication** (the Friday after it), for backtests without look-ahead.
+- Kept week by week in `cot_weeks` and `cot_positions` (migration 025): a year is read only when a request needs it, the years up to 2016 once, the current year after `COT_REFRESH_HOURS` (new setting, 24 by default).
+- Two **OpenBB widgets** (28 in all): the positioning of a market with its COT index, and the most extreme positioning of the key markets, in the *Macro Context* tab of the Screener & Macro app.
 
 ## October 2026 — Secure defaults, per-listing prices, verified provider data
 

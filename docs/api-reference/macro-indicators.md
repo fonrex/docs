@@ -15,7 +15,7 @@ Fonrex reads the main macro-economic indicators of the euro area and of each cou
 | `GET /macro/indicators/{indicator}` | One indicator over time, for up to 10 countries |
 | `POST /macro/indicators/refresh` | Reads series from Eurostat on demand |
 
-The rates of FRED and of the ECB (risk-free rates, deposit facility rate, CISS) stay on [`GET /macro/rates`](./valuation-dcf.md); the US yield curve, every maturity day by day, is on [`GET /macro/treasury/curve`](./treasury-curves.md).
+The rates of FRED and of the ECB (risk-free rates, deposit facility rate, CISS) stay on [`GET /macro/rates`](./valuation-dcf.md); the US yield curve, every maturity day by day, is on [`GET /macro/treasury/curve`](./treasury-curves.md); the positioning of the speculators in the US futures markets is on [`GET /cot/signals`](./cot.md).
 
 ## Indicators
 

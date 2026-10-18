@@ -66,6 +66,17 @@ curl -s -H "$AUTH" "http://localhost:5000/factors/exposure/AIR.PA?model=carhart"
 
 The stored prices are regressed on the Fama/French factors of their region (in US dollars): betas, t-stats, annualised alpha, R². See [Fama/French factors](../api-reference/factors.md).
 
+## 5. Add the positioning of the futures markets
+
+The Commitments of Traders of the CFTC give, every week, the net position of the speculators in the US futures markets and its COT index, a sentiment signal to combine with prices:
+
+```bash
+docker compose exec fonrex-api python scripts/load_cot.py
+curl -s -H "$AUTH" "http://localhost:5000/cot/signals?market=13874A&report=tff&start=2016-01-01"
+```
+
+Align each report on its `published_on` date, not on its `date`, so that a backtest does not use the positions before they were published. See [Commitments of Traders](../api-reference/cot.md).
+
 ## Next steps
 
 - [Historical prices API](../api-reference/historical.md)

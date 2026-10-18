@@ -26,7 +26,7 @@ Une clé en lecture seule (`FONREX_READ_ONLY_API_KEYS`) suffit pour tous les wid
 
 ## Fichiers de découverte
 
-- `GET /widgets.json` : les 26 widgets, avec pour chacun son nom, sa catégorie, son type, sa route et ses paramètres (`integrations/openbb/widgets.json`).
+- `GET /widgets.json` : les 28 widgets, avec pour chacun son nom, sa catégorie, son type, sa route et ses paramètres (`integrations/openbb/widgets.json`).
 - `GET /apps.json` : deux tableaux de bord pré-assemblés, **Fonrex — EU Markets** et **Fonrex — Screener & Macro** (`integrations/openbb/apps.json`).
 
 ## Routes
@@ -59,6 +59,8 @@ Une clé en lecture seule (`FONREX_READ_ONLY_API_KEYS`) suffit pour tous les wid
 | `fonrex_macro_indicator_chart` | chart | `GET /openbb/macro/indicators/{indicator}/chart` (`geo` EA,DE,FR,IT,ES et 10 ans par défaut) | `/macro/indicators/{indicator}` |
 | `fonrex_treasury_curve` | chart | `GET /openbb/macro/treasury/curve/chart` (`curve` nominal, `compare` 1M,1Y par défaut) | `/macro/treasury/curve` |
 | `fonrex_treasury_spread` | chart | `GET /openbb/macro/treasury/series/chart` (`tenor` 10Y-2Y et 10 ans par défaut) | `/macro/treasury/series` |
+| `fonrex_cot_positioning` | chart | `GET /openbb/cot/signals/chart` (`market` 13874A, `report` tff, les spéculateurs et 3 ans par défaut) | `/cot/signals` |
+| `fonrex_cot_extremes` | table | `GET /openbb/cot/extremes` (`report` tff, ses marchés clés par défaut) | `/cot/extremes` |
 
 Le widget macro prend un paramètre `currency` (`USD`, `EUR`, ou vide pour les deux) et affiche une carte par série : le taux américain à 10 ans, le taux AAA de la zone euro à 10 ans, le taux de dépôt de la BCE et l'indice de stress CISS.
 
