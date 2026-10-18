@@ -37,6 +37,7 @@ Alembic 掌管整个 Schema，包括 TimescaleDB 超表、压缩和连续聚合�
 | 022 | `022_macro_observations.py` | `macro_observations` 和 `macro_series_loads`：按期间保存的 Eurostat 指标 |
 | 023 | `023_xbrl_facts.py` | `xbrl_facts` 和 `sec_company_loads`：SEC XBRL 申报的事实 |
 | 024 | `024_yield_curves.py` | `yield_curve_points` 和 `yield_curve_loads`：美国财政部的每日收益率曲线 |
+| 025 | `025_cot_reports.py` | `cot_weeks`、`cot_positions` 和 `cot_loads`：CFTC 的交易商持仓报告 |
 
 ## 迁移的执行方式
 
@@ -51,7 +52,7 @@ Alembic 掌管整个 Schema，包括 TimescaleDB 超表、压缩和连续聚合�
 alembic revision -m "describe_the_change"
 ```
 
-重命名 `alembic/versions/` 中的新文件，并将其标识符设置在最后一个迁移之后（`revision = "025"`、`down_revision = "024"`，文件名 `025_describe_the_change.py`），然后：
+重命名 `alembic/versions/` 中的新文件，并将其标识符设置在最后一个迁移之后（`revision = "026"`、`down_revision = "025"`，文件名 `026_describe_the_change.py`），然后：
 
 ```bash
 alembic upgrade head

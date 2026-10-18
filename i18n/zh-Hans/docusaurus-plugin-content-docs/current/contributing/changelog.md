@@ -47,6 +47,13 @@ description: "项目历史、功能新增、Schema 迁移和版本更新"
 - **没有 FRED 密钥时 DCF 的美国无风险利率**：FRED 不提供利率时，使用美国国债曲线的 10 年期利率（`treasury_live`、`treasury_cached`、`treasury_stale`），而不是 `DCF_RISK_FREE_RATE`。
 - 两个 **OpenBB 小组件**（共 26 个）：当天的曲线及 1 个月前和 1 年前的曲线，以及 10 年期减 2 年期利差，位于 Screener & Macro 应用的 *Macro Context* 标签页。
 
+### CFTC 交易商持仓报告 {#cftc-commitments-of-traders}
+- **CFTC 每周发布的交易商持仓报告**，免费文件，无需密钥：Legacy 自 1986 年起，Traders in Financial Futures 和 Disaggregated 自 2006 年 6 月起，仅期货。美国期货市场（股指、利率、货币、大宗商品）中投机者（非商业交易商、杠杆基金、管理资金）以及其他各类交易商的持仓。参见[交易商持仓报告（COT）](../api-reference/cot.md)。
+- `GET /cot/markets` 按 CFTC 代码列出市场；`GET /cot/positions` 给出某一市场的各类交易商；`GET /cot/signals` 给出**净持仓**、其占未平仓合约的比例、变化以及 **COT 指数**（在若干周的窗口内从 0 到 100）；`GET /cot/extremes` 给出重点市场中最极端的头寸；`POST /cot/refresh` 和 `scripts/load_cot.py` 按需读取年份。
+- 每个报告日期都附有其**估计发布日期**（之后的周五），便于进行无前视偏差的回测。
+- 按周保存在 `cot_weeks` 和 `cot_positions` 中（迁移 025）：只有在请求需要时才读取某一年，2016 年及以前的年份只读取一次，当年在 `COT_REFRESH_HOURS`（新设置，默认 24）之后重新读取。
+- 两个 **OpenBB 小组件**（共 28 个）：某一市场的头寸及其 COT 指数，以及重点市场中最极端的头寸，位于 Screener & Macro 应用的 *Macro Context* 标签页。
+
 ## 2026 年 10 月——默认安全、按上市品种存储价格、经过验证的数据提供方数据
 
 于 2026 年 10 月 8 日合并到 `main`（pull request #15）。

@@ -47,6 +47,13 @@ description: "Project history, feature additions, schema migrations, and version
 - **The US risk-free rate of the DCF without FRED key**: when FRED gives no rate, the 10-year rate of the Treasury curve is used (`treasury_live`, `treasury_cached`, `treasury_stale`) instead of `DCF_RISK_FREE_RATE`.
 - Two **OpenBB widgets** (26 in all): the curve of the day with the curves of 1 month and 1 year before, and the 10-year minus 2-year spread, in the *Macro Context* tab of the Screener & Macro app.
 
+### CFTC Commitments of Traders
+- **The weekly Commitments of Traders reports of the CFTC**, free files without key: Legacy since 1986, Traders in Financial Futures and Disaggregated since June 2006, futures only. The positions of the speculators (non-commercial, leveraged funds, managed money) and of every other type of trader, in the US futures markets: stock indices, rates, currencies, commodities. See [Commitments of Traders](../api-reference/cot.md).
+- `GET /cot/markets` lists the markets by CFTC code; `GET /cot/positions` gives every type of trader of a market; `GET /cot/signals` the **net position**, its share of the open interest, its change and the **COT index** (0 to 100 over a window of weeks); `GET /cot/extremes` the most extreme positioning of the key markets; `POST /cot/refresh` and `scripts/load_cot.py` read years on demand.
+- Each report date comes with its **estimated day of publication** (the Friday after it), for backtests without look-ahead.
+- Kept week by week in `cot_weeks` and `cot_positions` (migration 025): a year is read only when a request needs it, the years up to 2016 once, the current year after `COT_REFRESH_HOURS` (new setting, 24 by default).
+- Two **OpenBB widgets** (28 in all): the positioning of a market with its COT index, and the most extreme positioning of the key markets, in the *Macro Context* tab of the Screener & Macro app.
+
 ## October 2026 — Secure defaults, per-listing prices, verified provider data
 
 Merged on `main` on 8 October 2026 (pull request #15).

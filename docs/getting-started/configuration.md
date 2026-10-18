@@ -84,6 +84,7 @@ Clients send a key as `Authorization: Bearer <key>` or `X-API-KEY: <key>`. See [
 | `EUROSTAT_API_URL` | `https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data` | Eurostat (inflation, unemployment, GDP, surveys; free, no key); set only to use a mirror |
 | `EUROSTAT_REFRESH_HOURS` | `24` | Hours before a Eurostat series is read again (1 to 720) |
 | `TREASURY_REFRESH_HOURS` | `12` | Hours before the current year of a Treasury yield curve is read again (1 to 720); a past year read after its end is never read again |
+| `COT_REFRESH_HOURS` | `24` | Hours before the current year of a Commitments of Traders report is read again (1 to 720); the years up to 2016, and a later past year read from 15 January of the next year on, are never read again |
 
 ## Factors and exchange rates
 

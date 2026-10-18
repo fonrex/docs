@@ -43,6 +43,7 @@ Optional tokens: `BARRONS_TOKEN`, `MARKETWATCH_TOKEN`, `WSJ_TOKEN`.
 | `IndexConstituents` | Wikipedia | `/index/{index_name}/constituents` |
 | `OpenFIGI` | openfigi.com | Loaded, not used by any route today |
 | `Treasury` | home.treasury.gov, daily par yield curves | `/macro/treasury/curve`, `/macro/treasury/series`, and the US risk-free rate of the DCF when FRED gives none |
+| `CFTC` | cftc.gov, weekly Commitments of Traders reports (Legacy, TFF, Disaggregated) | `/cot/markets`, `/cot/positions`, `/cot/signals`, `/cot/extremes` |
 
 ## Health
 

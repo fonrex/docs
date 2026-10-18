@@ -149,6 +149,17 @@ curl -s -H "$AUTH" "http://localhost:5000/factors/exposure/AIR.PA?model=carhart"
 
 The stored prices are regressed on the Fama/French factors of their region (in US dollars): betas, t-stats, annualised alpha, R². See [Fama/French factors](../api-reference/factors.md).
 
+## 5. Add the positioning of the futures markets
+
+The Commitments of Traders of the CFTC give, every week, the net position of the speculators in the US futures markets and its COT index, a sentiment signal to combine with prices:
+
+```bash
+docker compose exec fonrex-api python scripts/load_cot.py
+curl -s -H "$AUTH" "http://localhost:5000/cot/signals?market=13874A&report=tff&start=2016-01-01"
+```
+
+Align each report on its `published_on` date, not on its `date`, so that a backtest does not use the positions before they were published. See [Commitments of Traders](../api-reference/cot.md).
+
 ## Next steps
 
 - [Historical prices API](../api-reference/historical.md)
@@ -582,6 +593,7 @@ Clients send a key as `Authorization: Bearer <key>` or `X-API-KEY: <key>`. See [
 | `EUROSTAT_API_URL` | `https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data` | Eurostat (inflation, unemployment, GDP, surveys; free, no key); set only to use a mirror |
 | `EUROSTAT_REFRESH_HOURS` | `24` | Hours before a Eurostat series is read again (1 to 720) |
 | `TREASURY_REFRESH_HOURS` | `12` | Hours before the current year of a Treasury yield curve is read again (1 to 720); a past year read after its end is never read again |
+| `COT_REFRESH_HOURS` | `24` | Hours before the current year of a Commitments of Traders report is read again (1 to 720); the years up to 2016, and a later past year read from 15 January of the next year on, are never read again |
 
 ## Factors and exchange rates
 
@@ -2066,7 +2078,7 @@ Fonrex reads the main macro-economic indicators of the euro area and of each cou
 | `GET /macro/indicators/{indicator}` | One indicator over time, for up to 10 countries |
 | `POST /macro/indicators/refresh` | Reads series from Eurostat on demand |
 
-The rates of FRED and of the ECB (risk-free rates, deposit facility rate, CISS) stay on [`GET /macro/rates`](./valuation-dcf.md); the US yield curve, every maturity day by day, is on [`GET /macro/treasury/curve`](./treasury-curves.md).
+The rates of FRED and of the ECB (risk-free rates, deposit facility rate, CISS) stay on [`GET /macro/rates`](./valuation-dcf.md); the US yield curve, every maturity day by day, is on [`GET /macro/treasury/curve`](./treasury-curves.md); the positioning of the speculators in the US futures markets is on [`GET /cot/signals`](./cot.md).
 
 ## Indicators
 
@@ -2415,6 +2427,330 @@ The answer lists one `load` per curve, with its `curve`.
 - **Fonrex Treasury Spread** (`fonrex_treasury_spread`): the 10-year minus 2-year spread over the last 10 years, with a zero line; `tenor` also takes `10Y-3M`, `30Y-5Y` or maturities (`2Y,10Y`).
 
 Both are in the *Macro Context* tab of the **Fonrex — Screener & Macro** dashboard. See the [OpenBB Workspace guide](../guides/openbb-workspace.md).
+
+
+
+<!-- FILE: /docs/api-reference/cot.md -->
+
+---
+id: "cot"
+title: "Commitments of Traders API Reference"
+sidebar_label: "Commitments of Traders"
+description: "The weekly Commitments of Traders reports of the CFTC: positions of speculators and hedgers in the US futures markets (indices, rates, currencies, commodities), net position, COT index"
+---
+
+# Commitments of Traders API Reference
+
+Every week, the US Commodity Futures Trading Commission (CFTC) publishes the positions held on the Tuesday in the US futures markets, by type of trader: the [Commitments of Traders](https://www.cftc.gov/MarketReports/CommitmentsofTraders/index.htm) reports. Fonrex reads their free files (no key) and keeps them in your database, week by week.
+
+It is a **sentiment signal**: who holds the market, and how far their position is from its usual range. It moves slowly (one figure a week, known three days later) and is meant for advanced quantitative use.
+
+| Route | What it does |
+|---|---|
+| `GET /cot/markets` | The markets stored, with their CFTC code and latest name |
+| `GET /cot/positions` | The positions of every type of trader in one market, report by report |
+| `GET /cot/signals` | The positioning of one type of trader in one market: net position, share of the open interest, change, COT index |
+| `GET /cot/extremes` | The latest report of several markets, the most extreme positioning first |
+| `POST /cot/refresh` | Reads years of the reports from the CFTC on demand |
+
+## Reports and types of traders
+
+Fonrex reads three reports, futures only:
+
+| `report` | Markets | Since | Types of traders (`category`) |
+|---|---|---|---|
+| `legacy` | Every market | January 1986 | `noncommercial` (the speculators), `commercial` (the hedgers), `nonreportable` (small traders) |
+| `tff` (Traders in Financial Futures) | Financial markets: stock indices, rates, currencies, VIX, bitcoin | June 2006 | `dealer`, `asset_manager`, `leveraged_funds` (hedge funds, CTAs), `other_reportable`, `nonreportable` |
+| `disaggregated` | Commodities: energy, metals, agriculture | June 2006 | `producer_merchant`, `swap_dealer`, `managed_money` (hedge funds, CTAs), `other_reportable`, `nonreportable` |
+
+The **speculators** of each report are followed by default: `noncommercial`, `leveraged_funds`, `managed_money`. The CFTC classifies each trader from what it declares; the classification of a trader is not published.
+
+Each type of trader holds **long**, **short** and, for some of them, **spreading** positions (long and short in the same market, in different months), in numbers of contracts. The long positions of all types add up to the open interest, and so do the short ones.
+
+## Markets
+
+A market is its **CFTC contract market code**, six characters: `13874A` for the E-mini S&P 500, `043602` for the 10-year note, `067651` for WTI crude oil, `088691` for gold. The code stays when the name changes (`067651` was `CRUDE OIL, LIGHT SWEET` and is `WTI-PHYSICAL` today); the answers give the latest name. `GET /cot/markets` lists the codes.
+
+A market leaves the report the weeks it has fewer than 20 large traders, and comes back after. The Legacy reports came **twice a month** until September 1992, then every week.
+
+The **key markets** are shown when no market is asked:
+
+| Report | Key markets |
+|---|---|
+| `tff` | E-mini S&P 500 `13874A`, Nasdaq mini `209742`, Russell 2000 E-mini `239742`, 2-year note `042601`, 10-year note `043602`, euro `099741`, yen `097741`, pound `096742`, VIX `1170E1`, bitcoin `133741` |
+| `disaggregated` | WTI `067651`, natural gas `023651`, gold `088691`, silver `084691`, copper `085692`, corn `002602`, soybeans `005602`, wheat `001602` |
+| `legacy` | E-mini S&P 500, Nasdaq mini, 10-year note, euro, yen, gold, WTI, natural gas, corn |
+
+## Signals
+
+For one type of trader, report by report:
+
+- **`net`**: long minus short, in contracts;
+- **`net_share`**: `net` as a ratio of the open interest (`-0.2116` is -21.16 %);
+- **`change`**: the change of `net` since the previous report stored;
+- **`cot_index`**: where `net` stands between its lowest (0) and its highest (100) over a **window** of weeks (`window`, 156 by default: three years). The window is a length of time, not a number of reports. The index is empty until the market has reports over the whole window, and when `net` did not move in it. Near 100, the type of trader is as long as it has been over the window; near 0, as short.
+
+### Report date and day of publication
+
+The positions are those of the **Tuesday** (`date`). The CFTC publishes them on **Friday** at 3:30 p.m. in New York: `published_on` gives that Friday. It is an estimate: a holiday moves the publication by a day or two, the reports of before October 1992 came out later, and the CFTC keeps the true dates of the last 13 months only.
+
+:::caution Backtests
+A backtest must use `published_on`, not `date`: on the Tuesday, nobody knows the positions of that Tuesday yet.
+:::
+
+## Freshness
+
+The CFTC publishes one file per report and year, and one file for every year up to 2016 (Legacy: 23 MB). A year is read the first time a request needs it. After that:
+
+- the **years up to 2016** come together in the history file of their report: read once, never again;
+- a **later past year** read from 15 January of the next year on is complete: never asked again;
+- the **current year** is read again once its last reading is older than **`COT_REFRESH_HOURS`** hours (24 by default);
+- when the CFTC does not answer (a year not published yet answers `404`), the stored reports are given with `load.status` = `failed` and the reason, and the next years of the request are not asked.
+
+A file is read whole or not at all: a changed layout, a date outside the file, a line given twice, or positions that do not add up to the open interest refuse it, and what was stored is kept.
+
+To load the whole history of the three reports at once (a few minutes):
+
+```bash
+docker compose exec fonrex-api python scripts/load_cot.py
+docker compose exec fonrex-api python scripts/load_cot.py --report tff --start-year 2020 --force
+```
+
+The script prints one line per report and exits with `1` when a year could not be read. Every answer of the routes says, in `load`, what was done: `fetched` (a year read now), `fresh` (everything needed was stored) or `failed`, with the years read and the first and last report date stored.
+
+---
+
+## <span className="api-method get">GET</span> `/cot/markets`
+
+The markets stored, by report then code, with their latest name, their contract units and the report dates stored. The current year of each report asked is read first when needed, so that a new instance lists the markets of the latest reports; older years are read by the routes of a market or by `POST /cot/refresh`.
+
+| Parameter | Default | Description |
+|---|---|---|
+| `report` | the three | `legacy`, `tff` or `disaggregated` |
+| `q` | — | Part of the name or of the code, in any case (`gold`, `S&P`, `13874`) |
+| `key` | `false` | Only the key markets |
+
+```bash
+curl -s -H "X-API-KEY: $FONREX_API_KEY" \
+  "http://localhost:5000/cot/markets?report=tff&q=13874A"
+```
+
+```json
+{
+  "markets": [
+    {
+      "report": "tff",
+      "market": "13874A",
+      "name": "E-MINI S&P 500 - CHICAGO MERCANTILE EXCHANGE",
+      "contract_units": "($50 X S&P 500 INDEX)",
+      "first_date": "2006-06-13",
+      "last_date": "2026-10-13",
+      "...": "...",
+      "key": true
+    }
+  ],
+  "loads": [{ "report": "tff", "status": "fresh", "...": "..." }],
+  "source": "CFTC, Commitments of Traders (https://www.cftc.gov)"
+}
+```
+
+`weeks` is the number of report dates stored for the market.
+
+---
+
+## <span className="api-method get">GET</span> `/cot/positions`
+
+The positions of every type of trader in one market, report by report, oldest first.
+
+| Parameter | Default | Description |
+|---|---|---|
+| `market` | — | CFTC contract market code (required) |
+| `report` | `legacy` | `legacy`, `tff` or `disaggregated` |
+| `start` | 3 years before `end` | First report date included |
+| `end` | today | Last report date included |
+
+```bash
+curl -s -H "X-API-KEY: $FONREX_API_KEY" \
+  "http://localhost:5000/cot/positions?market=088691&report=disaggregated&start=2026-10-13"
+```
+
+```json
+{
+  "report": "disaggregated",
+  "market": "088691",
+  "name": "GOLD - COMMODITY EXCHANGE INC.",
+  "categories": [
+    { "code": "producer_merchant", "label": "Producer / merchant / processor / user" },
+    { "code": "swap_dealer", "label": "Swap dealers" },
+    { "code": "managed_money", "label": "Managed money" },
+    { "code": "other_reportable", "label": "Other reportables" },
+    { "code": "nonreportable", "label": "Non-reportable" }
+  ],
+  "start": "2026-10-13",
+  "end": "2026-10-18",
+  "weeks": [
+    {
+      "date": "2026-10-13",
+      "published_on": "2026-10-16",
+      "open_interest": 396345,
+      "positions": [
+        { "category": "producer_merchant", "long": 18386, "short": 36823, "spreading": null, "net": -18437 },
+        { "category": "swap_dealer", "long": 13976, "short": 238070, "spreading": 22057, "net": -224094 },
+        { "category": "managed_money", "long": 124747, "short": 17658, "spreading": 33557, "net": 107089 },
+        { "category": "other_reportable", "long": 120553, "short": 19763, "spreading": 12338, "net": 100790 },
+        { "category": "nonreportable", "long": 50731, "short": 16079, "spreading": null, "net": 34652 }
+      ]
+    }
+  ],
+  "load": { "report": "disaggregated", "status": "fresh", "...": "..." },
+  "source": "CFTC, Commitments of Traders (https://www.cftc.gov)"
+}
+```
+
+---
+
+## <span className="api-method get">GET</span> `/cot/signals`
+
+The positioning of one type of trader in one market, report by report, oldest first. The reports of the window before `start` are read too, so that the COT index of `start` is computed.
+
+| Parameter | Default | Description |
+|---|---|---|
+| `market` | — | CFTC contract market code (required) |
+| `report` | `legacy` | `legacy`, `tff` or `disaggregated` |
+| `category` | the speculators of the report | A type of trader of the report |
+| `window` | `156` | Weeks of the COT index window (1 to 520) |
+| `start` | 3 years before `end` | First report date given |
+| `end` | today | Last report date given |
+
+```bash
+curl -s -H "X-API-KEY: $FONREX_API_KEY" \
+  "http://localhost:5000/cot/signals?market=13874A&report=tff&window=52&start=2026-10-01"
+```
+
+```json
+{
+  "report": "tff",
+  "market": "13874A",
+  "name": "E-MINI S&P 500 - CHICAGO MERCANTILE EXCHANGE",
+  "category": { "code": "leveraged_funds", "label": "Leveraged funds" },
+  "window_weeks": 52,
+  "start": "2026-10-01",
+  "end": "2026-10-18",
+  "signals": [
+    {
+      "date": "2026-10-06",
+      "published_on": "2026-10-09",
+      "open_interest": 1932227,
+      "long": 113223,
+      "short": 528310,
+      "spreading": 48436,
+      "net": -415087,
+      "net_share": -0.214823,
+      "change": -42598,
+      "cot_index": 35.6
+    },
+    {
+      "date": "2026-10-13",
+      "published_on": "2026-10-16",
+      "open_interest": 1931607,
+      "long": 121404,
+      "short": 530130,
+      "spreading": 46956,
+      "net": -408726,
+      "net_share": -0.211599,
+      "change": 6361,
+      "cot_index": 37.9
+    }
+  ],
+  "load": { "report": "tff", "status": "fresh", "...": "..." },
+  "source": "CFTC, Commitments of Traders (https://www.cftc.gov)"
+}
+```
+
+On 13 October 2026, the leveraged funds were short 408,726 E-mini S&P 500 contracts net, 21 % of the open interest: at 37.9 between their lowest and their highest net position of the past 52 weeks.
+
+---
+
+## <span className="api-method get">GET</span> `/cot/extremes`
+
+The latest report of several markets, the COT index farthest from 50 first. A market without index comes last; a market asked without any report stored is listed in `missing`.
+
+| Parameter | Default | Description |
+|---|---|---|
+| `report` | `legacy` | `legacy`, `tff` or `disaggregated` |
+| `market` | the key markets of the report | Up to 20 codes, repeated or separated by commas |
+| `category` | the speculators of the report | A type of trader of the report |
+| `window` | `156` | Weeks of the COT index window |
+
+```bash
+curl -s -H "X-API-KEY: $FONREX_API_KEY" \
+  "http://localhost:5000/cot/extremes?report=tff&window=52"
+```
+
+```json
+{
+  "report": "tff",
+  "category": { "code": "leveraged_funds", "label": "Leveraged funds" },
+  "window_weeks": 52,
+  "markets": [
+    {
+      "market": "099741",
+      "name": "EURO FX - CHICAGO MERCANTILE EXCHANGE",
+      "signal": { "date": "2026-10-13", "net": -68001, "net_share": -0.077756, "change": -23740, "cot_index": 0.0, "...": "..." }
+    },
+    {
+      "market": "133741",
+      "name": "BITCOIN - CHICAGO MERCANTILE EXCHANGE",
+      "signal": { "date": "2026-10-13", "net": -5844, "net_share": -0.281611, "change": 1008, "cot_index": 95.5, "...": "..." }
+    },
+    {
+      "market": "1170E1",
+      "name": "VIX FUTURES - CBOE FUTURES EXCHANGE",
+      "signal": { "date": "2026-10-13", "net": 1105, "net_share": 0.002464, "change": -4389, "cot_index": 90.7, "...": "..." }
+    }
+  ],
+  "missing": [],
+  "load": { "report": "tff", "status": "fresh", "...": "..." },
+  "source": "CFTC, Commitments of Traders (https://www.cftc.gov)"
+}
+```
+
+The list is shortened here: the answer gives every key market. On 13 October 2026, the leveraged funds were at their shortest of the past 52 weeks on the euro (index 0).
+
+---
+
+## <span className="api-method post">POST</span> `/cot/refresh`
+
+Reads years of the reports from the CFTC into the database. Needs a full-access key: a read-only key gets `403`.
+
+| Parameter | Default | Description |
+|---|---|---|
+| `report` | the three | `legacy`, `tff`, `disaggregated`, repeated |
+| `start_year`, `end_year` | the current year | Years read (1986 or later) |
+| `force` | `false` | Read even the years that are up to date |
+
+```bash
+curl -s -X POST -H "X-API-KEY: $FONREX_API_KEY" \
+  "http://localhost:5000/cot/refresh?report=tff&start_year=2006"
+```
+
+The answer lists one `load` per report.
+
+## Errors
+
+| Status | When |
+|---|---|
+| `404` | No report of the market in the period (`GET /cot/markets` lists the markets stored) |
+| `422` | Unknown report, a market that is not a CFTC code (six letters, digits or `+`), a type of trader of another report (`managed_money` in `tff`), a window out of 1 to 520, more than 20 markets, `start` after `end` |
+| `502` | The CFTC could not be read and nothing is stored |
+| `503` | No database |
+
+## OpenBB widgets
+
+- **Fonrex COT Positioning** (`fonrex_cot_positioning`): the net position of a type of trader in one market (area, left axis) and its COT index (dotted, right axis, 0 to 100), over the last 3 years; the leveraged funds on the E-mini S&P 500 by default. `market`, `report`, `category`, `window` and `start` as above.
+- **Fonrex COT Extremes** (`fonrex_cot_extremes`): the latest report of the key markets of a report, the most extreme first, with the net position, its share of the open interest, its change and a reading (*Extreme long* at 90 or more, *Extreme short* at 10 or less).
+
+Both are in the *Macro Context* tab of the **Fonrex — Screener & Macro** dashboard, on the TFF report. See the [OpenBB Workspace guide](../guides/openbb-workspace.md).
 
 
 
@@ -3034,7 +3370,7 @@ A read-only key (`FONREX_READ_ONLY_API_KEYS`) is enough for every widget. CORS a
 
 ## Discovery files
 
-- `GET /widgets.json` — the 26 widgets: for each one, its name, category, type, route and parameters (`integrations/openbb/widgets.json`).
+- `GET /widgets.json` — the 28 widgets: for each one, its name, category, type, route and parameters (`integrations/openbb/widgets.json`).
 - `GET /apps.json` — two pre-assembled dashboards, **Fonrex — EU Markets** and **Fonrex — Screener & Macro** (`integrations/openbb/apps.json`).
 
 ## Routes
@@ -3067,6 +3403,8 @@ A read-only key (`FONREX_READ_ONLY_API_KEYS`) is enough for every widget. CORS a
 | `fonrex_macro_indicator_chart` | chart | `GET /openbb/macro/indicators/{indicator}/chart` (`geo` EA,DE,FR,IT,ES and 10 years by default) | `/macro/indicators/{indicator}` |
 | `fonrex_treasury_curve` | chart | `GET /openbb/macro/treasury/curve/chart` (`curve` nominal, `compare` 1M,1Y by default) | `/macro/treasury/curve` |
 | `fonrex_treasury_spread` | chart | `GET /openbb/macro/treasury/series/chart` (`tenor` 10Y-2Y and 10 years by default) | `/macro/treasury/series` |
+| `fonrex_cot_positioning` | chart | `GET /openbb/cot/signals/chart` (`market` 13874A, `report` tff, the speculators and 3 years by default) | `/cot/signals` |
+| `fonrex_cot_extremes` | table | `GET /openbb/cot/extremes` (`report` tff, its key markets by default) | `/cot/extremes` |
 
 The macro widget takes a `currency` parameter (`USD`, `EUR`, or empty for both) and shows one card per series: the US 10-year rate, the euro AAA 10-year rate, the ECB deposit rate and the CISS stress index.
 
@@ -3911,7 +4249,7 @@ description: "Connect your self-hosted Fonrex instance to OpenBB Workspace widge
 
 1. In OpenBB Workspace, right-click on the dashboard and select **Add data** (or open the backend connections).
 2. Enter the URL of your instance, e.g. `http://localhost:5000` or `https://myfonrex.share.zrok.io`.
-3. OpenBB reads `/widgets.json` and lists the 26 widgets. This file and `/apps.json` answer without a key.
+3. OpenBB reads `/widgets.json` and lists the 28 widgets. This file and `/apps.json` answer without a key.
 
 ## Step 2 — Add the key
 
@@ -3936,7 +4274,7 @@ Every `/openbb/...` route requires it.
 
 **Fonrex — Screener & Macro** — discovery:
 - *Screener*: technical screener (e.g. RSI < 30)
-- *Macro Context*: FRED and ECB rates (USD and EUR), Eurostat indicators of the euro area, inflation of the main euro area countries over time, the US Treasury curve (today, 1 month and 1 year before) and the 10-year minus 2-year spread, and index constituents
+- *Macro Context*: FRED and ECB rates (USD and EUR), Eurostat indicators of the euro area, inflation of the main euro area countries over time, the US Treasury curve (today, 1 month and 1 year before) and the 10-year minus 2-year spread, the positioning of the leveraged funds on the E-mini S&P 500 and the most extreme positioning of the financial futures (CFTC), and index constituents
 
 Import them from the Apps menu of OpenBB, or add widgets one by one to your own dashboard.
 
@@ -3970,6 +4308,8 @@ Import them from the Apps menu of OpenBB, or add widgets one by one to your own 
 | `fonrex_macro_indicator_chart` | Fonrex Macro Indicator Chart | Macro | chart |
 | `fonrex_treasury_curve` | Fonrex Treasury Curve | Macro | chart |
 | `fonrex_treasury_spread` | Fonrex Treasury Spread | Macro | chart |
+| `fonrex_cot_positioning` | Fonrex COT Positioning | Macro | chart |
+| `fonrex_cot_extremes` | Fonrex COT Extremes | Macro | table |
 | `fonrex_factor_exposure` | Fonrex Factor Exposure | Factors | table |
 | `fonrex_factor_returns` | Fonrex Factor Returns | Factors | chart |
 
@@ -4276,6 +4616,9 @@ These tables are written by the deep enrichment from Yahoo Finance (`/fundamenta
 | `macro_series_loads` | One row per series (indicator and country): when it was last read, first and last period, last update announced by Eurostat |
 | `yield_curve_points` | Daily yield curves of the US Treasury (nominal since 1990, real since 2003): one rate per `(source, curve, rate_date, tenor)`, as a ratio (a real yield may be negative); `tenor_months` sorts a curve; a maturity not published on a day has no row |
 | `yield_curve_loads` | One row per year of a curve: when it was last read, number of days, first and last day. A past year read after its end is not read again |
+| `cot_weeks` | Commitments of Traders of the CFTC (`legacy` since 1986, `tff` and `disaggregated` since June 2006): one line per `(report, market_code, report_date)`, the market being its CFTC contract market code (`13874A`), with the name of the market that week, its contract units and its open interest |
+| `cot_positions` | The positions of each type of trader on a line, in contracts: `long`, `short`, and `spreading` for the types that have it (a non-reportable position may be negative in the Legacy history); removed with their line |
+| `cot_loads` | One row per year of a report: when it was last read, the file that held it, number of report dates, first and last. The years up to 2016 come from one history file per report |
 | `usage_logs` | One row per API request, written in background batches; IP not kept unless `USAGE_LOG_IP` asks for it; purged after `USAGE_LOG_RETENTION_DAYS` |
 
 ## Factors and exchange rates
@@ -4340,6 +4683,7 @@ Alembic owns the schema, including the TimescaleDB hypertables, compression and 
 | 022 | `022_macro_observations.py` | `macro_observations` and `macro_series_loads`: the Eurostat indicators, period by period |
 | 023 | `023_xbrl_facts.py` | `xbrl_facts` and `sec_company_loads`: the facts of the XBRL filings of the SEC |
 | 024 | `024_yield_curves.py` | `yield_curve_points` and `yield_curve_loads`: the daily yield curves of the US Treasury |
+| 025 | `025_cot_reports.py` | `cot_weeks`, `cot_positions` and `cot_loads`: the Commitments of Traders reports of the CFTC |
 
 ## How migrations run
 
@@ -4354,7 +4698,7 @@ Migration 014 first deletes the TimescaleDB jobs of the price tables (waiting fo
 alembic revision -m "describe_the_change"
 ```
 
-Rename the new file of `alembic/versions/` and set its identifiers after the last migration (`revision = "025"`, `down_revision = "024"`, file `025_describe_the_change.py`), then:
+Rename the new file of `alembic/versions/` and set its identifiers after the last migration (`revision = "026"`, `down_revision = "025"`, file `026_describe_the_change.py`), then:
 
 ```bash
 alembic upgrade head
@@ -4541,6 +4885,7 @@ Optional tokens: `BARRONS_TOKEN`, `MARKETWATCH_TOKEN`, `WSJ_TOKEN`.
 | `IndexConstituents` | Wikipedia | `/index/{index_name}/constituents` |
 | `OpenFIGI` | openfigi.com | Loaded, not used by any route today |
 | `Treasury` | home.treasury.gov, daily par yield curves | `/macro/treasury/curve`, `/macro/treasury/series`, and the US risk-free rate of the DCF when FRED gives none |
+| `CFTC` | cftc.gov, weekly Commitments of Traders reports (Legacy, TFF, Disaggregated) | `/cot/markets`, `/cot/positions`, `/cot/signals`, `/cot/extremes` |
 
 ## Health
 
@@ -5378,6 +5723,13 @@ description: "Project history, feature additions, schema migrations, and version
 - Kept day by day in `yield_curve_points` (migration 024): a year is read only when a request needs it, a past year read after its end never again, the current year after `TREASURY_REFRESH_HOURS` (new setting, 12 by default).
 - **The US risk-free rate of the DCF without FRED key**: when FRED gives no rate, the 10-year rate of the Treasury curve is used (`treasury_live`, `treasury_cached`, `treasury_stale`) instead of `DCF_RISK_FREE_RATE`.
 - Two **OpenBB widgets** (26 in all): the curve of the day with the curves of 1 month and 1 year before, and the 10-year minus 2-year spread, in the *Macro Context* tab of the Screener & Macro app.
+
+### CFTC Commitments of Traders
+- **The weekly Commitments of Traders reports of the CFTC**, free files without key: Legacy since 1986, Traders in Financial Futures and Disaggregated since June 2006, futures only. The positions of the speculators (non-commercial, leveraged funds, managed money) and of every other type of trader, in the US futures markets: stock indices, rates, currencies, commodities. See [Commitments of Traders](../api-reference/cot.md).
+- `GET /cot/markets` lists the markets by CFTC code; `GET /cot/positions` gives every type of trader of a market; `GET /cot/signals` the **net position**, its share of the open interest, its change and the **COT index** (0 to 100 over a window of weeks); `GET /cot/extremes` the most extreme positioning of the key markets; `POST /cot/refresh` and `scripts/load_cot.py` read years on demand.
+- Each report date comes with its **estimated day of publication** (the Friday after it), for backtests without look-ahead.
+- Kept week by week in `cot_weeks` and `cot_positions` (migration 025): a year is read only when a request needs it, the years up to 2016 once, the current year after `COT_REFRESH_HOURS` (new setting, 24 by default).
+- Two **OpenBB widgets** (28 in all): the positioning of a market with its COT index, and the most extreme positioning of the key markets, in the *Macro Context* tab of the Screener & Macro app.
 
 ## October 2026 — Secure defaults, per-listing prices, verified provider data
 

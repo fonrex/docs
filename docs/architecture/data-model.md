@@ -116,6 +116,9 @@ These tables are written by the deep enrichment from Yahoo Finance (`/fundamenta
 | `macro_series_loads` | One row per series (indicator and country): when it was last read, first and last period, last update announced by Eurostat |
 | `yield_curve_points` | Daily yield curves of the US Treasury (nominal since 1990, real since 2003): one rate per `(source, curve, rate_date, tenor)`, as a ratio (a real yield may be negative); `tenor_months` sorts a curve; a maturity not published on a day has no row |
 | `yield_curve_loads` | One row per year of a curve: when it was last read, number of days, first and last day. A past year read after its end is not read again |
+| `cot_weeks` | Commitments of Traders of the CFTC (`legacy` since 1986, `tff` and `disaggregated` since June 2006): one line per `(report, market_code, report_date)`, the market being its CFTC contract market code (`13874A`), with the name of the market that week, its contract units and its open interest |
+| `cot_positions` | The positions of each type of trader on a line, in contracts: `long`, `short`, and `spreading` for the types that have it (a non-reportable position may be negative in the Legacy history); removed with their line |
+| `cot_loads` | One row per year of a report: when it was last read, the file that held it, number of report dates, first and last. The years up to 2016 come from one history file per report |
 | `usage_logs` | One row per API request, written in background batches; IP not kept unless `USAGE_LOG_IP` asks for it; purged after `USAGE_LOG_RETENTION_DAYS` |
 
 ## Factors and exchange rates

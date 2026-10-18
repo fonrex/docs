@@ -15,7 +15,7 @@ Fonrex 从 [Eurostat](https://ec.europa.eu/eurostat)（免费，无需密钥）�
 | `GET /macro/indicators/{indicator}` | 一个指标随时间的变化，最多 10 个国家 |
 | `POST /macro/indicators/refresh` | 按需从 Eurostat 读取序列 |
 
-FRED 和欧洲央行的利率（无风险利率、存款便利利率、CISS）仍在 [`GET /macro/rates`](./valuation-dcf.md)；美国收益率曲线（每天所有期限）位于 [`GET /macro/treasury/curve`](./treasury-curves.md)。
+FRED 和欧洲央行的利率（无风险利率、存款便利利率、CISS）仍在 [`GET /macro/rates`](./valuation-dcf.md)；美国收益率曲线（每天所有期限）位于 [`GET /macro/treasury/curve`](./treasury-curves.md)；美国期货市场中投机者的头寸位于 [`GET /cot/signals`](./cot.md)。
 
 ## 指标
 
