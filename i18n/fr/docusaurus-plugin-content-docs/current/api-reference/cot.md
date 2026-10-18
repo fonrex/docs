@@ -75,7 +75,7 @@ La CFTC publie un fichier par rapport et par an, et un seul fichier pour toutes 
 
 Un fichier est lu en entier ou pas du tout : une mise en page changée, une date hors du fichier, une ligne donnée deux fois ou des positions qui ne retombent pas sur l'open interest le font refuser, et ce qui était en base est gardé.
 
-Pour charger d'un coup tout l'historique des trois rapports (quelques minutes) :
+Pour charger d'un coup tout l'historique des trois rapports (environ 15 à 20 minutes) :
 
 ```bash
 docker compose exec fonrex-api python scripts/load_cot.py
@@ -111,7 +111,7 @@ curl -s -H "X-API-KEY: $FONREX_API_KEY" \
       "contract_units": "($50 X S&P 500 INDEX)",
       "first_date": "2006-06-13",
       "last_date": "2026-10-13",
-      "...": "...",
+      "weeks": 1062,
       "key": true
     }
   ],
@@ -314,6 +314,6 @@ La réponse liste un `load` par rapport.
 ## Widgets OpenBB
 
 - **Fonrex COT Positioning** (`fonrex_cot_positioning`) : la position nette d'un type d'intervenant sur un marché (aire, axe de gauche) et son COT index (pointillés, axe de droite, de 0 à 100), sur les 3 dernières années ; les leveraged funds sur le E-mini S&P 500 par défaut. `market`, `report`, `category`, `window` et `start` comme ci-dessus.
-- **Fonrex COT Extremes** (`fonrex_cot_extremes`) : le dernier rapport des marchés clés d'un rapport, le plus extrême en premier, avec la position nette, sa part de l'open interest, sa variation et une lecture (*Extreme long* à 90 ou plus, *Extreme short* à 10 ou moins).
+- **Fonrex COT Extremes** (`fonrex_cot_extremes`) : le dernier rapport des marchés clés d'un rapport, le plus extrême en premier, avec la position nette, sa part de l'open interest, sa variation et une lecture (*Top of window* à 90 ou plus, *Bottom of window* à 10 ou moins). La lecture dit où se trouve la position nette dans sa fenêtre, pas si elle est acheteuse ou vendeuse : une position nette vendeuse qui n'a jamais été aussi petite se lit *Top of window*.
 
 Les deux sont dans l'onglet *Macro Context* du tableau de bord **Fonrex — Screener & Macro**, sur le rapport TFF. Voir le [guide OpenBB Workspace](../guides/openbb-workspace.md).

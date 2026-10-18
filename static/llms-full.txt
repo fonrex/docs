@@ -2509,7 +2509,7 @@ The CFTC publishes one file per report and year, and one file for every year up 
 
 A file is read whole or not at all: a changed layout, a date outside the file, a line given twice, or positions that do not add up to the open interest refuse it, and what was stored is kept.
 
-To load the whole history of the three reports at once (a few minutes):
+To load the whole history of the three reports at once (about 15 to 20 minutes):
 
 ```bash
 docker compose exec fonrex-api python scripts/load_cot.py
@@ -2545,7 +2545,7 @@ curl -s -H "X-API-KEY: $FONREX_API_KEY" \
       "contract_units": "($50 X S&P 500 INDEX)",
       "first_date": "2006-06-13",
       "last_date": "2026-10-13",
-      "...": "...",
+      "weeks": 1062,
       "key": true
     }
   ],
@@ -2748,7 +2748,7 @@ The answer lists one `load` per report.
 ## OpenBB widgets
 
 - **Fonrex COT Positioning** (`fonrex_cot_positioning`): the net position of a type of trader in one market (area, left axis) and its COT index (dotted, right axis, 0 to 100), over the last 3 years; the leveraged funds on the E-mini S&P 500 by default. `market`, `report`, `category`, `window` and `start` as above.
-- **Fonrex COT Extremes** (`fonrex_cot_extremes`): the latest report of the key markets of a report, the most extreme first, with the net position, its share of the open interest, its change and a reading (*Extreme long* at 90 or more, *Extreme short* at 10 or less).
+- **Fonrex COT Extremes** (`fonrex_cot_extremes`): the latest report of the key markets of a report, the most extreme first, with the net position, its share of the open interest, its change and a reading (*Top of window* at 90 or more, *Bottom of window* at 10 or less). The reading says where the net position stands in its window, not whether it is long or short: a net short position that has never been so small reads *Top of window*.
 
 Both are in the *Macro Context* tab of the **Fonrex — Screener & Macro** dashboard, on the TFF report. See the [OpenBB Workspace guide](../guides/openbb-workspace.md).
 

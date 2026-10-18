@@ -75,7 +75,7 @@ CFTC 每种报告每年发布一个文件，2016 年及以前的所有年份合�
 
 文件要么完整读取，要么完全不读取：版式变化、日期超出文件范围、同一行出现两次或持仓之和与未平仓合约不符，都会导致该文件被拒绝，而已存储的数据保持不变。
 
-一次性加载三种报告的全部历史（需要几分钟）：
+一次性加载三种报告的全部历史（约需 15 到 20 分钟）：
 
 ```bash
 docker compose exec fonrex-api python scripts/load_cot.py
@@ -111,7 +111,7 @@ curl -s -H "X-API-KEY: $FONREX_API_KEY" \
       "contract_units": "($50 X S&P 500 INDEX)",
       "first_date": "2006-06-13",
       "last_date": "2026-10-13",
-      "...": "...",
+      "weeks": 1062,
       "key": true
     }
   ],
@@ -314,6 +314,6 @@ curl -s -X POST -H "X-API-KEY: $FONREX_API_KEY" \
 ## OpenBB 小组件
 
 - **Fonrex COT Positioning**（`fonrex_cot_positioning`）：某类交易商在某一市场的净持仓（面积图，左轴）及其 COT 指数（虚线，右轴，0 到 100），显示最近 3 年；默认为杠杆基金在 E-mini 标普 500 上的头寸。`market`、`report`、`category`、`window` 和 `start` 同上。
-- **Fonrex COT Extremes**（`fonrex_cot_extremes`）：某种报告中各重点市场的最新一期报告，最极端的排在最前，附净持仓、占未平仓合约的比例、变化以及解读（指数 90 及以上为 *Extreme long*，10 及以下为 *Extreme short*）。
+- **Fonrex COT Extremes**（`fonrex_cot_extremes`）：某种报告中各重点市场的最新一期报告，最极端的排在最前，附净持仓、占未平仓合约的比例、变化以及解读（指数 90 及以上为 *Top of window*，10 及以下为 *Bottom of window*）。解读说明的是净持仓在窗口中所处的位置，而不是多头或空头：从未如此小的净空头持仓也显示为 *Top of window*。
 
 两者都位于 **Fonrex — Screener & Macro** 仪表板的 *Macro Context* 标签页中，使用 TFF 报告。参见 [OpenBB Workspace 指南](../guides/openbb-workspace.md)。
