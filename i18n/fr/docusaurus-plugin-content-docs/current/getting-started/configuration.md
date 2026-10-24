@@ -115,6 +115,7 @@ Les clients envoient une clé sous la forme `Authorization: Bearer <key>` ou `X-
 | `SEC_EDGAR_EMAIL` | `contact@fonrex.io` | Adresse de contact envoyée à SEC EDGAR (exigée par la politique de la SEC) : mettez la vôtre |
 | `SEC_XBRL_REFRESH_HOURS` | `24` | Heures avant que les faits XBRL d'une société soient relus depuis la SEC (1 à 720) |
 | `SEC_CHECK_TOLERANCE` | `0.01` | Plus grand écart relatif entre Yahoo et la SEC encore compté comme un accord, sous forme de ratio (0 à 0,5) |
+| `ESEF_REFRESH_HOURS` | `24` | Heures avant de relire l'index des rapports ESEF d'une société (1 à 720) ; un rapport déjà lu n'est jamais relu, sauf si son fichier change |
 | `OPENFIGI_API_KEY` | *(vide)* | Clé OpenFIGI facultative (limite de débit plus élevée) |
 | `BARRONS_TOKEN`, `MARKETWATCH_TOKEN`, `WSJ_TOKEN` | *(vide)* | Jetons facultatifs de ces sites web |
 | `FONREX_PROVIDER_MAX_CONCURRENCY` | `4` | Requêtes qu'un fournisseur peut exécuter en même temps (1 à 64) |

@@ -44,6 +44,7 @@ description: "/fundamental 查询的数据提供方以及专用数据提供方"
 | `OpenFIGI` | openfigi.com | 已加载，目前没有任何路由使用 |
 | `Treasury` | home.treasury.gov，每日平价收益率曲线 | `/macro/treasury/curve`、`/macro/treasury/series`，以及 FRED 不提供时 DCF 的美国无风险利率 |
 | `CFTC` | cftc.gov，每周交易商持仓报告（Legacy、TFF、Disaggregated） | `/cot/markets`、`/cot/positions`、`/cot/signals`、`/cot/extremes` |
+| `ESEF` | filings.xbrl.org（欧洲上市公司的 ESEF 年度报告）和 GLEIF（ISIN 对应的 LEI） | `/esef/{ticker}/statements`、`/esef/{ticker}/check`、`/esef/{ticker}/filings` |
 
 ## 健康状况
 

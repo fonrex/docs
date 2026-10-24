@@ -74,7 +74,7 @@ erDiagram
 |---|---|
 | `assets` | One row per ISIN: partial unique index `uq_assets_isin_not_null` (`WHERE isin IS NOT NULL`) |
 | `asset_listings` | Unique on `(asset_id, ticker, exchange, currency)` (`uq_asset_listing_identity`); `is_primary` marks the default listing |
-| `asset_mappings` | Unique on `(asset_listing_id, provider_name)`. A mapping without listing applies to every listing of the instrument. `source` says where the identifier comes from: `csv_import`, `manual`, `isin_search`, `ticker_check`, `symbol_not_found`. The CIK of the SEC is a mapping of the instrument (provider `SEC`, no listing) |
+| `asset_mappings` | Unique on `(asset_listing_id, provider_name)`. A mapping without listing applies to every listing of the instrument. `source` says where the identifier comes from: `csv_import`, `manual`, `isin_search`, `ticker_check`, `symbol_not_found`. The CIK of the SEC is a mapping of the instrument (provider `SEC`, no listing), and so is the LEI of its ESEF filings (provider `LEI`, source `isin_check`) |
 
 The Yahoo Finance mapping of a listing holds its **verified symbol** — found from the ISIN and checked against the listing's currency — or, with `source = 'manual'`, a symbol you set by hand.
 
@@ -97,6 +97,9 @@ The Yahoo Finance mapping of a listing holds its **verified symbol** — found f
 | `financial_statements` | One row per statement type (income, balance, cash flow), fiscal period and frequency. A fiscal year is three rows; calculations put them together with `financials/fiscal_years.py`. `currency` is the currency of the statements given by Yahoo (`NULL` when unknown); the DCF is made in it |
 | `xbrl_facts` | Facts of the XBRL filings of the SEC, kept apart from Yahoo: one value per `(cik, taxonomy, concept, unit, period_end, duration_days)`. `duration_days` is 0 for a balance at a date. A restatement replaces the value, and `accession`, `form` and `filed` name the filing it comes from |
 | `sec_company_loads` | One row per company (CIK): name at the SEC, when its facts were last read, latest filing kept, number of facts |
+| `esef_filings` | The ESEF filings of the index of filings.xbrl.org, one row per `fxo_id`: LEI of the company, period the index gives (can be wrong), country, links, counts of errors, and what the last reading found: `read_status` (`read`, `refused` with its reason, `missing`), `report_end` (the true period, from the figures), counts of values, breakdowns left out and conflicts dropped |
+| `esef_facts` | The totals of the ESEF filings, kept apart from Yahoo: one value per `(lei, taxonomy, concept, unit, period_end, duration_days)`; `taxonomy` is `ifrs-full` or the prefix of an extension of the company. A restatement replaces the value; `fxo_id` names the filing, and the values go with it |
+| `esef_entity_loads` | One row per company (LEI): legal name, when its filings were last read, number of filings, latest period read, number of values |
 | `earnings_history`, `earnings_trend` | Actual vs estimated EPS; analyst estimates for `0q`, `+1q`, `0y`, `+1y` |
 | `analyst_ratings` | Consensus, target price, rating counts |
 | `esg_scores` | E/S/G scores and 15 controversy flags |

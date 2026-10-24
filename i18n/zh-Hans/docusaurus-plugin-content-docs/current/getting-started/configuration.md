@@ -115,6 +115,7 @@ Fonrex 从环境变量读取设置。将 `.env.example` 复制为 `.env` 并进�
 | `SEC_EDGAR_EMAIL` | `contact@fonrex.io` | 发送给 SEC EDGAR 的联系地址（SEC 政策要求）：请填写您自己的地址 |
 | `SEC_XBRL_REFRESH_HOURS` | `24` | 再次从 SEC 读取一家公司 XBRL 事实前的小时数（1 到 720） |
 | `SEC_CHECK_TOLERANCE` | `0.01` | Yahoo 与 SEC 之间仍视为一致的最大相对差距，以比率表示（0 到 0.5） |
+| `ESEF_REFRESH_HOURS` | `24` | 重新读取一家公司 ESEF 报告索引之前的小时数（1 到 720）；已读取的报告不会再次读取，除非其文件发生变化 |
 | `OPENFIGI_API_KEY` | *（空）* | 可选的 OpenFIGI 密钥（更高的速率限制） |
 | `BARRONS_TOKEN`、`MARKETWATCH_TOKEN`、`WSJ_TOKEN` | *（空）* | 这些网站的可选 token |
 | `FONREX_PROVIDER_MAX_CONCURRENCY` | `4` | 单个数据提供方可同时执行的请求数（1 到 64） |

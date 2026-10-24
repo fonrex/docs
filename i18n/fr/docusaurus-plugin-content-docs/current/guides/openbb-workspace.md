@@ -18,7 +18,7 @@ description: "Connecter votre instance Fonrex auto-hébergée aux widgets et tab
 
 1. Dans OpenBB Workspace, faites un clic droit sur le tableau de bord et sélectionnez **Add data** (ou ouvrez les connexions de backend).
 2. Saisissez l'URL de votre instance, par exemple `http://localhost:5000` ou `https://myfonrex.share.zrok.io`.
-3. OpenBB lit `/widgets.json` et liste les 28 widgets. Ce fichier et `/apps.json` répondent sans clé.
+3. OpenBB lit `/widgets.json` et liste les 29 widgets. Ce fichier et `/apps.json` répondent sans clé.
 
 ## Étape 2 — Ajouter la clé
 
@@ -49,6 +49,8 @@ Importez-les depuis le menu Apps d'OpenBB, ou ajoutez les widgets un par un à v
 
 **Fonrex SEC Check** n'est dans aucun des deux tableaux de bord : il lui faut un ticker américain qui dépose auprès de la SEC (`AAPL`, `MSFT`…), et les deux tableaux de bord suivent des tickers européens. Ajoutez-le à votre propre tableau de bord ; voir [Dépôts SEC](../api-reference/sec-filings.md).
 
+**Fonrex ESEF Check** n'y est pas non plus : ajoutez-le à votre propre tableau de bord avec une action de l'Union européenne (`AIR.PA`, `TTE.PA`, `BNP.PA`…) pour vérifier ses états Yahoo par rapport à son rapport annuel ; voir [Rapports ESEF](../api-reference/esef-filings.md).
+
 ## Widgets
 
 | Widget | Nom | Catégorie | Type |
@@ -57,6 +59,7 @@ Importez-les depuis le menu Apps d'OpenBB, ou ajoutez les widgets un par un à v
 | `fonrex_fundamentals_deep` | Fonrex Deep Fundamentals | Fundamentals | table |
 | `fonrex_insider_transactions` | Fonrex Insider Transactions | Fundamentals | table |
 | `fonrex_sec_check` | Fonrex SEC Check | Fundamentals | table |
+| `fonrex_esef_check` | Fonrex ESEF Check | Fundamentals | table |
 | `fonrex_etf_details` | Fonrex ETF Details | Fundamentals | table |
 | `fonrex_eod` | Fonrex EOD History | Historical | chart |
 | `fonrex_history` | Fonrex OHLCV History | Historical | chart |

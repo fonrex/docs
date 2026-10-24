@@ -54,6 +54,15 @@ description: "Project history, feature additions, schema migrations, and version
 - Kept week by week in `cot_weeks` and `cot_positions` (migration 025): a year is read only when a request needs it, the years up to 2016 once, the current year after `COT_REFRESH_HOURS` (new setting, 24 by default).
 - Two **OpenBB widgets** (28 in all): the positioning of a market with its COT index, and the most extreme positioning of the key markets, in the *Macro Context* tab of the Screener & Macro app.
 
+### ESEF filings (European annual reports)
+- **Annual statements of European listed companies**, read from their ESEF filings on filings.xbrl.org (XBRL International, free, no key): `GET /esef/{ticker}/statements` gives each figure with its IFRS concept and a link to the filing in the viewer. See [ESEF filings](../api-reference/esef-filings.md).
+- **The Yahoo statements checked against the annual report**: `GET /esef/{ticker}/check`, with the rules of the SEC check (`match`, `mismatch`, `missing_yahoo`, `missing_esef`). `GET /esef/{ticker}/filings` lists the filings and what their reading found; `POST /esef/{ticker}/refresh` reads a company again at once.
+- **The company is found by the ISIN, never by the ticker**: GLEIF gives the LEI of the ISIN, and its name must match the name of the instrument, the legal forms left out.
+- **One filing per period** (one language, the latest version), each read once; the period of every figure comes from the figure itself, never from the index (a June fiscal year listed at 31 December). TotalEnergies reports in US dollars, and its figures are in dollars.
+- Kept in `esef_filings`, `esef_facts` and `esef_entity_loads` (migration 026); new setting `ESEF_REFRESH_HOURS`; `scripts/load_esef.py` reads the filings of every share of the catalogue. The IFRS mapping now knows `RevenueFromContractsWithCustomers`, and the `ProfitLoss` and `Equity` of a group without minority interests.
+- One **OpenBB widget** (29 in all): *Fonrex ESEF Check*, the check as a table, gaps first.
+- filings.xbrl.org states that its index is not complete: no filing of a German company is found.
+
 ## October 2026 — Secure defaults, per-listing prices, verified provider data
 
 Merged on `main` on 8 October 2026 (pull request #15).

@@ -18,7 +18,7 @@ description: "Connect your self-hosted Fonrex instance to OpenBB Workspace widge
 
 1. In OpenBB Workspace, right-click on the dashboard and select **Add data** (or open the backend connections).
 2. Enter the URL of your instance, e.g. `http://localhost:5000` or `https://myfonrex.share.zrok.io`.
-3. OpenBB reads `/widgets.json` and lists the 28 widgets. This file and `/apps.json` answer without a key.
+3. OpenBB reads `/widgets.json` and lists the 29 widgets. This file and `/apps.json` answer without a key.
 
 ## Step 2 — Add the key
 
@@ -49,6 +49,8 @@ Import them from the Apps menu of OpenBB, or add widgets one by one to your own 
 
 **Fonrex SEC Check** is in neither dashboard: it needs a US ticker that files with the SEC (`AAPL`, `MSFT`…), and the two dashboards follow European ones. Add it to your own dashboard; see [SEC filings](../api-reference/sec-filings.md).
 
+**Fonrex ESEF Check** is not in them either: add it to your own dashboard with a share of the European Union (`AIR.PA`, `TTE.PA`, `BNP.PA`…) to check its Yahoo statements against its annual report; see [ESEF filings](../api-reference/esef-filings.md).
+
 ## Widgets
 
 | Widget | Name | Category | Type |
@@ -57,6 +59,7 @@ Import them from the Apps menu of OpenBB, or add widgets one by one to your own 
 | `fonrex_fundamentals_deep` | Fonrex Deep Fundamentals | Fundamentals | table |
 | `fonrex_insider_transactions` | Fonrex Insider Transactions | Fundamentals | table |
 | `fonrex_sec_check` | Fonrex SEC Check | Fundamentals | table |
+| `fonrex_esef_check` | Fonrex ESEF Check | Fundamentals | table |
 | `fonrex_etf_details` | Fonrex ETF Details | Fundamentals | table |
 | `fonrex_eod` | Fonrex EOD History | Historical | chart |
 | `fonrex_history` | Fonrex OHLCV History | Historical | chart |

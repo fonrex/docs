@@ -74,7 +74,7 @@ erDiagram
 |---|---|
 | `assets` | Une ligne par ISIN : index unique partiel `uq_assets_isin_not_null` (`WHERE isin IS NOT NULL`) |
 | `asset_listings` | Unique sur `(asset_id, ticker, exchange, currency)` (`uq_asset_listing_identity`) ; `is_primary` marque la cotation par défaut |
-| `asset_mappings` | Unique sur `(asset_listing_id, provider_name)`. Une correspondance sans cotation s'applique à toutes les cotations de l'instrument. `source` indique d'où vient l'identifiant : `csv_import`, `manual`, `isin_search`, `ticker_check`, `symbol_not_found`. Le CIK de la SEC est une correspondance de l'instrument (fournisseur `SEC`, sans cotation) |
+| `asset_mappings` | Unique sur `(asset_listing_id, provider_name)`. Une correspondance sans cotation s'applique à toutes les cotations de l'instrument. `source` indique d'où vient l'identifiant : `csv_import`, `manual`, `isin_search`, `ticker_check`, `symbol_not_found`. Le CIK de la SEC est une correspondance de l'instrument (fournisseur `SEC`, sans cotation), tout comme le LEI de ses rapports ESEF (fournisseur `LEI`, source `isin_check`) |
 
 La correspondance Yahoo Finance d'une cotation contient son **symbole vérifié** (trouvé à partir de l'ISIN et contrôlé par rapport à la devise de la cotation) ou, avec `source = 'manual'`, un symbole que vous avez saisi à la main.
 
@@ -97,6 +97,9 @@ La correspondance Yahoo Finance d'une cotation contient son **symbole vérifié*
 | `financial_statements` | Une ligne par type d'état (compte de résultat, bilan, flux de trésorerie), période fiscale et fréquence. Un exercice correspond à trois lignes ; les calculs les regroupent avec `financials/fiscal_years.py`. `currency` est la devise des états donnée par Yahoo (`NULL` si inconnue) ; le DCF est fait dans cette devise |
 | `xbrl_facts` | Faits des dépôts XBRL de la SEC, gardés à part de Yahoo : une valeur par `(cik, taxonomy, concept, unit, period_end, duration_days)`. `duration_days` vaut 0 pour un bilan à une date. Un retraitement remplace la valeur, et `accession`, `form` et `filed` nomment le dépôt d'où elle vient |
 | `sec_company_loads` | Une ligne par société (CIK) : nom à la SEC, date de la dernière lecture de ses faits, dépôt le plus récent gardé, nombre de faits |
+| `esef_filings` | Les rapports ESEF de l'index de filings.xbrl.org, une ligne par `fxo_id` : LEI de la société, période donnée par l'index (peut être fausse), pays, liens, nombre d'erreurs, et ce que la dernière lecture a trouvé : `read_status` (`read`, `refused` avec sa raison, `missing`), `report_end` (la vraie période, tirée des chiffres), nombre de valeurs, de ventilations écartées et de conflits écartés |
+| `esef_facts` | Les totaux des rapports ESEF, gardés à part de Yahoo : une valeur par `(lei, taxonomy, concept, unit, period_end, duration_days)` ; `taxonomy` vaut `ifrs-full` ou le préfixe d'une extension de la société. Un retraitement remplace la valeur ; `fxo_id` nomme le rapport, et les valeurs partent avec lui |
+| `esef_entity_loads` | Une ligne par société (LEI) : nom légal, date de la dernière lecture de ses rapports, nombre de rapports, dernière période lue, nombre de valeurs |
 | `earnings_history`, `earnings_trend` | BPA réel contre estimé ; estimations des analystes pour `0q`, `+1q`, `0y`, `+1y` |
 | `analyst_ratings` | Consensus, objectif de cours, nombre de recommandations |
 | `esg_scores` | Scores E/S/G et 15 indicateurs de controverse |
