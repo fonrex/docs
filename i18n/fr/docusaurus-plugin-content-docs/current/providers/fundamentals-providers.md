@@ -44,6 +44,7 @@ Jetons facultatifs : `BARRONS_TOKEN`, `MARKETWATCH_TOKEN`, `WSJ_TOKEN`.
 | `OpenFIGI` | openfigi.com | Chargé, utilisé par aucune route aujourd'hui |
 | `Treasury` | home.treasury.gov, courbes de taux « par » quotidiennes | `/macro/treasury/curve`, `/macro/treasury/series`, et le taux sans risque américain du DCF quand FRED n'en donne pas |
 | `CFTC` | cftc.gov, rapports hebdomadaires Commitments of Traders (Legacy, TFF, Disaggregated) | `/cot/markets`, `/cot/positions`, `/cot/signals`, `/cot/extremes` |
+| `ESEF` | filings.xbrl.org (rapports annuels ESEF des sociétés cotées européennes) et GLEIF (LEI d'un ISIN) | `/esef/{ticker}/statements`, `/esef/{ticker}/check`, `/esef/{ticker}/filings` |
 
 ## Santé
 

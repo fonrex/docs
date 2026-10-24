@@ -54,6 +54,15 @@ description: "Historique du projet, ajouts de fonctionnalités, migrations de sc
 - Gardés semaine par semaine dans `cot_weeks` et `cot_positions` (migration 025) : une année n'est lue que quand une requête en a besoin, les années jusqu'en 2016 une seule fois, l'année en cours après `COT_REFRESH_HOURS` (nouveau réglage, 24 par défaut).
 - Deux **widgets OpenBB** (28 en tout) : le positionnement d'un marché avec son COT index, et les positionnements les plus extrêmes des marchés clés, dans l'onglet *Macro Context* de l'application Screener & Macro.
 
+### Rapports ESEF (rapports annuels européens) {#esef-filings-european-annual-reports}
+- **Les états annuels des sociétés cotées européennes**, lus dans leurs rapports ESEF sur filings.xbrl.org (XBRL International, gratuit, sans clé) : `GET /esef/{ticker}/statements` donne chaque chiffre avec son concept IFRS et un lien vers le rapport dans la visionneuse. Voir [Rapports ESEF](../api-reference/esef-filings.md).
+- **Les états Yahoo vérifiés par rapport au rapport annuel** : `GET /esef/{ticker}/check`, avec les règles de la vérification SEC (`match`, `mismatch`, `missing_yahoo`, `missing_esef`). `GET /esef/{ticker}/filings` liste les rapports et ce que leur lecture a trouvé ; `POST /esef/{ticker}/refresh` relit une société tout de suite.
+- **La société est trouvée par l'ISIN, jamais par le ticker** : GLEIF donne le LEI de l'ISIN, et son nom doit correspondre au nom de l'instrument, formes juridiques mises de côté.
+- **Un rapport par période** (une langue, la dernière version), lu une seule fois ; la période de chaque chiffre vient du chiffre lui-même, jamais de l'index (un exercice clos en juin listé au 31 décembre). TotalEnergies publie en dollars américains, et ses chiffres sont en dollars.
+- Gardés dans `esef_filings`, `esef_facts` et `esef_entity_loads` (migration 026) ; nouveau réglage `ESEF_REFRESH_HOURS` ; `scripts/load_esef.py` lit les rapports de toutes les actions du catalogue. La correspondance IFRS connaît désormais `RevenueFromContractsWithCustomers`, ainsi que le `ProfitLoss` et l'`Equity` d'un groupe sans intérêts minoritaires.
+- Un **widget OpenBB** (29 en tout) : *Fonrex ESEF Check*, la vérification sous forme de tableau, les écarts en premier.
+- filings.xbrl.org indique que son index n'est pas complet : aucun rapport de société allemande n'y figure.
+
 ## Octobre 2026 — Sécurité par défaut, prix par cotation, données fournisseurs vérifiées
 
 Fusionné sur `main` le 8 octobre 2026 (pull request #15).

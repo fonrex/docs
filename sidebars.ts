@@ -40,6 +40,7 @@ const sidebars: SidebarsConfig = {
         'api-reference/treasury-curves',
         'api-reference/cot',
         'api-reference/sec-filings',
+        'api-reference/esef-filings',
         'api-reference/news',
         'api-reference/monitoring',
         'api-reference/specialized',

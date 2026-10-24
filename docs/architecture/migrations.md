@@ -38,6 +38,7 @@ Alembic owns the schema, including the TimescaleDB hypertables, compression and 
 | 023 | `023_xbrl_facts.py` | `xbrl_facts` and `sec_company_loads`: the facts of the XBRL filings of the SEC |
 | 024 | `024_yield_curves.py` | `yield_curve_points` and `yield_curve_loads`: the daily yield curves of the US Treasury |
 | 025 | `025_cot_reports.py` | `cot_weeks`, `cot_positions` and `cot_loads`: the Commitments of Traders reports of the CFTC |
+| 026 | `026_esef_filings.py` | `esef_filings`, `esef_facts` and `esef_entity_loads`: the ESEF filings of European listed companies |
 
 ## How migrations run
 
@@ -52,7 +53,7 @@ Migration 014 first deletes the TimescaleDB jobs of the price tables (waiting fo
 alembic revision -m "describe_the_change"
 ```
 
-Rename the new file of `alembic/versions/` and set its identifiers after the last migration (`revision = "026"`, `down_revision = "025"`, file `026_describe_the_change.py`), then:
+Rename the new file of `alembic/versions/` and set its identifiers after the last migration (`revision = "027"`, `down_revision = "026"`, file `027_describe_the_change.py`), then:
 
 ```bash
 alembic upgrade head

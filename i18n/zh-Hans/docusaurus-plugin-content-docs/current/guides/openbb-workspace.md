@@ -18,7 +18,7 @@ description: "将您自托管的 Fonrex 实例连接到 OpenBB Workspace 的小�
 
 1. 在 OpenBB Workspace 中，右键单击仪表板并选择 **Add data**（或打开后端连接）。
 2. 输入您实例的 URL，例如 `http://localhost:5000` 或 `https://myfonrex.share.zrok.io`。
-3. OpenBB 读取 `/widgets.json` 并列出 28 个小组件。该文件和 `/apps.json` 无需密钥即可响应。
+3. OpenBB 读取 `/widgets.json` 并列出 29 个小组件。该文件和 `/apps.json` 无需密钥即可响应。
 
 ## 第 2 步 — 添加密钥
 
@@ -49,6 +49,8 @@ description: "将您自托管的 Fonrex 实例连接到 OpenBB Workspace 的小�
 
 **Fonrex SEC Check** 不在任何一个仪表板中：它需要向 SEC 申报的美国代码（`AAPL`、`MSFT`……），而这两个仪表板跟踪的是欧洲代码。请将其添加到您自己的仪表板；参见 [SEC 申报](../api-reference/sec-filings.md)。
 
+**Fonrex ESEF Check** 也不在其中：请将它添加到您自己的仪表板，并使用一只欧盟股票（`AIR.PA`、`TTE.PA`、`BNP.PA`……），以其年度报告核对 Yahoo 的报表；参见 [ESEF 报告](../api-reference/esef-filings.md)。
+
 ## 小组件
 
 | 小组件 | 名称 | 类别 | 类型 |
@@ -57,6 +59,7 @@ description: "将您自托管的 Fonrex 实例连接到 OpenBB Workspace 的小�
 | `fonrex_fundamentals_deep` | Fonrex Deep Fundamentals | Fundamentals | table |
 | `fonrex_insider_transactions` | Fonrex Insider Transactions | Fundamentals | table |
 | `fonrex_sec_check` | Fonrex SEC Check | Fundamentals | table |
+| `fonrex_esef_check` | Fonrex ESEF Check | Fundamentals | table |
 | `fonrex_etf_details` | Fonrex ETF Details | Fundamentals | table |
 | `fonrex_eod` | Fonrex EOD History | Historical | chart |
 | `fonrex_history` | Fonrex OHLCV History | Historical | chart |

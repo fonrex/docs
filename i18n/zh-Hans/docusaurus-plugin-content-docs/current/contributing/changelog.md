@@ -54,6 +54,15 @@ description: "项目历史、功能新增、Schema 迁移和版本更新"
 - 按周保存在 `cot_weeks` 和 `cot_positions` 中（迁移 025）：只有在请求需要时才读取某一年，2016 年及以前的年份只读取一次，当年在 `COT_REFRESH_HOURS`（新设置，默认 24）之后重新读取。
 - 两个 **OpenBB 小组件**（共 28 个）：某一市场的头寸及其 COT 指数，以及重点市场中最极端的头寸，位于 Screener & Macro 应用的 *Macro Context* 标签页。
 
+### ESEF 报告（欧洲年度报告） {#esef-filings-european-annual-reports}
+- **欧洲上市公司的年度报表**，从 filings.xbrl.org 上的 ESEF 报告中读取（XBRL International，免费，无需密钥）：`GET /esef/{ticker}/statements` 给出每个数字及其 IFRS 概念，以及在查看器中打开报告的链接。参见 [ESEF 报告](../api-reference/esef-filings.md)。
+- **用年度报告核对 Yahoo 的报表**：`GET /esef/{ticker}/check`，规则与 SEC 核对相同（`match`、`mismatch`、`missing_yahoo`、`missing_esef`）。`GET /esef/{ticker}/filings` 列出报告及其读取结果；`POST /esef/{ticker}/refresh` 立即重新读取一家公司。
+- **按 ISIN 查找公司，从不使用代码**：GLEIF 给出 ISIN 对应的 LEI，其名称必须与金融工具的名称一致，法律形式不计在内。
+- **每个期间一份报告**（一种语言，最新版本），只读取一次；每个数字的期间来自数字本身，从不来自索引（列在 12 月 31 日的 6 月财年）。TotalEnergies 以美元报告，其数字以美元表示。
+- 保存在 `esef_filings`、`esef_facts` 和 `esef_entity_loads` 中（迁移 026）；新设置 `ESEF_REFRESH_HOURS`；`scripts/load_esef.py` 读取目录中所有股票的报告。IFRS 映射现在支持 `RevenueFromContractsWithCustomers`，以及没有少数股东权益的集团的 `ProfitLoss` 和 `Equity`。
+- 一个 **OpenBB 小组件**（共 29 个）：*Fonrex ESEF Check*，以表格形式显示核对结果，差距排在最前。
+- filings.xbrl.org 表示其索引并不完整：找不到任何德国公司的报告。
+
 ## 2026 年 10 月——默认安全、按上市品种存储价格、经过验证的数据提供方数据
 
 于 2026 年 10 月 8 日合并到 `main`（pull request #15）。
