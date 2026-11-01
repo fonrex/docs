@@ -43,7 +43,8 @@ AssetImporter.run()  — batches of 200 rows
   └─ default mappings: YahooFinance and GoogleFinance
 ```
 
-- 金融工具的第一个上市品种是其**主**上市品种；如果尚无主上市品种，则以 USD、GBP、JPY、CHF、CAD 或 AUD 计价的上市品种成为主上市品种。
+- 金融工具的第一个上市品种是其**主**上市品种；如果尚无主上市品种，则以 USD、GBP、JPY、CHF、CAD 或 AUD 计价的上市品种成为主上市品种。之前批次或之前导入已存储的上市品种也会被计入：一个金融工具**最多只有一个主上市品种**，由唯一索引 `uq_asset_listings_one_primary` 保证（迁移 029）。
+- 交易所已知的行（来自文件或 ticker 后缀）只匹配该交易所的上市品种。**没有交易所**的行会匹配同一金融工具、ticker 和货币的上市品种，不论其交易所，优先匹配主上市品种，其次是最早的：补充信息流程会填充导入上市品种的空交易所，再次导入文件不应再创建第二个。
 - 导入过程**不发起任何网络请求**。它写入的 Yahoo Finance 映射就是文件中的 ticker，未经验证：该上市品种的首次数据导入或基本面请求会将其替换为根据 ISIN 和货币验证过的 Yahoo 代码。
 
 ## 命令
@@ -90,6 +91,29 @@ docker compose exec fonrex-api python import_assets.py --enrich-only --file data
 docker compose exec fonrex-api python scripts/clean_isin_duplicates.py --diagnose-only   # read only
 docker compose exec fonrex-api python scripts/clean_isin_duplicates.py --dry-run         # run, then roll back
 docker compose exec fonrex-api python scripts/clean_isin_duplicates.py --create-index    # clean + unique index
+```
+
+## 删除重复的上市品种 {#removing-listing-duplicates}
+
+在上述规则之前，补充信息之后再次导入文件，会在已补充的上市品种旁边再创建一个（交易所为空的）上市品种。`scripts/clean_listing_duplicates.py` 会删除这些重复项并保留最早的那个：
+
+```bash
+docker compose exec fonrex-api python scripts/clean_listing_duplicates.py --dry-run   # 执行后回滚
+docker compose exec fonrex-api python scripts/clean_listing_duplicates.py             # 清理
+docker compose exec fonrex-api python scripts/clean_listing_duplicates.py --isin US0378331005 --dry-run
+```
+
+- 没有价格的重复项会连同其映射一起删除。
+- 有价格的重复项会在报告中列出并保留。每次删除前都会重新检查价格，因此脚本可以在调度器导入数据时运行。
+- 如果被删除的重复项是主上市品种，则保留的上市品种成为主上市品种。
+
+对于有价格的重复项，报告会说明保留的上市品种是否也有价格。如果没有，把价格数据移到保留的上市品种；否则重复项的价格只是同一序列的副本，可以删除。然后再次运行脚本：
+
+```sql
+-- 保留的上市品种没有价格
+UPDATE prices_eod SET asset_listing_id = <kept_id> WHERE asset_listing_id = <duplicate_id>;
+-- 保留的上市品种有自己的价格
+DELETE FROM prices_eod WHERE asset_listing_id = <duplicate_id>;
 ```
 
 ## 下一步

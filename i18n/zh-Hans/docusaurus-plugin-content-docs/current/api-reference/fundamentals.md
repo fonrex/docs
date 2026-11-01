@@ -2,7 +2,7 @@
 id: "fundamentals"
 title: "基本面财务 API 参考"
 sidebar_label: "基本面"
-description: "EODHD 格式的多数据提供方基本面数据，以及已存储的深度基本面数据"
+description: "与 EODHD 兼容格式的多数据提供方基本面数据，以及已存储的深度基本面数据"
 ---
 
 # 基本面财务 API 参考
@@ -25,7 +25,7 @@ description: "EODHD 格式的多数据提供方基本面数据，以及已存储
 | `exchange` | string | — | 交易所，用于选择上市品种 |
 | `currency` | string | — | 货币，用于选择上市品种 |
 | `provider` | string | all | 一个数据提供方名称，或以逗号分隔的多个名称，用于替代全部数据提供方 |
-| `fmt` | string | `eodhd` | `eodhd`（渲染后的文档）或 `raw`（每个数据提供方的原始响应） |
+| `fmt` | string | `eodhd` | `eodhd`（渲染后的文档，与 EODHD 兼容的布局）或 `raw`（每个数据提供方的原始响应） |
 | `nocache` | boolean | `false` | 忽略已缓存的响应 |
 
 ```bash
@@ -33,6 +33,8 @@ curl -s -H "X-API-KEY: $FONREX_API_KEY" "http://localhost:5000/fundamental?ticke
 ```
 
 ### 渲染后的文档（`fmt=eodhd`）
+
+该文档采用与 EODHD 基本面格式兼容的布局（分区和字段名称），以便为该格式编写的工具可以读取。Fonrex 与 EODHD 没有关联，也未获其认可：该名称仅说明文档遵循的格式，Fonrex 不会向 EODHD 发送任何请求。
 
 | 部分 | 内容 |
 |---|---|

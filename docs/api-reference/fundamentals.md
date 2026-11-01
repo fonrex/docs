@@ -2,7 +2,7 @@
 id: "fundamentals"
 title: "Fundamental Financials API Reference"
 sidebar_label: "Fundamentals"
-description: "Multi-provider fundamentals in the EODHD layout and stored deep fundamentals"
+description: "Multi-provider fundamentals in an EODHD-compatible layout and stored deep fundamentals"
 ---
 
 # Fundamental Financials API Reference
@@ -25,7 +25,7 @@ Ratios are ratios: a 0.32 % dividend yield is `0.0032`.
 | `exchange` | string | — | Exchange, to choose a listing |
 | `currency` | string | — | Currency, to choose a listing |
 | `provider` | string | all | One provider name, or several separated by commas, instead of all of them |
-| `fmt` | string | `eodhd` | `eodhd` (rendered document) or `raw` (the answer of each provider) |
+| `fmt` | string | `eodhd` | `eodhd` (rendered document, EODHD-compatible layout) or `raw` (the answer of each provider) |
 | `nocache` | boolean | `false` | Ignore the cached answer |
 
 ```bash
@@ -33,6 +33,8 @@ curl -s -H "X-API-KEY: $FONREX_API_KEY" "http://localhost:5000/fundamental?ticke
 ```
 
 ### The rendered document (`fmt=eodhd`)
+
+The document follows a layout compatible with the EODHD fundamentals format (section and field names), so that tools written for that format can read it. Fonrex is not affiliated with or endorsed by EODHD: the name only says which format the document follows, and no request is sent to EODHD.
 
 | Section | Content |
 |---|---|

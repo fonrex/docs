@@ -21,7 +21,7 @@ export FONREX_API_KEY="frx_live_..."   # the value of FONREX_API_KEY in .env
 AUTH="X-API-KEY: $FONREX_API_KEY"
 ```
 
-您实例的交互式文档位于 `http://localhost:5000/docs`。
+您实例的交互式文档位于 `http://localhost:5000/docs`。点击 **Authorize**，把密钥粘贴到 `X-API-KEY`（或 `Bearer`）中，*Try it out* 调用就会携带它；页面重新加载后 Swagger UI 仍会保留该密钥。
 
 ## 1. 日终价格
 

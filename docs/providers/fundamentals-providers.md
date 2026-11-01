@@ -21,7 +21,7 @@ These names are the keys of the answer and the values accepted by the `provider`
 | `InvestirLesEchos` | investir.lesechos.fr | ISIN | France |
 | `GoogleFinance` | google.com/finance | Ticker with the exchange of the listing (`EPA:AIR`) | Global |
 | `Msn` | msn.com/money | Ticker | Global |
-| `MorningStar` | morningstar | Ticker | Global |
+| `MorningStar` | Morningstar JSON services (screener and `sal-service`) | ISIN, or ticker on the place of its suffix | Global |
 | `Investing` | investing.com | ISIN | Global |
 | `Barrons` | barrons.com | Ticker | US |
 | `wallStreetJournal` | wsj.com | ISIN | US |
@@ -33,6 +33,13 @@ An active mapping of the listing (`provider_url`, then `provider_ticker`) takes 
 In the rendered document, the Yahoo answer and the stored deep fundamentals come first; the scraped providers fill only the trailing P/E, the EPS and the dividend yield when those are missing (Google Finance, Barron's, MarketWatch, WSJ, Investing.com). Every provider answer remains available with `fmt=raw`.
 
 Optional tokens: `BARRONS_TOKEN`, `MARKETWATCH_TOKEN`, `WSJ_TOKEN`.
+
+### What some providers read
+
+- **MorningStar** never reads the quote page of global.morningstar.com (filled by JavaScript, it answers a script with an AWS WAF challenge). The screener of Morningstar turns an ISIN, or a ticker sent without its Yahoo suffix, into the identifier of a share (`0P0000OQN8`): only a share whose ISIN is the one asked, or whose ticker is, on the place the suffix names (`AIR.PA` is Paris, never AAR Corp in New York). Three services are then read in parallel: the overview (price, market capitalisation, volumes, P/S, P/B, PE, dividend yields, star rating), the company profile (sector, industry, staff) and the trading information (beta, shares, short interest). Figures reserved to paying users are left out. The public keys of the site are built in; `MORNINGSTAR_SAL_API_KEY` and `MORNINGSTAR_SAL_REALTIME_TOKEN` replace them only if Morningstar changes them (HTTP 401/403).
+- **Gurufocus** reads the summary page of a share (`/stock/TSLA/summary`, `/stock/XPAR:AIR/summary`): GF Score (`/100`), Piotroski F-Score (`/9`), Beneish M-Score, Altman Z-Score, ROIC, PE, net and operating margins, debt to equity, EPS and revenue of the last twelve months. Each figure comes from the row whose label links to its term, never from the first number of the page; the scores and the ROIC are checked against ranges. When the GF Score badge is drawn in the browser, the score is read from the page state written by the server, from the share itself and never from a peer.
+- **ZoneBourse** reads the quote page found by its search: name, ISIN, sector, last price and currency, analysts' consensus, number of analysts and target price, staff, MSCI ESG rating, market capitalisation, enterprise value, EV/revenue, float, revenue, net income and net debt. The PER, revenue, net income, net debt and EV/revenue are estimates of the current fiscal year.
+- **Investing** reads the equity page in English (`www.investing.com`) or in French (`fr.investing.com`, decimal comma): price, change, currency, and the key figures (PE, EPS, dividend, market capitalisation, revenue, net income, EBITDA, P/B, ROA, ROE, gross margin, beta, 52-week range) plus the industry, sector and staff.
 
 ## Specialised providers
 

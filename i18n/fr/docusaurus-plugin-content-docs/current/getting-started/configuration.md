@@ -118,6 +118,7 @@ Les clients envoient une clé sous la forme `Authorization: Bearer <key>` ou `X-
 | `ESEF_REFRESH_HOURS` | `24` | Heures avant de relire l'index des rapports ESEF d'une société (1 à 720) ; un rapport déjà lu n'est jamais relu, sauf si son fichier change |
 | `OPENFIGI_API_KEY` | *(vide)* | Clé OpenFIGI facultative (limite de débit plus élevée) |
 | `BARRONS_TOKEN`, `MARKETWATCH_TOKEN`, `WSJ_TOKEN` | *(vide)* | Jetons facultatifs de ces sites web |
+| `MORNINGSTAR_SAL_API_KEY`, `MORNINGSTAR_SAL_REALTIME_TOKEN` | *(vide)* | Clés publiques des services JSON de Morningstar ; vide utilise celles intégrées. À renseigner seulement si MorningStar répond HTTP 401/403 |
 | `FONREX_PROVIDER_MAX_CONCURRENCY` | `4` | Requêtes qu'un fournisseur peut exécuter en même temps (1 à 64) |
 | `FONREX_PROXY_URL` | *(vide)* | Proxy HTTP sortant facultatif pour les sites web scrapés (pas pour yfinance ni TradingView) |
 | `FONREX_PROXY_PROVIDERS` | *(vide)* | Fournisseurs qui utilisent le proxy, séparés par des virgules ; vide signifie tous |

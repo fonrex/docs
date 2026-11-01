@@ -73,7 +73,7 @@ erDiagram
 | Table | Règle |
 |---|---|
 | `assets` | Une ligne par ISIN : index unique partiel `uq_assets_isin_not_null` (`WHERE isin IS NOT NULL`) |
-| `asset_listings` | Unique sur `(asset_id, ticker, exchange, currency)` (`uq_asset_listing_identity`) ; `is_primary` marque la cotation par défaut |
+| `asset_listings` | Unique sur `(asset_id, ticker, exchange, currency)` (`uq_asset_listing_identity`) ; `is_primary` marque la cotation par défaut, au plus une par instrument (`uq_asset_listings_one_primary`, index unique partiel) |
 | `asset_mappings` | Unique sur `(asset_listing_id, provider_name)`. Une correspondance sans cotation s'applique à toutes les cotations de l'instrument. `source` indique d'où vient l'identifiant : `csv_import`, `manual`, `isin_search`, `ticker_check`, `symbol_not_found`. Le CIK de la SEC est une correspondance de l'instrument (fournisseur `SEC`, sans cotation), tout comme le LEI de ses rapports ESEF (fournisseur `LEI`, source `isin_check`) |
 
 La correspondance Yahoo Finance d'une cotation contient son **symbole vérifié** (trouvé à partir de l'ISIN et contrôlé par rapport à la devise de la cotation) ou, avec `source = 'manual'`, un symbole que vous avez saisi à la main.

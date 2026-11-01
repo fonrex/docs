@@ -48,6 +48,30 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 
 Keep `WEB_CONCURRENCY=1`: the realtime streams, the WebSocket clients and the daily canary live in the API process, and each extra worker would duplicate them.
 
+## External database
+
+To use a PostgreSQL server outside Compose (it needs the TimescaleDB extension), keep `docker-compose.yml` as it is and put the address in `docker-compose.override.yml`, which `docker compose` loads on its own:
+
+```yaml
+services:
+  db:
+    profiles: [local-db]          # db no longer starts
+  fonrex-api:
+    environment:
+      - DATABASE_URL=postgresql://fonrex:${POSTGRES_PASSWORD}@db.example.com:5432/fonrex
+    depends_on: !override
+      redis:
+        condition: service_healthy
+  fonrex-migrate:
+    environment:
+      - DATABASE_URL=postgresql://fonrex:${POSTGRES_PASSWORD}@db.example.com:5432/fonrex
+    depends_on: !reset []
+```
+
+At start-up the entrypoint waits for the host and port of `DATABASE_URL` (here `db.example.com:5432`; `db:5432` when the URL gives none). The `!override` and `!reset` tags need Docker Compose 2.24 or later.
+
+With `db` stopped, the backup command of the `db` service no longer applies: run `pg_dump` against the external server, for example `pg_dump -h db.example.com -U fonrex -d fonrex -Fc > fonrex.dump`.
+
 ## Reverse proxy (NGINX)
 
 ```nginx

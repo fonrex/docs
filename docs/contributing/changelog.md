@@ -62,6 +62,23 @@ description: "Project history, feature additions, schema migrations, and version
 - Kept in `esef_filings`, `esef_facts` and `esef_entity_loads` (migration 026); new setting `ESEF_REFRESH_HOURS`; `scripts/load_esef.py` reads the filings of every share of the catalogue. The IFRS mapping now knows `RevenueFromContractsWithCustomers`, and the `ProfitLoss` and `Equity` of a group without minority interests.
 - One **OpenBB widget** (29 in all): *Fonrex ESEF Check*, the check as a table, gaps first.
 - filings.xbrl.org states that its index is not complete: no filing of a German company is found.
+- Migrations 027 and 028 widen `esef_facts.taxonomy`, `concept` and `unit` (to `text`): a company names the concepts and units of its extension as it wishes, and some names exceed 255 characters.
+
+### Scraped providers
+- **MorningStar** no longer reads the quote page (an AWS WAF challenge for a script): the screener of Morningstar turns the ISIN, or the ticker without its suffix on the place the suffix names, into the identifier of the listing, then three JSON services give the overview, the company profile and the trading information. A share without mapping is found again. New optional settings `MORNINGSTAR_SAL_API_KEY` and `MORNINGSTAR_SAL_REALTIME_TOKEN`, only if Morningstar changes its public keys. It returns a `FinancialMetrics` like the other providers.
+- **Gurufocus** reads the summary page of a share (`/stock/TSLA/summary`): GF Score, Piotroski F-Score, Beneish M-Score, Altman Z-Score, ROIC, PE, margins, debt to equity, EPS and revenue, each taken from its labelled row and checked against a range. Its search passes Cloudflare, the exchange of the suffix is kept, and the GF Score is read from the server-rendered page state when its badge is drawn in the browser.
+- **ZoneBourse** reads the analysts' consensus and target price (thousands kept), the MSCI ESG rating, the staff, and the valuation and financial tables (current fiscal year estimates).
+- **Investing** reads the French site (`fr.investing.com`) as well as the English one, and the key figures written as `<dt>`/`<dd>` pairs, whatever separates them.
+
+### Asset import
+- **Importing a file again no longer duplicates listings.** The enrichment fills the blank exchange of an imported listing; a row without exchange now matches the listing of the same instrument, ticker and currency on any exchange. `scripts/clean_listing_duplicates.py` (`--dry-run`, `--isin`) removes the duplicates older imports created. See [Import assets](../guides/import-assets.md#removing-listing-duplicates).
+- **One primary listing per instrument.** The importer takes into account the listings stored by an earlier batch or import. Migration 029 unmarks the extra primary listings (an active one is kept before an inactive one, then the oldest) and adds the partial unique index `uq_asset_listings_one_primary`.
+
+### Operations and documentation
+- **External PostgreSQL**: the entrypoint waits for the host and port of `DATABASE_URL` instead of always `db:5432`. See [Docker deployment](../deployment/docker.md#external-database).
+- **Swagger UI** (`/docs`) has an *Authorize* button: the OpenAPI document declares the `X-API-KEY` and Bearer schemes, the public paths need none. Enforcement is unchanged.
+- **Earnings history** is stored again: the enrichment read no row of what yfinance returns and `earnings_history` stayed empty. `period_end` and `surprise` are now filled.
+- **`fmt=eodhd`** is described as a layout compatible with the EODHD fundamentals format: Fonrex is not affiliated with EODHD and never calls it.
 
 ## October 2026 — Secure defaults, per-listing prices, verified provider data
 

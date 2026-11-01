@@ -43,7 +43,8 @@ AssetImporter.run()  — batches of 200 rows
   └─ default mappings: YahooFinance and GoogleFinance
 ```
 
-- La première cotation d'un instrument est sa cotation **principale** ; tant qu'aucune n'est principale, une cotation en USD, GBP, JPY, CHF, CAD ou AUD le devient.
+- La première cotation d'un instrument est sa cotation **principale** ; tant qu'aucune n'est principale, une cotation en USD, GBP, JPY, CHF, CAD ou AUD le devient. Les cotations déjà enregistrées par un lot ou un import précédent comptent : un instrument a **au plus une cotation principale**, garanti par l'index unique `uq_asset_listings_one_primary` (migration 029).
+- Une ligne dont la place est connue (par le fichier ou le suffixe du ticker) correspond à la cotation de cette place uniquement. Une ligne **sans place** correspond à la cotation du même instrument, ticker et devise quelle que soit sa place, la principale d'abord, puis la plus ancienne : l'enrichissement remplit la place vide d'une cotation importée, et réimporter le fichier ne doit pas en créer une seconde.
 - L'import n'effectue **aucun appel réseau**. La correspondance Yahoo Finance qu'il écrit est le ticker du fichier, non vérifié : la première ingestion ou la première requête de données fondamentales sur la cotation la remplace par le symbole Yahoo vérifié à partir de l'ISIN et de la devise.
 
 ## Commandes
@@ -90,6 +91,29 @@ Les bases de données créées avant la règle d'unicité des ISIN peuvent conte
 docker compose exec fonrex-api python scripts/clean_isin_duplicates.py --diagnose-only   # read only
 docker compose exec fonrex-api python scripts/clean_isin_duplicates.py --dry-run         # run, then roll back
 docker compose exec fonrex-api python scripts/clean_isin_duplicates.py --create-index    # clean + unique index
+```
+
+## Supprimer les doublons de cotations {#removing-listing-duplicates}
+
+Avant la règle ci-dessus, réimporter un fichier après son enrichissement créait une seconde cotation (place vide) à côté de la cotation enrichie. `scripts/clean_listing_duplicates.py` les supprime et garde la plus ancienne :
+
+```bash
+docker compose exec fonrex-api python scripts/clean_listing_duplicates.py --dry-run   # exécute, puis annule
+docker compose exec fonrex-api python scripts/clean_listing_duplicates.py             # nettoyage
+docker compose exec fonrex-api python scripts/clean_listing_duplicates.py --isin US0378331005 --dry-run
+```
+
+- Un doublon sans prix est supprimé, avec ses mappings.
+- Un doublon qui a des prix est signalé et conservé. Les prix sont revérifiés juste avant chaque suppression : le script peut tourner pendant que le planificateur ingère.
+- Quand le doublon supprimé était la cotation principale, la cotation gardée devient principale.
+
+Pour un doublon qui a des prix, le rapport indique si la cotation gardée en a aussi. Si elle n'en a pas, déplacez-y les barres ; sinon les barres du doublon sont une seconde copie de la même série et peuvent être supprimées. Relancez ensuite le script :
+
+```sql
+-- la cotation gardée n'a pas de prix
+UPDATE prices_eod SET asset_listing_id = <kept_id> WHERE asset_listing_id = <duplicate_id>;
+-- la cotation gardée a ses propres prix
+DELETE FROM prices_eod WHERE asset_listing_id = <duplicate_id>;
 ```
 
 ## Étape suivante
