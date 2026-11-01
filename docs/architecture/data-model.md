@@ -73,7 +73,7 @@ erDiagram
 | Table | Rule |
 |---|---|
 | `assets` | One row per ISIN: partial unique index `uq_assets_isin_not_null` (`WHERE isin IS NOT NULL`) |
-| `asset_listings` | Unique on `(asset_id, ticker, exchange, currency)` (`uq_asset_listing_identity`); `is_primary` marks the default listing |
+| `asset_listings` | Unique on `(asset_id, ticker, exchange, currency)` (`uq_asset_listing_identity`); `is_primary` marks the default listing, at most one per instrument (`uq_asset_listings_one_primary`, partial unique index) |
 | `asset_mappings` | Unique on `(asset_listing_id, provider_name)`. A mapping without listing applies to every listing of the instrument. `source` says where the identifier comes from: `csv_import`, `manual`, `isin_search`, `ticker_check`, `symbol_not_found`. The CIK of the SEC is a mapping of the instrument (provider `SEC`, no listing), and so is the LEI of its ESEF filings (provider `LEI`, source `isin_check`) |
 
 The Yahoo Finance mapping of a listing holds its **verified symbol** — found from the ISIN and checked against the listing's currency — or, with `source = 'manual'`, a symbol you set by hand.

@@ -73,7 +73,7 @@ erDiagram
 | 表 | 规则 |
 |---|---|
 | `assets` | 每个 ISIN 一行：部分唯一索引 `uq_assets_isin_not_null`（`WHERE isin IS NOT NULL`） |
-| `asset_listings` | 在 `(asset_id, ticker, exchange, currency)` 上唯一（`uq_asset_listing_identity`）；`is_primary` 标记默认上市品种 |
+| `asset_listings` | 在 `(asset_id, ticker, exchange, currency)` 上唯一（`uq_asset_listing_identity`）；`is_primary` 标记默认上市品种，每个金融工具最多一个（`uq_asset_listings_one_primary`，部分唯一索引） |
 | `asset_mappings` | 在 `(asset_listing_id, provider_name)` 上唯一。不关联上市品种的映射适用于该金融工具的所有上市品种。`source` 说明标识符的来源：`csv_import`、`manual`、`isin_search`、`ticker_check`、`symbol_not_found`。 SEC 的 CIK 是金融工具的一个映射（提供方 `SEC`，不关联上市品种），其 ESEF 报告的 LEI 也是如此（提供方 `LEI`，来源 `isin_check`） |
 
 上市品种的 Yahoo Finance 映射保存其**已验证的代码**——根据 ISIN 查得并按上市品种的货币核对——或者在 `source = 'manual'` 时，保存你手动设置的代码。

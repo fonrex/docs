@@ -43,7 +43,8 @@ AssetImporter.run()  — batches of 200 rows
   └─ default mappings: YahooFinance and GoogleFinance
 ```
 
-- The first listing of an instrument is its **primary** listing; when none is primary yet, a listing in USD, GBP, JPY, CHF, CAD or AUD becomes primary.
+- The first listing of an instrument is its **primary** listing; when none is primary yet, a listing in USD, GBP, JPY, CHF, CAD or AUD becomes primary. The listings already stored by an earlier batch or import count: an instrument has **at most one primary listing**, enforced by the unique index `uq_asset_listings_one_primary` (migration 029).
+- A row whose exchange is known (from the file or the ticker suffix) matches the listing of that exchange only. A row **without exchange** matches the listing of the same instrument, ticker and currency whatever its exchange, the primary one first, then the oldest: the enrichment fills the blank exchange of an imported listing, and importing the file again must not create a second one.
 - The import makes **no network call**. The Yahoo Finance mapping it writes is the ticker of the file, not verified: the first ingestion or fundamentals request of the listing replaces it with the Yahoo symbol verified from the ISIN and the currency.
 
 ## Commands
@@ -90,6 +91,29 @@ Databases created before the ISIN uniqueness rule may hold the same ISIN twice. 
 docker compose exec fonrex-api python scripts/clean_isin_duplicates.py --diagnose-only   # read only
 docker compose exec fonrex-api python scripts/clean_isin_duplicates.py --dry-run         # run, then roll back
 docker compose exec fonrex-api python scripts/clean_isin_duplicates.py --create-index    # clean + unique index
+```
+
+## Removing listing duplicates
+
+Before the matching rule above, importing a file again after its enrichment created a second listing (empty exchange) next to the enriched one. `scripts/clean_listing_duplicates.py` removes them and keeps the oldest listing:
+
+```bash
+docker compose exec fonrex-api python scripts/clean_listing_duplicates.py --dry-run   # run, then roll back
+docker compose exec fonrex-api python scripts/clean_listing_duplicates.py             # cleanup
+docker compose exec fonrex-api python scripts/clean_listing_duplicates.py --isin US0378331005 --dry-run
+```
+
+- A duplicate without prices is deleted, with its mappings.
+- A duplicate that holds prices is reported and kept. Prices are checked again right before each delete, so the script can run while the scheduler ingests.
+- When the deleted duplicate was the primary listing, the kept listing becomes primary.
+
+For a duplicate that holds prices, the report says whether the kept listing has prices too. If it has none, move the bars to it; otherwise the bars of the duplicate are a second copy of the same series and can be deleted. Then run the script again:
+
+```sql
+-- the kept listing has no prices
+UPDATE prices_eod SET asset_listing_id = <kept_id> WHERE asset_listing_id = <duplicate_id>;
+-- the kept listing has its own prices
+DELETE FROM prices_eod WHERE asset_listing_id = <duplicate_id>;
 ```
 
 ## Next step

@@ -62,6 +62,8 @@ docker compose down -v                     # stop and DELETE the database and ca
 
 ## 备份数据库 {#backing-up-the-database}
 
+以下命令使用 `db` 服务。如果使用 Compose 之外的 PostgreSQL 服务器，请改为对该服务器运行 `pg_dump`（参见[外部数据库](../deployment/docker.md#external-database)）。
+
 ```bash
 # Backup to one file on the host
 docker compose exec -T db pg_dump -U fonrex -d fonrex -Fc > fonrex.dump

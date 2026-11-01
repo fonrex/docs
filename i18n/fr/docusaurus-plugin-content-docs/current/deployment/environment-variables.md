@@ -13,6 +13,7 @@ Chaque réglage est décrit dans [Configuration](../getting-started/configuratio
 
 - `docker-compose.yml` charge `.env` dans le conteneur de l'API (`env_file`).
 - Il **remplace** ensuite les adresses de services écrites pour une exécution locale : `DATABASE_URL` (construite à partir de `POSTGRES_PASSWORD`, hôte `db`), `REDIS_URL` (hôte `redis`) et `ASYNC_DATABASE_URL` (vidée, pour qu'elle soit dérivée de `DATABASE_URL`). Il fixe aussi `WEB_CONCURRENCY` et vide `HTTP_PROXY` / `HTTPS_PROXY`.
+- Pour joindre un serveur PostgreSQL hors de Compose, surchargez `DATABASE_URL` dans `docker-compose.override.yml` (voir [Base de données externe](docker.md#external-database)) ; l'entrypoint attend l'hôte et le port de cette URL.
 - `.env` n'est jamais copié dans l'image.
 - Un `KEY=value` par ligne ; un commentaire placé après une valeur vide est lu comme la valeur.
 

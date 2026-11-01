@@ -21,7 +21,7 @@ export FONREX_API_KEY="frx_live_..."   # the value of FONREX_API_KEY in .env
 AUTH="X-API-KEY: $FONREX_API_KEY"
 ```
 
-La documentation interactive de votre instance se trouve à `http://localhost:5000/docs`.
+La documentation interactive de votre instance se trouve à `http://localhost:5000/docs`. Cliquez sur **Authorize**, collez votre clé dans `X-API-KEY` (ou `Bearer`) : les appels *Try it out* l'envoient, et Swagger UI la garde quand la page est rechargée.
 
 ## 1. Cours de clôture
 

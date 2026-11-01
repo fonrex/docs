@@ -118,6 +118,7 @@ Clients send a key as `Authorization: Bearer <key>` or `X-API-KEY: <key>`. See [
 | `ESEF_REFRESH_HOURS` | `24` | Hours before the index of the ESEF filings of a company is read again (1 to 720); a filing already read is never read again unless its file changes |
 | `OPENFIGI_API_KEY` | *(empty)* | Optional OpenFIGI key (higher rate limit) |
 | `BARRONS_TOKEN`, `MARKETWATCH_TOKEN`, `WSJ_TOKEN` | *(empty)* | Optional tokens of these websites |
+| `MORNINGSTAR_SAL_API_KEY`, `MORNINGSTAR_SAL_REALTIME_TOKEN` | *(empty)* | Public keys of the Morningstar JSON services; empty uses the ones built in. Set them only if MorningStar answers HTTP 401/403 |
 | `FONREX_PROVIDER_MAX_CONCURRENCY` | `4` | Requests one provider may run at the same time (1 to 64) |
 | `FONREX_PROXY_URL` | *(empty)* | Optional outbound HTTP proxy for the scraped websites (not for yfinance or TradingView) |
 | `FONREX_PROXY_PROVIDERS` | *(empty)* | Providers that use the proxy, comma-separated; empty means all |

@@ -2,7 +2,7 @@
 id: "fundamentals"
 title: "Référence API Données fondamentales"
 sidebar_label: "Fondamentaux"
-description: "Fondamentaux multi-fournisseurs au format EODHD et fondamentaux approfondis enregistrés"
+description: "Fondamentaux multi-fournisseurs dans un format compatible EODHD et fondamentaux approfondis enregistrés"
 ---
 
 # Référence API Données fondamentales
@@ -25,7 +25,7 @@ Les ratios sont des ratios : un rendement du dividende de 0,32 % vaut `0.0032`.
 | `exchange` | string | — | Place, pour choisir une cotation |
 | `currency` | string | — | Devise, pour choisir une cotation |
 | `provider` | string | tous | Un nom de fournisseur, ou plusieurs séparés par des virgules, au lieu de tous |
-| `fmt` | string | `eodhd` | `eodhd` (document mis en forme) ou `raw` (la réponse de chaque fournisseur) |
+| `fmt` | string | `eodhd` | `eodhd` (document mis en forme, format compatible EODHD) ou `raw` (la réponse de chaque fournisseur) |
 | `nocache` | boolean | `false` | Ignorer la réponse en cache |
 
 ```bash
@@ -33,6 +33,8 @@ curl -s -H "X-API-KEY: $FONREX_API_KEY" "http://localhost:5000/fundamental?ticke
 ```
 
 ### Le document mis en forme (`fmt=eodhd`)
+
+Le document suit un format compatible avec le format de fondamentaux d'EODHD (noms des sections et des champs), pour que les outils écrits pour ce format puissent le lire. Fonrex n'est ni affilié à EODHD ni approuvé par lui : le nom indique seulement quel format suit le document, et aucune requête n'est envoyée à EODHD.
 
 | Section | Contenu |
 |---|---|

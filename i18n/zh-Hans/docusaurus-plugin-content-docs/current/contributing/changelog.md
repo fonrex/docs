@@ -62,6 +62,23 @@ description: "项目历史、功能新增、Schema 迁移和版本更新"
 - 保存在 `esef_filings`、`esef_facts` 和 `esef_entity_loads` 中（迁移 026）；新设置 `ESEF_REFRESH_HOURS`；`scripts/load_esef.py` 读取目录中所有股票的报告。IFRS 映射现在支持 `RevenueFromContractsWithCustomers`，以及没有少数股东权益的集团的 `ProfitLoss` 和 `Equity`。
 - 一个 **OpenBB 小组件**（共 29 个）：*Fonrex ESEF Check*，以表格形式显示核对结果，差距排在最前。
 - filings.xbrl.org 表示其索引并不完整：找不到任何德国公司的报告。
+- 迁移 027 和 028 放宽了 `esef_facts.taxonomy`、`concept` 和 `unit`（改为 `text`）：公司可以自由命名其扩展中的概念和单位，部分名称超过 255 个字符。
+
+### 网页抓取数据提供方
+- **MorningStar** 不再读取行情页面（该页面会对脚本返回 AWS WAF 挑战）：Morningstar 的筛选器把 ISIN，或去掉后缀、限定在后缀所指交易所的 ticker，转换为上市品种的标识符，然后由三个 JSON 服务提供概览、公司简介和交易信息。没有映射的股票也能重新找到。新增可选配置 `MORNINGSTAR_SAL_API_KEY` 和 `MORNINGSTAR_SAL_REALTIME_TOKEN`，仅在 Morningstar 更换其公开密钥时需要。它与其他数据提供方一样返回 `FinancialMetrics`。
+- **Gurufocus** 读取股票的摘要页面（`/stock/TSLA/summary`）：GF Score、Piotroski F-Score、Beneish M-Score、Altman Z-Score、ROIC、市盈率、利润率、负债权益比、EPS 和营收，每个数值都取自其带标签的行，并按取值范围校验。其搜索可以通过 Cloudflare，保留后缀所指的交易所；当 GF Score 徽章在浏览器中渲染时，从服务器渲染的页面状态中读取该分数。
+- **ZoneBourse** 读取分析师一致评级和目标价（保留千位）、MSCI ESG 评级、员工人数，以及估值和财务表格（当前财年的预估值）。
+- **Investing** 既读取英文站点，也读取法文站点（`fr.investing.com`），并读取以 `<dt>`/`<dd>` 成对书写的关键数据，无论两者之间隔着什么。
+
+### 资产导入
+- **再次导入文件不再产生重复的上市品种。** 补充信息流程会填充导入上市品种的空交易所；现在没有交易所的行会匹配同一金融工具、ticker 和货币的上市品种，不论其交易所。`scripts/clean_listing_duplicates.py`（`--dry-run`、`--isin`）会删除旧版导入产生的重复项。参见[导入资产](../guides/import-assets.md#removing-listing-duplicates)。
+- **每个金融工具只有一个主上市品种。** 导入程序会考虑之前批次或之前导入已存储的上市品种。迁移 029 取消多余主上市品种的标记（优先保留活跃的，其次保留最早的），并添加部分唯一索引 `uq_asset_listings_one_primary`。
+
+### 运维与文档
+- **外部 PostgreSQL**：entrypoint 等待 `DATABASE_URL` 的主机和端口，而不再总是等待 `db:5432`。参见 [Docker 部署](../deployment/docker.md#external-database)。
+- **Swagger UI**（`/docs`）新增 *Authorize* 按钮：OpenAPI 文档声明了 `X-API-KEY` 和 Bearer 两种方案，公开路径不需要任何方案。密钥校验方式不变。
+- **盈利历史**重新被存储：此前补充信息流程读不到 yfinance 返回的任何行，`earnings_history` 一直为空。现在会填写 `period_end` 和 `surprise`。
+- **`fmt=eodhd`** 现在被描述为与 EODHD 基本面格式兼容的布局：Fonrex 与 EODHD 没有关联，也从不调用它。
 
 ## 2026 年 10 月——默认安全、按上市品种存储价格、经过验证的数据提供方数据
 

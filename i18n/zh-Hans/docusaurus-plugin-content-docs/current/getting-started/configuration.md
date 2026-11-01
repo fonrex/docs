@@ -118,6 +118,7 @@ Fonrex 从环境变量读取设置。将 `.env.example` 复制为 `.env` 并进�
 | `ESEF_REFRESH_HOURS` | `24` | 重新读取一家公司 ESEF 报告索引之前的小时数（1 到 720）；已读取的报告不会再次读取，除非其文件发生变化 |
 | `OPENFIGI_API_KEY` | *（空）* | 可选的 OpenFIGI 密钥（更高的速率限制） |
 | `BARRONS_TOKEN`、`MARKETWATCH_TOKEN`、`WSJ_TOKEN` | *（空）* | 这些网站的可选 token |
+| `MORNINGSTAR_SAL_API_KEY`、`MORNINGSTAR_SAL_REALTIME_TOKEN` | *（空）* | Morningstar JSON 服务的公开密钥；为空时使用内置值。仅当 MorningStar 返回 HTTP 401/403 时才需设置 |
 | `FONREX_PROVIDER_MAX_CONCURRENCY` | `4` | 单个数据提供方可同时执行的请求数（1 到 64） |
 | `FONREX_PROXY_URL` | *（空）* | 用于抓取网站的可选出站 HTTP 代理（不用于 yfinance 或 TradingView） |
 | `FONREX_PROXY_PROVIDERS` | *（空）* | 使用代理的数据提供方，以逗号分隔；为空表示全部 |

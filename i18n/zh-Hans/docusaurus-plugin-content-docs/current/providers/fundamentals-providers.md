@@ -21,7 +21,7 @@ description: "/fundamental 查询的数据提供方以及专用数据提供方"
 | `InvestirLesEchos` | investir.lesechos.fr | ISIN | 法国 |
 | `GoogleFinance` | google.com/finance | 带上市品种交易所的 ticker（`EPA:AIR`） | 全球 |
 | `Msn` | msn.com/money | Ticker | 全球 |
-| `MorningStar` | morningstar | Ticker | 全球 |
+| `MorningStar` | Morningstar JSON 服务（筛选器和 `sal-service`） | ISIN，或后缀所指交易所上的 ticker | 全球 |
 | `Investing` | investing.com | ISIN | 全球 |
 | `Barrons` | barrons.com | Ticker | 美国 |
 | `wallStreetJournal` | wsj.com | ISIN | 美国 |
@@ -33,6 +33,13 @@ description: "/fundamental 查询的数据提供方以及专用数据提供方"
 在生成的文档中，Yahoo 的响应和已存储的深度基本面数据优先；抓取类数据提供方（Google Finance、Barron's、MarketWatch、WSJ、Investing.com）仅在追踪市盈率（trailing P/E）、EPS 和股息收益率缺失时进行补充。每个数据提供方的响应都可以通过 `fmt=raw` 获取。
 
 可选 token：`BARRONS_TOKEN`、`MARKETWATCH_TOKEN`、`WSJ_TOKEN`。
+
+### 部分数据提供方读取的内容 {#what-some-providers-read}
+
+- **MorningStar** 从不读取 global.morningstar.com 的行情页面（该页面由 JavaScript 填充，会对脚本返回 AWS WAF 挑战）。Morningstar 的筛选器把 ISIN，或不带 Yahoo 后缀的 ticker，转换为股票标识符（`0P0000OQN8`）：只接受 ISIN 或 ticker 与请求一致、且位于后缀所指交易所的股票（`AIR.PA` 是巴黎，绝不是纽约的 AAR Corp）。随后并行读取三个服务：概览（价格、市值、成交量、市销率、市净率、市盈率、股息率、星级）、公司简介（行业板块、行业、员工人数）和交易信息（贝塔、股本、卖空）。仅对付费用户开放的数据会被排除。站点的公开密钥已内置；只有当 Morningstar 更换它们时（HTTP 401/403），才需用 `MORNINGSTAR_SAL_API_KEY` 和 `MORNINGSTAR_SAL_REALTIME_TOKEN` 替换。
+- **Gurufocus** 读取股票的摘要页面（`/stock/TSLA/summary`、`/stock/XPAR:AIR/summary`）：GF Score（`/100`）、Piotroski F-Score（`/9`）、Beneish M-Score、Altman Z-Score、ROIC、市盈率、净利润率和营业利润率、负债权益比、过去十二个月的 EPS 和营收。每个数值都来自标签链接到其术语的那一行，绝不取页面上的第一个数字；各项评分和 ROIC 会按取值范围校验。当 GF Score 徽章在浏览器中渲染时，从服务器写入的页面状态中读取该股票本身的分数，绝不取同类公司的分数。
+- **ZoneBourse** 读取通过其搜索找到的行情页面：名称、ISIN、行业、最新价格和货币、分析师一致评级、分析师人数和目标价、员工人数、MSCI ESG 评级、市值、企业价值、EV/营收、自由流通比例、营收、净利润和净负债。市盈率、营收、净利润、净负债和 EV/营收为当前财年的预估值。
+- **Investing** 读取英文（`www.investing.com`）或法文（`fr.investing.com`，小数点为逗号）的股票页面：价格、涨跌、货币，以及关键数据（市盈率、EPS、股息、市值、营收、净利润、EBITDA、市净率、ROA、ROE、毛利率、贝塔、52 周区间），还有行业、板块和员工人数。
 
 ## 专用数据提供方
 

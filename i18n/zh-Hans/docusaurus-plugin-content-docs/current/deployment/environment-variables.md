@@ -13,6 +13,7 @@ description: "部署 Fonrex 时需要关注的配置项，以及 .env 如何传�
 
 - `docker-compose.yml` 将 `.env` 加载到 API 容器中（`env_file`）。
 - 随后它会**覆盖**为本地运行编写的服务地址：`DATABASE_URL`（根据 `POSTGRES_PASSWORD` 构建，主机为 `db`）、`REDIS_URL`（主机为 `redis`）和 `ASYNC_DATABASE_URL`（置空，以便从 `DATABASE_URL` 派生）。它还会设置 `WEB_CONCURRENCY`，并清除 `HTTP_PROXY` / `HTTPS_PROXY`。
+- 如需连接 Compose 之外的 PostgreSQL 服务器，请在 `docker-compose.override.yml` 中覆盖 `DATABASE_URL`（参见[外部数据库](docker.md#external-database)）；entrypoint 会等待该 URL 的主机和端口。
 - `.env` 从不会被复制到镜像中。
 - 每行一个 `KEY=value`；空值后面的注释会被当作值读取。
 

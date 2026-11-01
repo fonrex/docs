@@ -62,6 +62,8 @@ Development: `docker compose -f docker-compose.yml -f docker-compose.dev.yml up`
 
 ## Backing up the database
 
+These commands use the `db` service. With a PostgreSQL server outside Compose, run `pg_dump` against that server instead (see [External database](../deployment/docker.md#external-database)).
+
 ```bash
 # Backup to one file on the host
 docker compose exec -T db pg_dump -U fonrex -d fonrex -Fc > fonrex.dump

@@ -48,6 +48,30 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 
 保持 `WEB_CONCURRENCY=1`：实时数据流、WebSocket 客户端和每日金丝雀都位于 API 进程中，每增加一个 worker 都会将它们复制一份。
 
+## 外部数据库 {#external-database}
+
+如需使用 Compose 之外的 PostgreSQL 服务器（需要 TimescaleDB 扩展），保持 `docker-compose.yml` 不变，把地址写入 `docker-compose.override.yml`，`docker compose` 会自动加载它：
+
+```yaml
+services:
+  db:
+    profiles: [local-db]          # db 不再启动
+  fonrex-api:
+    environment:
+      - DATABASE_URL=postgresql://fonrex:${POSTGRES_PASSWORD}@db.example.com:5432/fonrex
+    depends_on: !override
+      redis:
+        condition: service_healthy
+  fonrex-migrate:
+    environment:
+      - DATABASE_URL=postgresql://fonrex:${POSTGRES_PASSWORD}@db.example.com:5432/fonrex
+    depends_on: !reset []
+```
+
+启动时，entrypoint 会等待 `DATABASE_URL` 的主机和端口（此处为 `db.example.com:5432`；URL 未给出时为 `db:5432`）。`!override` 和 `!reset` 标签需要 Docker Compose 2.24 或更高版本。
+
+`db` 停止后，`db` 服务的备份命令不再适用：请直接对外部服务器运行 `pg_dump`，例如 `pg_dump -h db.example.com -U fonrex -d fonrex -Fc > fonrex.dump`。
+
 ## 反向代理（NGINX）
 
 ```nginx

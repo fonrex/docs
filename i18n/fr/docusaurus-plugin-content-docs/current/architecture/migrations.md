@@ -39,6 +39,9 @@ Alembic est maître du schéma, y compris les hypertables TimescaleDB, la compre
 | 024 | `024_yield_curves.py` | `yield_curve_points` et `yield_curve_loads` : les courbes de taux quotidiennes du Trésor américain |
 | 025 | `025_cot_reports.py` | `cot_weeks`, `cot_positions` et `cot_loads` : les rapports Commitments of Traders de la CFTC |
 | 026 | `026_esef_filings.py` | `esef_filings`, `esef_facts` et `esef_entity_loads` : les rapports ESEF des sociétés cotées européennes |
+| 027 | `027_esef_long_prefixes.py` | `esef_facts.taxonomy` et `unit` passent à 255 caractères (40 avant) : le préfixe de l'extension d'une société peut être plus long |
+| 028 | `028_esef_text_keys.py` | `esef_facts.taxonomy`, `concept` et `unit` deviennent `text` : certaines sociétés utilisent des noms de plus de 255 caractères |
+| 029 | `029_single_primary_listing.py` | Garde une seule cotation principale par instrument (une active avant une inactive, puis la plus ancienne) et ajoute l'index unique partiel `uq_asset_listings_one_primary` sur `asset_listings (asset_id) WHERE is_primary`. Le downgrade supprime l'index et ne touche pas aux données |
 
 ## Exécution des migrations
 
@@ -53,7 +56,7 @@ La migration 014 supprime d'abord les jobs TimescaleDB des tables de prix (en at
 alembic revision -m "describe_the_change"
 ```
 
-Renommez le nouveau fichier de `alembic/versions/` et placez ses identifiants après la dernière migration (`revision = "027"`, `down_revision = "026"`, fichier `027_describe_the_change.py`), puis :
+Renommez le nouveau fichier de `alembic/versions/` et placez ses identifiants après la dernière migration (`revision = "030"`, `down_revision = "029"`, fichier `030_describe_the_change.py`), puis :
 
 ```bash
 alembic upgrade head
