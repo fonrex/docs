@@ -104,9 +104,13 @@ const config: Config = {
           position: 'right',
         },
         {
-          href: 'https://github.com/fonrex/fonrex',
-          label: 'GitHub',
+          type: 'html',
           position: 'right',
+          value:
+            '<a href="https://github.com/fonrex/fonrex" target="_blank" rel="noopener noreferrer" ' +
+            'aria-label="Fonrex on GitHub" style="display:flex;align-items:center">' +
+            '<img src="https://img.shields.io/github/stars/fonrex/fonrex?style=social" ' +
+            'alt="GitHub stars" height="20" /></a>',
         },
       ],
     },
